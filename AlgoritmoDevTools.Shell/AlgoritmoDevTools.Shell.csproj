@@ -9,6 +9,20 @@
     <RootNamespace>AlgoritmoDevTools.Shell</RootNamespace>
     <StartupObject>AlgoritmoDevTools.Shell.Program</StartupObject>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
+    <!--
+      Publish: un solo .exe autocontenido con el runtime de .NET 8 y todos los DLLs embebidos.
+      Para generar el exe:   dotnet publish -c Release
+      Salida en:             bin\Release\net8.0-windows\win-x64\publish\AlgoritmoDevTools.Shell.exe
+    -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <DebugType>embedded</DebugType>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <AssemblyName>AlgoritmoDevTools</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,5 +38,14 @@
       <LogicalName>app.ico</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+
+  <!-- Deja sólo el .exe en el folder de publish — elimina PDBs/XML de proyectos referenciados. -->
+  <Target Name="CleanupPublishOutputs" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishExtras Include="$(PublishDir)*.pdb" />
+      <PublishExtras Include="$(PublishDir)*.xml" />
+    </ItemGroup>
+    <Delete Files="@(PublishExtras)" />
+  </Target>
 
 </Project>
