@@ -4,6 +4,11 @@ namespace AlgoritmoDevTools.Integrations.SoftCerealCore;
 
 public class SecretService
 {
+    private static readonly Lazy<SecretService> _shared = new(() => new SecretService());
+    public static SecretService Shared => _shared.Value;
+
+    public event EventHandler? SecretsChanged;
+
     private readonly string _projectPath;
     public Dictionary<string, string> Secrets { get; protected set; } = new();
     public string LastRawOutput { get; private set; } = string.Empty;
@@ -27,6 +32,7 @@ public class SecretService
             $"dotnet user-secrets list --project {Constantes.ServiceProyectName}",
             GetSolutionRoot());
         ParseRawOutput(LastRawOutput);
+        SecretsChanged?.Invoke(this, EventArgs.Empty);
         return LastRawOutput;
     }
 

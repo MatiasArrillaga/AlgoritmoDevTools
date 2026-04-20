@@ -15,143 +15,158 @@ partial class CommandsMakerView
 
     private void InitializeComponent()
     {
-        this.rtbText = new System.Windows.Forms.RichTextBox();
-        this.bAdd = new System.Windows.Forms.Button();
-        this.bRemove = new System.Windows.Forms.Button();
-        this.bUpdate = new System.Windows.Forms.Button();
-        this.label1 = new System.Windows.Forms.Label();
-        this.addDomain = new System.Windows.Forms.Button();
-        this.cmbDominios = new System.Windows.Forms.ComboBox();
-        this.migrationName = new System.Windows.Forms.TextBox();
-        this.label2 = new System.Windows.Forms.Label();
-        this.checkBox1 = new System.Windows.Forms.CheckBox();
-        this.SuspendLayout();
-        //
+        rtbText = new RichTextBox();
+        bAdd = new Button();
+        bRemove = new Button();
+        bUpdate = new Button();
+        label1 = new Label();
+        addDomain = new Button();
+        removeDomain = new Button();
+        cmbDominios = new ComboBox();
+        migrationName = new TextBox();
+        label2 = new Label();
+        checkBox1 = new CheckBox();
+        SuspendLayout();
+        // 
         // rtbText
-        //
-        this.rtbText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-        | System.Windows.Forms.AnchorStyles.Left)
-        | System.Windows.Forms.AnchorStyles.Right)));
-        this.rtbText.Location = new System.Drawing.Point(14, 168);
-        this.rtbText.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.rtbText.Name = "rtbText";
-        this.rtbText.Size = new System.Drawing.Size(367, 100);
-        this.rtbText.TabIndex = 1;
-        this.rtbText.Text = "";
-        //
+        // 
+        rtbText.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        rtbText.Location = new Point(14, 85);
+        rtbText.Margin = new Padding(3, 4, 3, 4);
+        rtbText.Name = "rtbText";
+        rtbText.Size = new Size(1165, 263);
+        rtbText.TabIndex = 9;
+        rtbText.Text = "";
+        // 
         // bAdd
-        //
-        this.bAdd.Location = new System.Drawing.Point(132, 128);
-        this.bAdd.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.bAdd.Name = "bAdd";
-        this.bAdd.Size = new System.Drawing.Size(80, 31);
-        this.bAdd.TabIndex = 2;
-        this.bAdd.Text = "Add";
-        this.bAdd.UseVisualStyleBackColor = true;
-        this.bAdd.Click += new System.EventHandler(this.bAdd_Click);
-        //
+        // 
+        bAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        bAdd.Location = new Point(927, 13);
+        bAdd.Margin = new Padding(3, 4, 3, 4);
+        bAdd.Name = "bAdd";
+        bAdd.Size = new Size(80, 31);
+        bAdd.TabIndex = 5;
+        bAdd.Text = "Add";
+        bAdd.UseVisualStyleBackColor = true;
+        bAdd.Click += bAdd_Click;
+        // 
         // bRemove
-        //
-        this.bRemove.Location = new System.Drawing.Point(218, 128);
-        this.bRemove.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.bRemove.Name = "bRemove";
-        this.bRemove.Size = new System.Drawing.Size(80, 31);
-        this.bRemove.TabIndex = 3;
-        this.bRemove.Text = "Remove";
-        this.bRemove.UseVisualStyleBackColor = true;
-        this.bRemove.Click += new System.EventHandler(this.bRemove_Click);
-        //
+        // 
+        bRemove.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        bRemove.Location = new Point(1013, 13);
+        bRemove.Margin = new Padding(3, 4, 3, 4);
+        bRemove.Name = "bRemove";
+        bRemove.Size = new Size(80, 31);
+        bRemove.TabIndex = 6;
+        bRemove.Text = "Remove";
+        bRemove.UseVisualStyleBackColor = true;
+        bRemove.Click += bRemove_Click;
+        // 
         // bUpdate
-        //
-        this.bUpdate.Location = new System.Drawing.Point(304, 128);
-        this.bUpdate.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.bUpdate.Name = "bUpdate";
-        this.bUpdate.Size = new System.Drawing.Size(80, 31);
-        this.bUpdate.TabIndex = 4;
-        this.bUpdate.Text = "UpdateDb";
-        this.bUpdate.UseVisualStyleBackColor = true;
-        this.bUpdate.Click += new System.EventHandler(this.bUpdate_Click);
-        //
+        // 
+        bUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        bUpdate.Location = new Point(1099, 13);
+        bUpdate.Margin = new Padding(3, 4, 3, 4);
+        bUpdate.Name = "bUpdate";
+        bUpdate.Size = new Size(80, 31);
+        bUpdate.TabIndex = 7;
+        bUpdate.Text = "UpdateD";
+        bUpdate.UseVisualStyleBackColor = true;
+        bUpdate.Click += bUpdate_Click;
+        // 
         // label1
-        //
-        this.label1.AutoSize = true;
-        this.label1.Location = new System.Drawing.Point(14, 15);
-        this.label1.Name = "label1";
-        this.label1.Size = new System.Drawing.Size(73, 20);
-        this.label1.TabIndex = 5;
-        this.label1.Text = "Dominios";
-        //
+        // 
+        label1.AutoSize = true;
+        label1.Location = new Point(22, 19);
+        label1.Name = "label1";
+        label1.Size = new Size(73, 20);
+        label1.TabIndex = 0;
+        label1.Text = "Dominios";
+        // 
         // addDomain
-        //
-        this.addDomain.Location = new System.Drawing.Point(353, 9);
-        this.addDomain.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.addDomain.Name = "addDomain";
-        this.addDomain.Size = new System.Drawing.Size(31, 31);
-        this.addDomain.TabIndex = 6;
-        this.addDomain.Text = "+";
-        this.addDomain.UseVisualStyleBackColor = true;
-        this.addDomain.Click += new System.EventHandler(this.addDomain_Click);
-        //
+        // 
+        addDomain.Location = new Point(361, 13);
+        addDomain.Margin = new Padding(3, 4, 3, 4);
+        addDomain.Name = "addDomain";
+        addDomain.Size = new Size(31, 31);
+        addDomain.TabIndex = 2;
+        addDomain.Text = "+";
+        addDomain.UseVisualStyleBackColor = true;
+        addDomain.Click += addDomain_Click;
+        // 
+        // removeDomain
+        // 
+        removeDomain.Location = new Point(398, 13);
+        removeDomain.Margin = new Padding(3, 4, 3, 4);
+        removeDomain.Name = "removeDomain";
+        removeDomain.Size = new Size(31, 31);
+        removeDomain.TabIndex = 3;
+        removeDomain.Text = "-";
+        removeDomain.UseVisualStyleBackColor = true;
+        removeDomain.Click += removeDomain_Click;
+        // 
         // cmbDominios
-        //
-        this.cmbDominios.FormattingEnabled = true;
-        this.cmbDominios.Location = new System.Drawing.Point(93, 11);
-        this.cmbDominios.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.cmbDominios.Name = "cmbDominios";
-        this.cmbDominios.Size = new System.Drawing.Size(254, 28);
-        this.cmbDominios.TabIndex = 7;
-        this.cmbDominios.SelectedIndexChanged += new System.EventHandler(this.cmbDominios_SelectedIndexChanged);
-        this.cmbDominios.KeyDown += new System.Windows.Forms.KeyEventHandler(this.cmbDominios_KeyDown);
-        //
+        // 
+        cmbDominios.FormattingEnabled = true;
+        cmbDominios.Location = new Point(101, 15);
+        cmbDominios.Margin = new Padding(3, 4, 3, 4);
+        cmbDominios.Name = "cmbDominios";
+        cmbDominios.Size = new Size(254, 28);
+        cmbDominios.TabIndex = 1;
+        cmbDominios.SelectedIndexChanged += cmbDominios_SelectedIndexChanged;
+        cmbDominios.KeyDown += cmbDominios_KeyDown;
+        // 
         // migrationName
-        //
-        this.migrationName.Location = new System.Drawing.Point(94, 49);
-        this.migrationName.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.migrationName.Name = "migrationName";
-        this.migrationName.Size = new System.Drawing.Size(290, 27);
-        this.migrationName.TabIndex = 8;
-        //
+        // 
+        migrationName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        migrationName.Location = new Point(536, 15);
+        migrationName.Margin = new Padding(3, 4, 3, 4);
+        migrationName.Name = "migrationName";
+        migrationName.Size = new Size(385, 27);
+        migrationName.TabIndex = 5;
+        // 
         // label2
-        //
-        this.label2.Location = new System.Drawing.Point(15, 45);
-        this.label2.Name = "label2";
-        this.label2.Size = new System.Drawing.Size(82, 47);
-        this.label2.TabIndex = 9;
-        this.label2.Text = "Nombre Migracion";
-        //
+        // 
+        label2.Location = new Point(440, 9);
+        label2.Name = "label2";
+        label2.Size = new Size(90, 40);
+        label2.TabIndex = 4;
+        label2.Text = "Nombre Migracion";
+        // 
         // checkBox1
-        //
-        this.checkBox1.AutoSize = true;
-        this.checkBox1.Checked = true;
-        this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-        this.checkBox1.Location = new System.Drawing.Point(93, 96);
-        this.checkBox1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.checkBox1.Name = "checkBox1";
-        this.checkBox1.Size = new System.Drawing.Size(299, 24);
-        this.checkBox1.TabIndex = 10;
-        this.checkBox1.Text = "Incluir dominio en nombre de migracion";
-        this.checkBox1.UseVisualStyleBackColor = true;
-        this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
-        //
+        // 
+        checkBox1.AutoSize = true;
+        checkBox1.Checked = true;
+        checkBox1.CheckState = CheckState.Checked;
+        checkBox1.Location = new Point(101, 51);
+        checkBox1.Margin = new Padding(3, 4, 3, 4);
+        checkBox1.Name = "checkBox1";
+        checkBox1.Size = new Size(299, 24);
+        checkBox1.TabIndex = 8;
+        checkBox1.Text = "Incluir dominio en nombre de migracion";
+        checkBox1.UseVisualStyleBackColor = true;
+        checkBox1.CheckedChanged += checkBox1_CheckedChanged;
+        // 
         // CommandsMakerView
-        //
-        this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
-        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.Controls.Add(this.checkBox1);
-        this.Controls.Add(this.migrationName);
-        this.Controls.Add(this.cmbDominios);
-        this.Controls.Add(this.addDomain);
-        this.Controls.Add(this.label2);
-        this.Controls.Add(this.label1);
-        this.Controls.Add(this.bUpdate);
-        this.Controls.Add(this.bRemove);
-        this.Controls.Add(this.bAdd);
-        this.Controls.Add(this.rtbText);
-        this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-        this.Name = "CommandsMakerView";
-        this.Size = new System.Drawing.Size(400, 280);
-        this.ResumeLayout(false);
-        this.PerformLayout();
+        // 
+        AutoScaleDimensions = new SizeF(8F, 20F);
+        AutoScaleMode = AutoScaleMode.Font;
+        Controls.Add(rtbText);
+        Controls.Add(checkBox1);
+        Controls.Add(bUpdate);
+        Controls.Add(bRemove);
+        Controls.Add(bAdd);
+        Controls.Add(migrationName);
+        Controls.Add(label2);
+        Controls.Add(removeDomain);
+        Controls.Add(addDomain);
+        Controls.Add(cmbDominios);
+        Controls.Add(label1);
+        Margin = new Padding(3, 4, 3, 4);
+        Name = "CommandsMakerView";
+        Size = new Size(1193, 358);
+        ResumeLayout(false);
+        PerformLayout();
     }
 
     private System.Windows.Forms.RichTextBox rtbText;
@@ -160,6 +175,7 @@ partial class CommandsMakerView
     private System.Windows.Forms.Button bUpdate;
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.Button addDomain;
+    private System.Windows.Forms.Button removeDomain;
     private System.Windows.Forms.ComboBox cmbDominios;
     private System.Windows.Forms.TextBox migrationName;
     private System.Windows.Forms.Label label2;

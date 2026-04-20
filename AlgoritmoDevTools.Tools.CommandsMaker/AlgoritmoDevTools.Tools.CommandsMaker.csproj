@@ -10,6 +10,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\icon.ico">
+      <LogicalName>icon.ico</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

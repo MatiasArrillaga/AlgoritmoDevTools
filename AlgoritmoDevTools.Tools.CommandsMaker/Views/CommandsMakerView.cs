@@ -1,26 +1,28 @@
 using AlgoritmoDevTools.Core.UI;
-using AlgoritmoDevTools.Tools.CommandsMaker.Services;
+using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using System.Windows.Forms;
 
 namespace AlgoritmoDevTools.Tools.CommandsMaker.Views;
 
 public partial class CommandsMakerView : UserControl
 {
-    private const string DOMINIO = "*DOMINIO*";
+    private const string DOMINIO_TOKEN = "*DOMINIO*";
     private const string MIGRATION_NAME = "*MIGRATION_NAME*";
+    private const string CONNECTION_STRING = "*CONNECTION_STRING*";
 
-    private const string PROJECT = "Algoritmo." + DOMINIO + ".Infrastructure";
-    private const string DATABASE = "Server=localhost,1433;Database=Algoritmo";
-    private const string CONNECTION_STRING = DATABASE + ";Integrated Security = true; MultipleActiveResultSets=True";
+    private const string PROJECT = "Algoritmo." + DOMINIO_TOKEN + ".Infrastructure";
+    private const string FALLBACK_CONNECTION_STRING =
+        "Server=localhost,1433;Database=Algoritmo;Integrated Security=true;MultipleActiveResultSets=True";
 
-    private const string COMMON_COMMAND = "-Context " + DOMINIO + "DbContext -Project " + PROJECT + " -StartupProject " + PROJECT;
+    private const string COMMON_COMMAND = "-Context " + DOMINIO_TOKEN + "DbContext -Project " + PROJECT + " -StartupProject " + PROJECT;
     private const string ARGS = " -Args '--Connection \"" + CONNECTION_STRING + "\"'";
 
-    private const string AddMigration = "add-migration " + MIGRATION_NAME + " " + COMMON_COMMAND + ARGS;
-    private const string RmvMigration = "remove-migration -force " + COMMON_COMMAND + ARGS;
-    private const string UpdateDb = "update-database " + COMMON_COMMAND + " -Connection \"" + CONNECTION_STRING + "\"" + ARGS;
+    private const string AddMigrationTemplate = "add-migration " + MIGRATION_NAME + " " + COMMON_COMMAND + ARGS;
+    private const string RmvMigrationTemplate = "remove-migration -force " + COMMON_COMMAND + ARGS;
+    private const string UpdateDbTemplate = "update-database " + COMMON_COMMAND + " -Connection \"" + CONNECTION_STRING + "\"" + ARGS;
 
     private readonly DomainRepository _repository;
+    private readonly SecretService _secretService = SecretService.Shared;
 
     public CommandsMakerView(DomainRepository repository)
     {
@@ -28,22 +30,44 @@ public partial class CommandsMakerView : UserControl
         InitializeComponent();
         cmbDominios.DataSource = _repository.GetAll();
         migrationName.Text = ChangeMigrationName(true, "Inicial");
+        SetupTooltips();
     }
 
-    private void CastCommand(string command)
+    private void SetupTooltips()
     {
-        Clipboard.SetData(DataFormats.Text, command.Replace(DOMINIO, cmbDominios.Text));
-        rtbText.Text = Clipboard.GetText();
+        var tips = new ToolTip { AutoPopDelay = 10_000, InitialDelay = 400, ReshowDelay = 200 };
+        tips.SetToolTip(cmbDominios, "Dominio actual. Se usa para armar los comandos. Compartido con Schema Change Detector.");
+        tips.SetToolTip(addDomain, "Agrega un dominio nuevo a la lista.");
+        tips.SetToolTip(removeDomain, "Elimina el dominio seleccionado.");
+        tips.SetToolTip(migrationName, "Nombre de la migración (editable). Se sustituye en el comando add-migration.");
+        tips.SetToolTip(checkBox1, "Si está activo, antepone '[Dominio].' al nombre de la migración.");
+        tips.SetToolTip(bAdd, "Copia al clipboard el comando 'add-migration' con el nombre y la connection string actual, listo para pegarlo en PM Console.");
+        tips.SetToolTip(bRemove, "Copia al clipboard el comando 'remove-migration -force', listo para pegarlo en PM Console.");
+        tips.SetToolTip(bUpdate, "Copia al clipboard el comando 'update-database' con la connection string del secreto Development.");
+        tips.SetToolTip(rtbText, "Último comando generado. Ya está copiado en el clipboard.");
+    }
+
+    private string ResolveConnectionString()
+        => _secretService.GetConnectionString(Constantes.SecretKeys.Development) ?? FALLBACK_CONNECTION_STRING;
+
+    private void CastCommand(string template)
+    {
+        var command = template
+            .Replace(CONNECTION_STRING, ResolveConnectionString())
+            .Replace(DOMINIO_TOKEN, cmbDominios.Text);
+
+        Clipboard.SetData(DataFormats.Text, command);
+        rtbText.Text = command;
     }
 
     private void bAdd_Click(object? sender, EventArgs e)
-        => CastCommand(AddMigration.Replace(MIGRATION_NAME, migrationName.Text));
+        => CastCommand(AddMigrationTemplate.Replace(MIGRATION_NAME, migrationName.Text));
 
     private void bRemove_Click(object? sender, EventArgs e)
-        => CastCommand(RmvMigration);
+        => CastCommand(RmvMigrationTemplate);
 
     private void bUpdate_Click(object? sender, EventArgs e)
-        => CastCommand(UpdateDb);
+        => CastCommand(UpdateDbTemplate);
 
     private void addDomain_Click(object? sender, EventArgs e)
     {
@@ -53,6 +77,24 @@ public partial class CommandsMakerView : UserControl
             _repository.Add(input);
             cmbDominios.DataSource = _repository.GetAll();
         }
+    }
+
+    private void removeDomain_Click(object? sender, EventArgs e)
+    {
+        var dominio = cmbDominios.Text;
+        if (string.IsNullOrWhiteSpace(dominio))
+        {
+            MessageBox.Show("SeleccionÃ¡ un dominio para eliminar.",
+                "Commands Maker", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show($"Â¿Eliminar dominio '{dominio}'?",
+            "Commands Maker", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes) return;
+
+        _repository.Remove(dominio);
+        cmbDominios.DataSource = _repository.GetAll();
     }
 
     private void cmbDominios_SelectedIndexChanged(object? sender, EventArgs e)

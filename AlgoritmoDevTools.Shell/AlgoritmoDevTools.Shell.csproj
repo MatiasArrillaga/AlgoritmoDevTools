@@ -8,12 +8,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>AlgoritmoDevTools.Shell</RootNamespace>
     <StartupObject>AlgoritmoDevTools.Shell.Program</StartupObject>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.CommandsMaker\AlgoritmoDevTools.Tools.CommandsMaker.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.SecretsManager\AlgoritmoDevTools.Tools.SecretsManager.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\app.ico">
+      <LogicalName>app.ico</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
