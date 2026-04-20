@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.Shell", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.Integrations.SoftCerealCore", "AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj", "{763CAC1A-EB24-4F76-ADB9-125A59BF52DA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.Tools.ModelDriftChecker", "AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj", "{534FF2A3-68DA-40B5-98FE-7274491AFBCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{763CAC1A-EB24-4F76-ADB9-125A59BF52DA}.Release|x64.Build.0 = Release|Any CPU
 		{763CAC1A-EB24-4F76-ADB9-125A59BF52DA}.Release|x86.ActiveCfg = Release|Any CPU
 		{763CAC1A-EB24-4F76-ADB9-125A59BF52DA}.Release|x86.Build.0 = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|x64.Build.0 = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Debug|x86.Build.0 = Debug|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|x64.ActiveCfg = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|x64.Build.0 = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|x86.ActiveCfg = Release|Any CPU
+		{534FF2A3-68DA-40B5-98FE-7274491AFBCA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

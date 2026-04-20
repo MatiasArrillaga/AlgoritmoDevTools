@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AlgoritmoDevTools.Tools.ModelDriftChecker</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\icon.ico">
+      <LogicalName>icon.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
