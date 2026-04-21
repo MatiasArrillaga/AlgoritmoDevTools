@@ -220,7 +220,6 @@ public partial class SecretsManagerView : UserControl
 
     private async void RestaurarSecretosBtn_Click(object? sender, EventArgs e)
     {
-        var cn = BuildConnectionData();
         SetBusy(true);
         try
         {
@@ -238,43 +237,22 @@ public partial class SecretsManagerView : UserControl
         }
     }
 
-    private void DataBaseCmb_SelectedIndexChanged(object? sender, EventArgs e)
-        => PrevisualizarSecreto();
-
-    private async void RefreshBtn_Click(object? sender, EventArgs e)
-        => await RefreshDBDataAsync(ServerNameTxt.Text, UserTxt.Text, PasswordTxt.Text);
-
-    private async Task PrevisualizarDatosAsync()
-    {
-        if (!_service.Secrets.TryGetValue(Constantes.SecretKeys.Development, out var devConn)) return;
-
-        var parsed = ParseConnectionString(devConn);
-
-        ServerNameTxt.Text = parsed.GetValueOrDefault("Server");
-        UserTxt.Text = parsed.GetValueOrDefault("User Id");
-        PasswordTxt.Text = parsed.GetValueOrDefault("Password");
-
-        await RefreshDBDataAsync(ServerNameTxt.Text, UserTxt.Text, PasswordTxt.Text);
-        DataBaseCmb.Text = parsed.GetValueOrDefault("Database");
-    }
-
     private async void ModificarSecretoBtn_Click(object? sender, EventArgs e)
     {
         if (SavedConnectionsCmb.SelectedItem is not SavedConnection sc)
         {
-            MessageBox.Show("Seleccioná una conexión para modificar el secreto.",
+            MessageBox.Show("SeleccionÃ¡ una conexiÃ³n para modificar el secreto.",
                 "Secret Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        return result;
-    }
 
         var selectedDb = DataBaseCmb.SelectedItem as string ?? sc.DataBase;
         var cn = new SQLService.ConnectionData(
             server: sc.Server,
-            dataBase: selectedDb,
             user: sc.User,
-            password: sc.Password);
+            password: sc.Password,
+            dataBase: selectedDb,
+            useIntegratedSecurity: sc.UseIntegratedSecurity);
 
         SetBusy(true);
         try
@@ -292,13 +270,6 @@ public partial class SecretsManagerView : UserControl
             SetBusy(false);
         }
     }
-
-    private SQLService.ConnectionData BuildConnectionData()
-        => new(
-            server: ServerNameTxt.Text,
-            dataBase: DataBaseCmb.Text,
-            user: UserTxt.Text,
-            password: PasswordTxt.Text);
 
     private void SetBusy(bool busy)
     {
