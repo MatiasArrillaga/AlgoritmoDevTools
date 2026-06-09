@@ -2,6 +2,7 @@ using AlgoritmoDevTools.Core.Abstractions;
 using AlgoritmoDevTools.Tools.CommandsMaker;
 using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
+using AlgoritmoDevTools.Tools.TyeServiceSelector;
 
 namespace AlgoritmoDevTools.Shell;
 
@@ -16,7 +17,8 @@ static class Program
         {
             new CommandsMakerTool(),
             new SecretsManagerTool(),
-            new ModelDriftCheckerTool()
+            new ModelDriftCheckerTool(),
+            new TyeServiceSelectorTool()
         };
 
         Application.Run(new MainForm(tools));

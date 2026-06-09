@@ -53,7 +53,8 @@ AlgoritmoDevTools/
 │
 ├── AlgoritmoDevTools.Tools.CommandsMaker/
 ├── AlgoritmoDevTools.Tools.SecretsManager/
-└── AlgoritmoDevTools.Tools.ModelDriftChecker/      Schema Change Detector
+├── AlgoritmoDevTools.Tools.ModelDriftChecker/      Schema Change Detector
+└── AlgoritmoDevTools.Tools.TyeServiceSelector/     Selector de Servicios (Tye)
 ```
 
 Cada **Tool** es un `classlib` con:
@@ -117,6 +118,21 @@ Cada **Tool** es un `classlib` con:
 **Por qué no usamos `dotnet ef`**: porque el `AlgoritmoDbContextFactory` de AlgoritmoCore corre `CheckTablesInventoryResources` al construir el DbContext (requiere la función SQL `GetTableColumnsInfo` y permisos que no todos los usuarios tienen). El approach por git diff evita ese problema por completo — no toca la BD, no compila, no carga assemblies. Limitación: compara **código vs archivos**, no contra el esquema real de la BD. En la práctica cubre el 95% de los casos.
 
 **Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/ModelDriftChecker/data.db` — tabla `SchemaBaseline` indexada por ruta del repo.
+
+### 🚀 Selector de Servicios (Tye)
+
+**Qué hace**: permite elegir, con checkboxes, **qué microservicios levantar** sin tener que tocar a mano el `tye.yaml`.
+
+- **No modifica el `tye.yaml` original** (queda limpio en git). Lee la lista `services:` del master y genera un archivo derivado `tye.devtools.yaml` en la raíz de AlgoritmoCore (tiene que estar ahí para que las rutas relativas `project:` resuelvan).
+- El toggle es **por comentarios de línea** (`# `): los servicios destildados se comentan en vez de borrarse, así re-tildarlos los descomenta sin perder su definición. Es reversible y preserva todo el formato (no se usa un parser YAML que reformatearía). Se togglea tanto el bloque en `services:` como la entrada del servicio en la extensión `dapr`, para que el archivo quede consistente.
+- Al reabrir, el estado tildado/destildado se lee desde el `tye.devtools.yaml` generado; los servicios nuevos que aparezcan en el master se asumen activos.
+- **Perfiles**: podés guardar la selección actual con un nombre (ej: *"Logística mínima"*, *"Solo Cereales+Stock"*) y volver a aplicarla desde el combo. CRUD completo: `Guardar perfil` / `Eliminar perfil`.
+- **Copiar comando run**: copia al clipboard `dotnet tye run tye.devtools.yaml --watch`.
+- **Workflow típico**: tildás los servicios (o elegís un perfil) → `Generar y guardar` → corrés `dotnet tye run tye.devtools.yaml --watch`.
+
+**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/TyeServiceSelector/data.db` — tabla `Profiles` (`Name` PK, `Services` CSV).
+
+> El `tye.devtools.yaml` generado aparece como archivo sin trackear en AlgoritmoCore — conviene agregarlo al `.gitignore` del repo.
 
 ## Servicios compartidos
 

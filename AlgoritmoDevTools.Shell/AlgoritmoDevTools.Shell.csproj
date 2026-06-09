@@ -31,6 +31,7 @@
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.CommandsMaker\AlgoritmoDevTools.Tools.CommandsMaker.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.SecretsManager\AlgoritmoDevTools.Tools.SecretsManager.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.TyeServiceSelector\AlgoritmoDevTools.Tools.TyeServiceSelector.csproj" />
   </ItemGroup>
 
   <ItemGroup>
