@@ -7,7 +7,7 @@ public sealed record TyeService(string Name, bool Enabled);
 /// <summary>
 /// Lee la lista de servicios del <c>tye.yaml</c> de AlgoritmoCore y genera un archivo
 /// derivado (<see cref="GeneratedFileName"/>) donde los servicios no seleccionados quedan
-/// comentados. El master nunca se modifica: se corre con <c>dotnet tye run tye.devtools.yaml --watch</c>.
+/// comentados. El master nunca se modifica: se corre con <c>tye run tye.devtools.yaml --watch</c>.
 ///
 /// El toggle es por comentarios de línea (prefijo "# ") para que sea reversible y preserve
 /// todo el formato del yaml — no se usa un parser YAML que reformatearía y perdería comentarios.
@@ -17,7 +17,7 @@ public sealed record TyeService(string Name, bool Enabled);
 public static class TyeServiceToggler
 {
     public const string GeneratedFileName = "tye.devtools.yaml";
-    public const string RunCommand = "dotnet tye run " + GeneratedFileName + " --watch";
+    public const string RunCommand = "tye run " + GeneratedFileName + " --watch";
 
     public static string AlgoritmoCoreRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),

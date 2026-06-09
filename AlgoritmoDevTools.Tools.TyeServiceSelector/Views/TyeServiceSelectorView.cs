@@ -9,6 +9,9 @@ public partial class TyeServiceSelectorView : UserControl
 {
     private const string SinPerfil = "(sin perfil)";
 
+    /// <summary>Servicio que siempre queda tildado y no se puede destildar.</summary>
+    private const string ServicioObligatorio = "seguridad";
+
     private readonly ProfileRepository _profiles;
     private bool _suppressProfileEvent;
 
@@ -25,7 +28,7 @@ public partial class TyeServiceSelectorView : UserControl
         tips.SetToolTip(RefrescarBtn, "Vuelve a leer el tye.yaml y refleja qué servicios están activos según el archivo generado.");
         tips.SetToolTip(MarcarTodosBtn, "Tilda todos los servicios.");
         tips.SetToolTip(DesmarcarTodosBtn, "Destilda todos los servicios.");
-        tips.SetToolTip(ServicesList, "Tildá los microservicios que querés levantar. El master tye.yaml no se modifica.");
+        tips.SetToolTip(ServicesList, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. El master tye.yaml no se modifica.");
         tips.SetToolTip(ProfilesCombo, "Elegí un perfil guardado para tildar automáticamente sus servicios.");
         tips.SetToolTip(GuardarPerfilBtn, "Guarda la selección actual como un perfil con nombre (o sobrescribe el existente).");
         tips.SetToolTip(EliminarPerfilBtn, "Elimina el perfil seleccionado.");
@@ -60,7 +63,7 @@ public partial class TyeServiceSelectorView : UserControl
         }
 
         foreach (var s in services)
-            ServicesList.Items.Add(s.Name, s.Enabled);
+            ServicesList.Items.Add(s.Name, s.Enabled || EsObligatorio(s.Name));
 
         int activos = services.Count(s => s.Enabled);
         bool hayGenerado = File.Exists(TyeServiceToggler.GeneratedYamlPath);
@@ -70,6 +73,16 @@ public partial class TyeServiceSelectorView : UserControl
                 : $"{services.Count} servicios — todos activos (todavía no generaste {TyeServiceToggler.GeneratedFileName}).",
             Color.Gray);
     }
+
+    /// <summary>Veta el destildado del servicio obligatorio (clicks, "Desmarcar todos", aplicar perfil).</summary>
+    private void ServicesList_ItemCheck(object? sender, ItemCheckEventArgs e)
+    {
+        if (e.NewValue == CheckState.Unchecked && EsObligatorio((string)ServicesList.Items[e.Index]))
+            e.NewValue = CheckState.Checked;
+    }
+
+    private static bool EsObligatorio(string serviceName)
+        => string.Equals(serviceName, ServicioObligatorio, StringComparison.OrdinalIgnoreCase);
 
     private void RefrescarBtn_Click(object? sender, EventArgs e) => LoadServices();
 

@@ -120,6 +120,7 @@ partial class TyeServiceSelectorView
         ServicesList.Size = new System.Drawing.Size(696, 360);
         ServicesList.TabIndex = 8;
         ServicesList.Font = new System.Drawing.Font("Segoe UI", 10F);
+        ServicesList.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(ServicesList_ItemCheck);
         //
         // GenerarBtn
         //
