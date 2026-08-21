@@ -6,14 +6,10 @@ using System.Drawing;
 
 namespace AlgoritmoDevTools.Tools.MarkdownConverter;
 
-public sealed class MarkdownConverterTool : ITool, IFileTool
+public sealed class MarkdownConverterTool : ITool
 {
     private static readonly Image? _icon =
         IconLoader.LoadEmbedded(typeof(MarkdownConverterTool).Assembly, "icon.ico");
-
-    // Se resuelve una sola vez: la lista de extensiones no cambia y esto se consulta por cada
-    // archivo que llega del explorador.
-    private static readonly DocumentConverter _sonda = new();
 
     public string Id => "MarkdownConverter";
     public string DisplayName => "Convertidor a Markdown";
@@ -23,7 +19,4 @@ public sealed class MarkdownConverterTool : ITool, IFileTool
     // No usa ToolStorage: el .md se escribe al lado del original, asi que no hay nada que recordar
     // entre sesiones.
     public UserControl CreateView() => new MarkdownConverterView(new DocumentConverter());
-
-    public bool CanOpen(string filePath)
-        => _sonda.ExtensionesSoportadas.Contains(Path.GetExtension(filePath), StringComparer.OrdinalIgnoreCase);
 }

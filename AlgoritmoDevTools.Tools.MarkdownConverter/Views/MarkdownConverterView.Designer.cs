@@ -27,6 +27,7 @@ partial class MarkdownConverterView
         HtmlCmb = new System.Windows.Forms.ComboBox();
         MenuAgregarBtn = new System.Windows.Forms.Button();
         MenuQuitarBtn = new System.Windows.Forms.Button();
+        MenuClasicoBtn = new System.Windows.Forms.Button();
         MenuEstadoLbl = new System.Windows.Forms.Label();
         StatusLbl = new System.Windows.Forms.Label();
         OutputTxt = new System.Windows.Forms.RichTextBox();
@@ -157,13 +158,24 @@ partial class MarkdownConverterView
         MenuQuitarBtn.UseVisualStyleBackColor = true;
         MenuQuitarBtn.Click += new System.EventHandler(MenuQuitarBtn_Click);
         //
+        // MenuClasicoBtn
+        //
+        MenuClasicoBtn.Location = new System.Drawing.Point(488, 208);
+        MenuClasicoBtn.Name = "MenuClasicoBtn";
+        MenuClasicoBtn.Size = new System.Drawing.Size(270, 32);
+        MenuClasicoBtn.TabIndex = 11;
+        MenuClasicoBtn.Text = "Menú clásico de Windows 11";
+        MenuClasicoBtn.UseVisualStyleBackColor = true;
+        MenuClasicoBtn.Visible = false;
+        MenuClasicoBtn.Click += new System.EventHandler(MenuClasicoBtn_Click);
+        //
         // MenuEstadoLbl
         //
         MenuEstadoLbl.AutoSize = false;
-        MenuEstadoLbl.Location = new System.Drawing.Point(492, 214);
+        MenuEstadoLbl.Location = new System.Drawing.Point(766, 214);
         MenuEstadoLbl.Name = "MenuEstadoLbl";
-        MenuEstadoLbl.Size = new System.Drawing.Size(720, 20);
-        MenuEstadoLbl.TabIndex = 11;
+        MenuEstadoLbl.Size = new System.Drawing.Size(446, 20);
+        MenuEstadoLbl.TabIndex = 12;
         MenuEstadoLbl.Text = string.Empty;
         MenuEstadoLbl.Font = new System.Drawing.Font("Segoe UI", 9F);
         //
@@ -206,6 +218,7 @@ partial class MarkdownConverterView
         Controls.Add(HtmlCmb);
         Controls.Add(MenuAgregarBtn);
         Controls.Add(MenuQuitarBtn);
+        Controls.Add(MenuClasicoBtn);
         Controls.Add(MenuEstadoLbl);
         Controls.Add(StatusLbl);
         Controls.Add(OutputTxt);
@@ -229,6 +242,7 @@ partial class MarkdownConverterView
     private System.Windows.Forms.ComboBox HtmlCmb;
     private System.Windows.Forms.Button MenuAgregarBtn;
     private System.Windows.Forms.Button MenuQuitarBtn;
+    private System.Windows.Forms.Button MenuClasicoBtn;
     private System.Windows.Forms.Label MenuEstadoLbl;
     private System.Windows.Forms.Label StatusLbl;
     private System.Windows.Forms.RichTextBox OutputTxt;

@@ -96,6 +96,85 @@ public static class MenuContextual
     private static string RutaDelVerbo(string extension)
         => $@"{BASE_CLASSES}\{extension}\shell\{VERBO}";
 
+    // ---------------------------------------------------------------------
+    // Menu clasico de Windows 11
+    // ---------------------------------------------------------------------
+
+    // Windows 11 manda los verbos clasicos del registro (los que usa esta tool y cualquier .reg) a
+    // "Mostrar mas opciones". Registrar este CLSID vacio desactiva el menu nuevo y devuelve el
+    // clasico completo, donde la opcion aparece directo. Es el mismo CLSID que usa el propio
+    // explorador para el menu moderno.
+    private const string CLSID_MENU_NUEVO = @"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32";
+
+    /// <summary>
+    /// True si Windows 11 o posterior. En Windows 10 el menu clasico ya es el default y no hay nada
+    /// que tocar. La build 22000 es la primera de Windows 11.
+    /// </summary>
+    public static bool EsWindows11OPosterior()
+        => Environment.OSVersion.Version.Major >= 10 && Environment.OSVersion.Version.Build >= 22000;
+
+    public static bool MenuClasicoActivado()
+    {
+        using var clave = Registry.CurrentUser.OpenSubKey(CLSID_MENU_NUEVO);
+        return clave is not null;
+    }
+
+    /// <summary>
+    /// Devuelve el menu contextual clasico de Windows 10. Afecta a TODO el sistema, no solo a esta
+    /// opcion: el que lo active lo tiene que saber. Requiere reiniciar el explorador.
+    /// </summary>
+    public static string? TryActivarMenuClasico()
+    {
+        try
+        {
+            using var clave = Registry.CurrentUser.CreateSubKey(CLSID_MENU_NUEVO);
+            if (clave is null) return "no se pudo crear la clave del registro.";
+
+            // El valor vacio es lo que desactiva el menu nuevo: le dice al explorador que la DLL
+            // que lo dibuja esta en ninguna parte.
+            clave.SetValue(null, string.Empty);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    public static string? TryDesactivarMenuClasico()
+    {
+        try
+        {
+            Registry.CurrentUser.DeleteSubKeyTree(
+                @"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}",
+                throwOnMissingSubKey: false);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Reinicia el explorador para que el cambio de menu tome efecto. Windows lo vuelve a levantar
+    /// solo.
+    /// </summary>
+    public static void ReiniciarExplorador()
+    {
+        foreach (var proceso in System.Diagnostics.Process.GetProcessesByName("explorer"))
+        {
+            try
+            {
+                proceso.Kill();
+            }
+            catch
+            {
+                // Si no se puede matar uno, se sigue con los demas.
+            }
+        }
+    }
+
     /// <summary>
     /// En un publish de archivo unico el ensamblado se extrae a una carpeta temporal, asi que
     /// Assembly.Location viene vacio. ProcessPath devuelve el .exe real, que es lo que hay que

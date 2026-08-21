@@ -4,15 +4,13 @@ using System.Diagnostics;
 
 namespace AlgoritmoDevTools.Tools.MarkdownConverter.Views;
 
-public partial class MarkdownConverterView : UserControl, IFileReceiver
+public partial class MarkdownConverterView : UserControl
 {
     private const string TITULO = "Convertidor a Markdown";
 
     private readonly DocumentConverter _converter;
     private CancellationTokenSource? _cts;
     private string? _ultimaCarpeta;
-    private IReadOnlyList<string>? _pendientes;
-    private bool _yaCargo;
 
     public MarkdownConverterView(DocumentConverter converter)
     {
@@ -68,7 +66,6 @@ public partial class MarkdownConverterView : UserControl, IFileReceiver
 
     private void MarkdownConverterView_Load(object? sender, EventArgs e)
     {
-        _yaCargo = true;
         FormatosLbl.Text = "Formatos: " + string.Join("  ", _converter.ExtensionesSoportadas);
         ActualizarEstadoDelMenu();
 
@@ -85,36 +82,8 @@ public partial class MarkdownConverterView : UserControl, IFileReceiver
         }
 
         PandocLbl.Text = "pandoc: " + _converter.PandocPath;
-        Escribir("Las imágenes se extraen a una carpeta 'media' al lado del archivo.");
+        Escribir("Las imágenes van a media\\<nombre del archivo>\\, al lado del documento.");
         Escribir(string.Empty);
-
-        // Los archivos que llegaron del explorador se convierten recién acá: en el constructor la
-        // vista todavía no está en pantalla y el log no se vería.
-        if (_pendientes is not null)
-        {
-            var deEntrada = _pendientes;
-            _pendientes = null;
-            BeginInvoke(new Action(async () => await ConvertirAsync(deEntrada)));
-        }
-    }
-
-    /// <summary>
-    /// Recibe los archivos con los que se abrió el Shell (menú contextual del explorador).
-    /// El Shell puede llamar a esto antes o después del Load de la vista según cuándo agregue el
-    /// control al panel, así que se cubren los dos casos: si la vista ya está en pantalla se
-    /// convierte de una, y si todavía no, queda pendiente para el Load.
-    /// </summary>
-    public void ReceiveFiles(IReadOnlyList<string> filePaths)
-    {
-        if (filePaths.Count == 0) return;
-
-        if (_yaCargo && IsHandleCreated)
-        {
-            BeginInvoke(new Action(async () => await ConvertirAsync(filePaths)));
-            return;
-        }
-
-        _pendientes = filePaths;
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)
@@ -186,6 +155,44 @@ public partial class MarkdownConverterView : UserControl, IFileReceiver
     }
 
     /// <summary>
+    /// En Windows 11 los verbos clásicos del registro quedan escondidos en "Mostrar más opciones".
+    /// Este botón devuelve el menú contextual completo de Windows 10, donde la opción aparece
+    /// directo. Afecta al menú de todo el sistema, así que se avisa antes.
+    /// </summary>
+    private void MenuClasicoBtn_Click(object? sender, EventArgs e)
+    {
+        var activado = MenuContextual.MenuClasicoActivado();
+
+        var pregunta = activado
+            ? "Esto vuelve al menú contextual nuevo de Windows 11, donde la opción queda dentro de \"Mostrar más opciones\".\n\n¿Seguimos?"
+            : "Windows 11 esconde las opciones agregadas en \"Mostrar más opciones\".\n\n" +
+              "Esto devuelve el menú contextual clásico de Windows 10, donde aparecen directo. " +
+              "Ojo: cambia el menú de TODO el sistema, no sólo esta opción.\n\n" +
+              "Se reinicia el explorador para aplicarlo (las ventanas abiertas se cierran y vuelven).\n\n¿Seguimos?";
+
+        if (MessageBox.Show(pregunta, TITULO, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        var error = activado
+            ? MenuContextual.TryDesactivarMenuClasico()
+            : MenuContextual.TryActivarMenuClasico();
+
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo cambiar el menú:\n{error}",
+                TITULO, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        Escribir(activado ? "Menú contextual nuevo de Windows 11 restaurado." : "Menú contextual clásico activado.");
+        Escribir("Reiniciando el explorador...");
+        Escribir(string.Empty);
+
+        MenuContextual.ReiniciarExplorador();
+        ActualizarEstadoDelMenu();
+    }
+
+    /// <summary>
     /// Habilita un botón u otro según si el verbo ya está registrado. Las dos operaciones son
     /// idempotentes igual — el registro sobreescribe y el borrado no falla si no existe —, pero
     /// deshabilitar el que no corresponde deja claro en qué estado está.
@@ -196,9 +203,23 @@ public partial class MarkdownConverterView : UserControl, IFileReceiver
 
         MenuAgregarBtn.Enabled = !instalado;
         MenuQuitarBtn.Enabled = instalado;
-        MenuEstadoLbl.Text = instalado
-            ? "En el menú contextual: sí, clic derecho sobre un documento y aparece."
+
+        // El botón del menú clásico sólo tiene sentido en Windows 11: en Windows 10 el clásico ya
+        // es el único que hay.
+        MenuClasicoBtn.Visible = MenuContextual.EsWindows11OPosterior();
+
+        var estado = instalado
+            ? "En el menú contextual: sí."
             : "En el menú contextual: no.";
+
+        if (MenuClasicoBtn.Visible)
+        {
+            var clasico = MenuContextual.MenuClasicoActivado();
+            MenuClasicoBtn.Text = clasico ? "Volver al menú de Windows 11" : "Usar el menú clásico";
+            estado += clasico ? " Menú clásico activado." : " Está en \"Mostrar más opciones\".";
+        }
+
+        MenuEstadoLbl.Text = estado;
     }
 
     private void DetenerBtn_Click(object? sender, EventArgs e)

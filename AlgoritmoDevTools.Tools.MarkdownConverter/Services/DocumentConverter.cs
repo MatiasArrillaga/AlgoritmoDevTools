@@ -145,6 +145,11 @@ public sealed class DocumentConverter
 
         var destino = Path.Combine(carpeta, Path.GetFileNameWithoutExtension(sourcePath) + ".md");
 
+        // Las imagenes se extraen a una carpeta temporal y despues se mueven a media\<archivo>\.
+        // No se puede pedirle a pandoc que las ponga ahi directamente: le pega adelante la ruta
+        // interna del documento (word/media/), asi que "media/ERS" termina dando media/ERS/media/.
+        var temporal = "." + Guid.NewGuid().ToString("N")[..8];
+
         var argumentos = new[]
         {
             sourcePath,
@@ -153,21 +158,23 @@ public sealed class DocumentConverter
             "--wrap=none",
             // Las revisiones de Word se aceptan: lo insertado queda, lo borrado no vuelve.
             "--track-changes=accept",
-            // El punto y no "media": pandoc le pega adelante la ruta interna del documento
-            // (word/media/), asi que pasarle "media" termina generando media/media/.
-            "--extract-media=."
+            "--extract-media=" + temporal
         };
 
         var error = PandocRunner.TryRun(PandocPath, argumentos, carpeta, cancellationToken);
         if (error is not null)
         {
+            LimpiarTemporal(carpeta, temporal);
             return ConversionResult.Fail(nombre, error);
         }
 
         if (!File.Exists(destino))
         {
+            LimpiarTemporal(carpeta, temporal);
             return ConversionResult.Fail(nombre, "pandoc no genero el archivo de salida.");
         }
+
+        AcomodarImagenes(carpeta, temporal, destino);
 
         var antes = new FileInfo(destino).Length;
         var tachadosQuitados = Limpiar(destino, options.QuitarTachado);
@@ -238,6 +245,97 @@ public sealed class DocumentConverter
     {
         var normalizada = ruta.Replace('\\', '/');
         return normalizada.StartsWith("./", StringComparison.Ordinal) ? normalizada[2..] : normalizada;
+    }
+
+    /// <summary>
+    /// Mueve las imagenes de la carpeta temporal a media\&lt;archivo&gt;\ y reescribe las rutas del
+    /// Markdown. La subcarpeta por documento evita que dos conversiones en la misma carpeta se
+    /// pisen las imagenes entre si: pandoc las numera image1, image2... arrancando de uno en cada
+    /// documento. Devuelve el nombre de la subcarpeta, o null si el documento no traia imagenes.
+    /// </summary>
+    private static string? AcomodarImagenes(string carpeta, string temporal, string markdownPath)
+    {
+        var origen = Path.Combine(carpeta, temporal, "media");
+        if (!Directory.Exists(origen))
+        {
+            LimpiarTemporal(carpeta, temporal);
+            return null;
+        }
+
+        var subcarpeta = NombreDeCarpetaSeguro(Path.GetFileNameWithoutExtension(markdownPath));
+        var destino = Path.Combine(carpeta, "media", subcarpeta);
+
+        try
+        {
+            Directory.CreateDirectory(destino);
+
+            foreach (var archivo in Directory.GetFiles(origen))
+            {
+                var final = Path.Combine(destino, Path.GetFileName(archivo));
+                File.Move(archivo, final, overwrite: true);
+            }
+
+            // Las rutas quedaron apuntando a la carpeta temporal.
+            var texto = File.ReadAllText(markdownPath);
+            texto = texto.Replace($"{temporal}/media/", $"media/{subcarpeta}/")
+                         .Replace($"{temporal}\\media\\", $"media/{subcarpeta}/");
+            File.WriteAllText(markdownPath, texto, new UTF8Encoding(false));
+
+            return subcarpeta;
+        }
+        catch (IOException)
+        {
+            // Si no se pudieron mover, mejor dejar el .md apuntando a la temporal que romper los
+            // links: la conversion sirve igual y el problema es visible.
+            return null;
+        }
+        finally
+        {
+            LimpiarTemporal(carpeta, temporal);
+        }
+    }
+
+    private static void LimpiarTemporal(string carpeta, string temporal)
+    {
+        var ruta = Path.Combine(carpeta, temporal);
+
+        try
+        {
+            if (Directory.Exists(ruta)) Directory.Delete(ruta, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Queda una carpeta oculta de mas; no vale abortar la conversion por eso.
+        }
+    }
+
+    /// <summary>
+    /// Los espacios y los parentesis rompen los links de Markdown, asi que el nombre del documento
+    /// no se puede usar tal cual como carpeta. Se deja solo lo que es seguro en una ruta relativa.
+    /// </summary>
+    private static string NombreDeCarpetaSeguro(string nombre)
+    {
+        var limpio = new StringBuilder(nombre.Length);
+        var ultimoFueGuion = false;
+
+        foreach (var c in nombre)
+        {
+            if (char.IsLetterOrDigit(c) && c < 128)
+            {
+                limpio.Append(c);
+                ultimoFueGuion = false;
+            }
+            else if (!ultimoFueGuion && limpio.Length > 0)
+            {
+                limpio.Append('-');
+                ultimoFueGuion = true;
+            }
+        }
+
+        var resultado = limpio.ToString().Trim('-');
+        if (resultado.Length > 50) resultado = resultado[..50].TrimEnd('-');
+
+        return resultado.Length > 0 ? resultado : "documento";
     }
 
     /// <summary>

@@ -14,6 +14,15 @@ static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        // Con archivos por linea de comandos (menu contextual del explorador) se convierte y se
+        // sale, sin abrir la ventana: abrir el Shell entero para un archivo es pesado y molesto.
+        var archivosDeEntrada = args.Where(File.Exists).ToArray();
+        if (archivosDeEntrada.Length > 0)
+        {
+            ConversionSinVentana.Ejecutar(archivosDeEntrada);
+            return;
+        }
+
         var tools = new ITool[]
         {
             new CommandsMakerTool(),
@@ -23,10 +32,6 @@ static class Program
             new MarkdownConverterTool()
         };
 
-        // Los argumentos llegan cuando el .exe se invoca desde el menu contextual del explorador.
-        // Se filtran los que sean archivos existentes: el resto se ignora en silencio.
-        var archivos = args.Where(File.Exists).ToArray();
-
-        Application.Run(new MainForm(tools, archivos));
+        Application.Run(new MainForm(tools));
     }
 }
