@@ -25,6 +25,9 @@ partial class MarkdownConverterView
         TachadoChk = new System.Windows.Forms.CheckBox();
         HtmlLbl = new System.Windows.Forms.Label();
         HtmlCmb = new System.Windows.Forms.ComboBox();
+        MenuAgregarBtn = new System.Windows.Forms.Button();
+        MenuQuitarBtn = new System.Windows.Forms.Button();
+        MenuEstadoLbl = new System.Windows.Forms.Label();
         StatusLbl = new System.Windows.Forms.Label();
         OutputTxt = new System.Windows.Forms.RichTextBox();
         DropPanel.SuspendLayout();
@@ -134,27 +137,57 @@ partial class MarkdownConverterView
         HtmlCmb.TabIndex = 8;
         HtmlCmb.Font = new System.Drawing.Font("Segoe UI", 9F);
         //
+        // MenuAgregarBtn
+        //
+        MenuAgregarBtn.Location = new System.Drawing.Point(12, 208);
+        MenuAgregarBtn.Name = "MenuAgregarBtn";
+        MenuAgregarBtn.Size = new System.Drawing.Size(230, 32);
+        MenuAgregarBtn.TabIndex = 9;
+        MenuAgregarBtn.Text = "Agregar al menú contextual";
+        MenuAgregarBtn.UseVisualStyleBackColor = true;
+        MenuAgregarBtn.Click += new System.EventHandler(MenuAgregarBtn_Click);
+        //
+        // MenuQuitarBtn
+        //
+        MenuQuitarBtn.Location = new System.Drawing.Point(250, 208);
+        MenuQuitarBtn.Name = "MenuQuitarBtn";
+        MenuQuitarBtn.Size = new System.Drawing.Size(230, 32);
+        MenuQuitarBtn.TabIndex = 10;
+        MenuQuitarBtn.Text = "Quitar del menú contextual";
+        MenuQuitarBtn.UseVisualStyleBackColor = true;
+        MenuQuitarBtn.Click += new System.EventHandler(MenuQuitarBtn_Click);
+        //
+        // MenuEstadoLbl
+        //
+        MenuEstadoLbl.AutoSize = false;
+        MenuEstadoLbl.Location = new System.Drawing.Point(492, 214);
+        MenuEstadoLbl.Name = "MenuEstadoLbl";
+        MenuEstadoLbl.Size = new System.Drawing.Size(720, 20);
+        MenuEstadoLbl.TabIndex = 11;
+        MenuEstadoLbl.Text = string.Empty;
+        MenuEstadoLbl.Font = new System.Drawing.Font("Segoe UI", 9F);
+        //
         // StatusLbl
         //
         StatusLbl.AutoSize = false;
-        StatusLbl.Location = new System.Drawing.Point(12, 212);
+        StatusLbl.Location = new System.Drawing.Point(12, 252);
         StatusLbl.Name = "StatusLbl";
         StatusLbl.Size = new System.Drawing.Size(1200, 24);
-        StatusLbl.TabIndex = 9;
+        StatusLbl.TabIndex = 12;
         StatusLbl.Text = "Listo.";
         StatusLbl.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
         //
         // OutputTxt
         //
         OutputTxt.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-        OutputTxt.Location = new System.Drawing.Point(12, 242);
+        OutputTxt.Location = new System.Drawing.Point(12, 282);
         OutputTxt.Name = "OutputTxt";
         OutputTxt.ReadOnly = true;
         OutputTxt.WordWrap = false;
         OutputTxt.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Both;
         OutputTxt.Font = new System.Drawing.Font("Consolas", 9.5F);
-        OutputTxt.Size = new System.Drawing.Size(1200, 148);
-        OutputTxt.TabIndex = 10;
+        OutputTxt.Size = new System.Drawing.Size(1200, 108);
+        OutputTxt.TabIndex = 13;
         OutputTxt.Text = "";
         //
         // MarkdownConverterView
@@ -171,6 +204,9 @@ partial class MarkdownConverterView
         Controls.Add(TachadoChk);
         Controls.Add(HtmlLbl);
         Controls.Add(HtmlCmb);
+        Controls.Add(MenuAgregarBtn);
+        Controls.Add(MenuQuitarBtn);
+        Controls.Add(MenuEstadoLbl);
         Controls.Add(StatusLbl);
         Controls.Add(OutputTxt);
         Name = "MarkdownConverterView";
@@ -191,6 +227,9 @@ partial class MarkdownConverterView
     private System.Windows.Forms.CheckBox TachadoChk;
     private System.Windows.Forms.Label HtmlLbl;
     private System.Windows.Forms.ComboBox HtmlCmb;
+    private System.Windows.Forms.Button MenuAgregarBtn;
+    private System.Windows.Forms.Button MenuQuitarBtn;
+    private System.Windows.Forms.Label MenuEstadoLbl;
     private System.Windows.Forms.Label StatusLbl;
     private System.Windows.Forms.RichTextBox OutputTxt;
 }

@@ -158,6 +158,18 @@ Cada **Tool** es un `classlib` con:
 - **Si lo que entra ya es un `.md`** (uno que generó un asistente, un plan, un README), lo único que se puede hacer con él es la vista HTML: se genera el `.html` con el tema elegido y **el `.md` original no se toca**. Si no se eligió tema, avisa que no hay nada que convertir en vez de hacer algo raro — el destino sería el mismo archivo.
 - Los **formatos viejos de Office** (`.doc`, `.ppt`, `.xls`) no los lee pandoc: avisa que hay que reguardarlos como `.docx`/`.pptx`/`.xlsx`. El **PDF** tampoco: avisa que hay que conseguir el `.docx` original.
 
+#### Menú contextual del explorador
+
+Los botones **`Agregar al menú contextual`** / **`Quitar del menú contextual`** ponen y sacan la opción *"Convertir a Markdown"* del clic derecho, para todas las extensiones soportadas. Al hacer clic derecho sobre un documento se abre el Shell **ya en esta tool y con el archivo convertido**, así se ve el resultado y los errores en el log.
+
+- Escribe en **`HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations`**: aplica sólo al usuario actual y **no necesita permisos de administrador**.
+- Usa `SystemFileAssociations` y no el ProgID de cada extensión: así no pisa la asociación de Word o Excel, que además cambia según lo que esté instalado en cada máquina.
+- La ruta que registra es la de `Environment.ProcessPath`, o sea el `.exe` que está corriendo. Con `PublishSingleFile` el ensamblado se extrae a una carpeta temporal, así que `Assembly.Location` viene vacío y no sirve. **Si movés el `.exe` de lugar, hay que volver a agregarlo.**
+- Las dos operaciones son **idempotentes**: agregar dos veces no duplica nada (`CreateSubKey` abre si ya existe y `SetValue` sobreescribe) y quitar sobre algo que no está no falla. Igual, sólo se habilita el botón que corresponde al estado actual, que se muestra al lado.
+- Al terminar avisa al explorador con `SHChangeNotify(SHCNE_ASSOCCHANGED)`, si no el menú puede tardar en reflejar el cambio.
+
+> Con `"%1"` Windows lanza **un proceso por archivo**: si seleccionás diez documentos y hacés clic derecho, arrancan diez instancias. Para varios archivos conviene arrastrarlos juntos a la ventana, que los procesa en lote.
+
 **Requisito**: pandoc instalado (`winget install --id JohnMacFarlane.Pandoc -e`). La tool lo busca al lado del `.exe` primero — así se puede repartir el Shell con `pandoc.exe` en la misma carpeta —, después en `%LOCALAPPDATA%\Pandoc\` y por último en el PATH. Si no lo encuentra, la vista lo dice y muestra el comando de instalación en vez de fallar.
 
 **Storage**: ninguno. El `.md` se escribe al lado del original, así que no hay nada que recordar entre sesiones.

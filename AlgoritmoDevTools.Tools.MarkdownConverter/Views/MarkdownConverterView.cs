@@ -1,15 +1,18 @@
-﻿using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
+﻿using AlgoritmoDevTools.Core.Abstractions;
+using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
 using System.Diagnostics;
 
 namespace AlgoritmoDevTools.Tools.MarkdownConverter.Views;
 
-public partial class MarkdownConverterView : UserControl
+public partial class MarkdownConverterView : UserControl, IFileReceiver
 {
     private const string TITULO = "Convertidor a Markdown";
 
     private readonly DocumentConverter _converter;
     private CancellationTokenSource? _cts;
     private string? _ultimaCarpeta;
+    private IReadOnlyList<string>? _pendientes;
+    private bool _yaCargo;
 
     public MarkdownConverterView(DocumentConverter converter)
     {
@@ -29,6 +32,8 @@ public partial class MarkdownConverterView : UserControl
         tips.SetToolTip(AbrirCarpetaBtn, "Abre la carpeta del último archivo convertido.");
         tips.SetToolTip(TachadoChk, "En las ERS el texto tachado son requisitos que se descartaron. Sacarlo ahorra contexto y evita que el asistente implemente algo que ya no va.");
         tips.SetToolTip(HtmlCmb, "Genera además un .html con estilos para leer el documento cómodo. El .md no lleva estilos: el tema aplica sólo al HTML.");
+        tips.SetToolTip(MenuAgregarBtn, "Agrega 'Convertir a Markdown' al clic derecho del explorador, para todos los formatos soportados. Va en HKEY_CURRENT_USER: no necesita permisos de administrador.");
+        tips.SetToolTip(MenuQuitarBtn, "Saca la opción del clic derecho y deja el registro como estaba.");
         tips.SetToolTip(OutputTxt, "Resultado de cada archivo: tamaño del .md y cuánto relleno de Word se descartó.");
     }
 
@@ -63,7 +68,9 @@ public partial class MarkdownConverterView : UserControl
 
     private void MarkdownConverterView_Load(object? sender, EventArgs e)
     {
+        _yaCargo = true;
         FormatosLbl.Text = "Formatos: " + string.Join("  ", _converter.ExtensionesSoportadas);
+        ActualizarEstadoDelMenu();
 
         if (!_converter.PandocDisponible)
         {
@@ -80,6 +87,34 @@ public partial class MarkdownConverterView : UserControl
         PandocLbl.Text = "pandoc: " + _converter.PandocPath;
         Escribir("Las imágenes se extraen a una carpeta 'media' al lado del archivo.");
         Escribir(string.Empty);
+
+        // Los archivos que llegaron del explorador se convierten recién acá: en el constructor la
+        // vista todavía no está en pantalla y el log no se vería.
+        if (_pendientes is not null)
+        {
+            var deEntrada = _pendientes;
+            _pendientes = null;
+            BeginInvoke(new Action(async () => await ConvertirAsync(deEntrada)));
+        }
+    }
+
+    /// <summary>
+    /// Recibe los archivos con los que se abrió el Shell (menú contextual del explorador).
+    /// El Shell puede llamar a esto antes o después del Load de la vista según cuándo agregue el
+    /// control al panel, así que se cubren los dos casos: si la vista ya está en pantalla se
+    /// convierte de una, y si todavía no, queda pendiente para el Load.
+    /// </summary>
+    public void ReceiveFiles(IReadOnlyList<string> filePaths)
+    {
+        if (filePaths.Count == 0) return;
+
+        if (_yaCargo && IsHandleCreated)
+        {
+            BeginInvoke(new Action(async () => await ConvertirAsync(filePaths)));
+            return;
+        }
+
+        _pendientes = filePaths;
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)
@@ -111,6 +146,59 @@ public partial class MarkdownConverterView : UserControl
         {
             await ConvertirAsync(dialog.FileNames);
         }
+    }
+
+    private void MenuAgregarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextual.TryInstalar(_converter.ExtensionesSoportadas);
+
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo agregar al menú contextual:\n{error}",
+                TITULO, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        else
+        {
+            Escribir($"Agregado al menú contextual para {_converter.ExtensionesSoportadas.Count} extensiones.");
+            Escribir("Probalo: clic derecho sobre un documento → Convertir a Markdown.");
+            Escribir(string.Empty);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    private void MenuQuitarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextual.TryDesinstalar(_converter.ExtensionesSoportadas);
+
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo quitar del menú contextual:\n{error}",
+                TITULO, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        else
+        {
+            Escribir("Quitado del menú contextual.");
+            Escribir(string.Empty);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    /// <summary>
+    /// Habilita un botón u otro según si el verbo ya está registrado. Las dos operaciones son
+    /// idempotentes igual — el registro sobreescribe y el borrado no falla si no existe —, pero
+    /// deshabilitar el que no corresponde deja claro en qué estado está.
+    /// </summary>
+    private void ActualizarEstadoDelMenu()
+    {
+        var instalado = MenuContextual.EstaInstalado(_converter.ExtensionesSoportadas);
+
+        MenuAgregarBtn.Enabled = !instalado;
+        MenuQuitarBtn.Enabled = instalado;
+        MenuEstadoLbl.Text = instalado
+            ? "En el menú contextual: sí, clic derecho sobre un documento y aparece."
+            : "En el menú contextual: no.";
     }
 
     private void DetenerBtn_Click(object? sender, EventArgs e)
