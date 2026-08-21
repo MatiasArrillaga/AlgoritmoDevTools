@@ -154,7 +154,8 @@ Cada **Tool** es un `classlib` con:
   | Las líneas en blanco que deja el índice al salir | Evita un hueco de veinte líneas |
 
   El patrón del índice exige el número de página anidado a propósito: así **nunca borra un link escrito a mano**.
-- **Formatos**: `.docx` `.odt` `.rtf` `.pptx` `.xlsx` `.html` `.htm` `.epub` `.ipynb` `.csv` `.org` `.rst` `.tex` (sale de `pandoc --list-input-formats`).
+- **Formatos**: `.docx` `.odt` `.rtf` `.pptx` `.xlsx` `.html` `.htm` `.epub` `.ipynb` `.csv` `.org` `.rst` `.tex` (sale de `pandoc --list-input-formats`), más `.md` y `.markdown`.
+- **Si lo que entra ya es un `.md`** (uno que generó un asistente, un plan, un README), lo único que se puede hacer con él es la vista HTML: se genera el `.html` con el tema elegido y **el `.md` original no se toca**. Si no se eligió tema, avisa que no hay nada que convertir en vez de hacer algo raro — el destino sería el mismo archivo.
 - Los **formatos viejos de Office** (`.doc`, `.ppt`, `.xls`) no los lee pandoc: avisa que hay que reguardarlos como `.docx`/`.pptx`/`.xlsx`. El **PDF** tampoco: avisa que hay que conseguir el `.docx` original.
 
 **Requisito**: pandoc instalado (`winget install --id JohnMacFarlane.Pandoc -e`). La tool lo busca al lado del `.exe` primero — así se puede repartir el Shell con `pandoc.exe` en la misma carpeta —, después en `%LOCALAPPDATA%\Pandoc\` y por último en el PATH. Si no lo encuentra, la vista lo dice y muestra el comando de instalación en vez de fallar.
