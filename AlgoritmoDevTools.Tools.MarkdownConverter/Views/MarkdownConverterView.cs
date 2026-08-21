@@ -15,6 +15,7 @@ public partial class MarkdownConverterView : UserControl
     {
         _converter = converter;
         InitializeComponent();
+        SetupOpciones();
         SetupTooltips();
         SetupDragAndDrop();
     }
@@ -26,7 +27,27 @@ public partial class MarkdownConverterView : UserControl
         tips.SetToolTip(ElegirBtn, "Abre el explorador para elegir los documentos a convertir.");
         tips.SetToolTip(DetenerBtn, "Corta la conversión en curso. Los archivos ya convertidos quedan.");
         tips.SetToolTip(AbrirCarpetaBtn, "Abre la carpeta del último archivo convertido.");
+        tips.SetToolTip(TachadoChk, "En las ERS el texto tachado son requisitos que se descartaron. Sacarlo ahorra contexto y evita que el asistente implemente algo que ya no va.");
+        tips.SetToolTip(HtmlCmb, "Genera además un .html con estilos para leer el documento cómodo. El .md no lleva estilos: el tema aplica sólo al HTML.");
         tips.SetToolTip(OutputTxt, "Resultado de cada archivo: tamaño del .md y cuánto relleno de Word se descartó.");
+    }
+
+    private void SetupOpciones()
+    {
+        HtmlCmb.Items.AddRange(new object[] { "no generar", "tema claro", "tema oscuro" });
+        HtmlCmb.SelectedIndex = 0;
+    }
+
+    private ConversionOptions OpcionesActuales()
+    {
+        HtmlTheme? tema = HtmlCmb.SelectedIndex switch
+        {
+            1 => HtmlTheme.Claro,
+            2 => HtmlTheme.Oscuro,
+            _ => null
+        };
+
+        return new ConversionOptions(TachadoChk.Checked, tema);
     }
 
     // El drop se engancha en el panel y en su label: si sólo se enganchara en el panel, soltar
@@ -112,6 +133,8 @@ public partial class MarkdownConverterView : UserControl
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
+        var opciones = OpcionesActuales();
+
         ElegirBtn.Enabled = false;
         DropPanel.Enabled = false;
         DetenerBtn.Enabled = true;
@@ -137,7 +160,7 @@ public partial class MarkdownConverterView : UserControl
                 ConversionResult resultado;
                 try
                 {
-                    resultado = await Task.Run(() => _converter.Convert(ruta, token), token);
+                    resultado = await Task.Run(() => _converter.Convert(ruta, opciones, token), token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -181,12 +204,24 @@ public partial class MarkdownConverterView : UserControl
             return $"ERROR     {resultado.SourceName}  ->  {resultado.Error}";
         }
 
-        var peso = (resultado.OutputBytes / 1024.0).ToString("0.0") + " KB";
-        var recorte = resultado.TrimmedPercent > 0
-            ? $", {resultado.TrimmedPercent}% menos de relleno"
-            : string.Empty;
+        var detalle = new List<string> { (resultado.OutputBytes / 1024.0).ToString("0.0") + " KB" };
 
-        return $"OK        {Path.GetFileName(resultado.OutputPath!)}  ({peso}{recorte})";
+        if (resultado.TrimmedPercent > 0)
+        {
+            detalle.Add($"{resultado.TrimmedPercent}% menos de relleno");
+        }
+
+        if (resultado.StrikeRemoved > 0)
+        {
+            detalle.Add($"{resultado.StrikeRemoved} tachado(s) fuera");
+        }
+
+        if (resultado.HtmlPath is not null)
+        {
+            detalle.Add("+ " + Path.GetFileName(resultado.HtmlPath));
+        }
+
+        return $"OK        {Path.GetFileName(resultado.OutputPath!)}  ({string.Join(", ", detalle)})";
     }
 
     private void Escribir(string linea) => OutputTxt.AppendText(linea + Environment.NewLine);

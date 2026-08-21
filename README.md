@@ -143,6 +143,8 @@ Cada **Tool** es un `classlib` con:
 - **Por qué importa**: un PDF no se lee como texto — cada página se procesa como imagen, unos 1500-2000 tokens cada una, así que una ERS de 30 páginas se lleva 50k+ tokens. El mismo documento en HTML cuesta unas 4 veces más que en Markdown. Convertido, la ERS de A Remito (1.370 KB de `.docx`) queda en **5,6 KB de `.md` (~1,4k tokens)**, y además se puede leer por secciones en vez de entera.
 - **Arrastrar y soltar** uno o varios archivos sobre el panel, o `Elegir archivos...`. El `.md` queda **al lado del original**.
 - **Las imágenes van a una carpeta `media/`** con ruta relativa, así el `.md` es liviano, portable y se abren sólo las que hacen falta. Clave en nuestras ERS, donde las tablas de campos y los recuadros rojos son capturas.
+- **`Quitar el texto tachado`** (tildado por defecto): en las ERS el tachado marca requisitos que se descartaron. Sacarlo no sólo ahorra contexto — evita que el asistente implemente algo que ya no va. Funciona con el tachado de párrafo entero (la línea desaparece) y con el que está en el medio de una oración (se saca sólo ese fragmento). Destildarlo lo deja pasar tal cual.
+- **`HTML para leer`** (`no generar` / `tema claro` / `tema oscuro`): genera además un `.html` autocontenido con el CSS embebido, para leer el documento cómodo. El Markdown no lleva estilos — cuando se abre un `.md` con `Ctrl+Shift+V` el tema lo pone VS Code, no el archivo —, así que si la preview se ve mal, esta es la salida que sí controla los colores. El HTML se genera **a partir del `.md` ya limpio**, así hereda la misma limpieza.
 - **Limpieza del relleno de Word** — en una ERS típica es cerca de un tercio del archivo:
 
   | Se descarta | Por qué |
@@ -160,6 +162,8 @@ Cada **Tool** es un `classlib` con:
 **Storage**: ninguno. El `.md` se escribe al lado del original, así que no hay nada que recordar entre sesiones.
 
 > No usa `ProcessRunner` del Core: ese wrapper expone `dotnet` y `powershell`, y llamar a pandoc a través de powershell obligaría a escapar rutas con espacios y comillas. `Services/PandocRunner.cs` replica el mismo criterio (sin ventana, UTF-8, `Kill(entireProcessTree)` al cancelar) invocando el ejecutable directo con `ArgumentList`.
+
+> **Cuidado con `--extract-media`**: va con un punto (`--extract-media=.`), no con `media`. Pandoc le pega adelante la ruta interna del documento (`word/media/`), así que pasarle `media` termina generando `media/media/image1.png`. Con el punto queda `media/image1.png`.
 
 ## Servicios compartidos
 

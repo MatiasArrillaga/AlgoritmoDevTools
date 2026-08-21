@@ -22,6 +22,9 @@ partial class MarkdownConverterView
         ElegirBtn = new System.Windows.Forms.Button();
         DetenerBtn = new System.Windows.Forms.Button();
         AbrirCarpetaBtn = new System.Windows.Forms.Button();
+        TachadoChk = new System.Windows.Forms.CheckBox();
+        HtmlLbl = new System.Windows.Forms.Label();
+        HtmlCmb = new System.Windows.Forms.ComboBox();
         StatusLbl = new System.Windows.Forms.Label();
         OutputTxt = new System.Windows.Forms.RichTextBox();
         DropPanel.SuspendLayout();
@@ -100,13 +103,44 @@ partial class MarkdownConverterView
         AbrirCarpetaBtn.UseVisualStyleBackColor = true;
         AbrirCarpetaBtn.Click += new System.EventHandler(AbrirCarpetaBtn_Click);
         //
+        // TachadoChk
+        //
+        TachadoChk.Checked = true;
+        TachadoChk.CheckState = System.Windows.Forms.CheckState.Checked;
+        TachadoChk.Location = new System.Drawing.Point(490, 174);
+        TachadoChk.Name = "TachadoChk";
+        TachadoChk.Size = new System.Drawing.Size(210, 24);
+        TachadoChk.TabIndex = 6;
+        TachadoChk.Text = "Quitar el texto tachado";
+        TachadoChk.UseVisualStyleBackColor = true;
+        TachadoChk.Font = new System.Drawing.Font("Segoe UI", 9F);
+        //
+        // HtmlLbl
+        //
+        HtmlLbl.AutoSize = false;
+        HtmlLbl.Location = new System.Drawing.Point(712, 176);
+        HtmlLbl.Name = "HtmlLbl";
+        HtmlLbl.Size = new System.Drawing.Size(90, 20);
+        HtmlLbl.TabIndex = 7;
+        HtmlLbl.Text = "HTML para leer:";
+        HtmlLbl.Font = new System.Drawing.Font("Segoe UI", 9F);
+        //
+        // HtmlCmb
+        //
+        HtmlCmb.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+        HtmlCmb.Location = new System.Drawing.Point(808, 172);
+        HtmlCmb.Name = "HtmlCmb";
+        HtmlCmb.Size = new System.Drawing.Size(150, 28);
+        HtmlCmb.TabIndex = 8;
+        HtmlCmb.Font = new System.Drawing.Font("Segoe UI", 9F);
+        //
         // StatusLbl
         //
         StatusLbl.AutoSize = false;
         StatusLbl.Location = new System.Drawing.Point(12, 212);
         StatusLbl.Name = "StatusLbl";
         StatusLbl.Size = new System.Drawing.Size(1200, 24);
-        StatusLbl.TabIndex = 6;
+        StatusLbl.TabIndex = 9;
         StatusLbl.Text = "Listo.";
         StatusLbl.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
         //
@@ -120,7 +154,7 @@ partial class MarkdownConverterView
         OutputTxt.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Both;
         OutputTxt.Font = new System.Drawing.Font("Consolas", 9.5F);
         OutputTxt.Size = new System.Drawing.Size(1200, 148);
-        OutputTxt.TabIndex = 7;
+        OutputTxt.TabIndex = 10;
         OutputTxt.Text = "";
         //
         // MarkdownConverterView
@@ -134,6 +168,9 @@ partial class MarkdownConverterView
         Controls.Add(ElegirBtn);
         Controls.Add(DetenerBtn);
         Controls.Add(AbrirCarpetaBtn);
+        Controls.Add(TachadoChk);
+        Controls.Add(HtmlLbl);
+        Controls.Add(HtmlCmb);
         Controls.Add(StatusLbl);
         Controls.Add(OutputTxt);
         Name = "MarkdownConverterView";
@@ -151,6 +188,9 @@ partial class MarkdownConverterView
     private System.Windows.Forms.Button ElegirBtn;
     private System.Windows.Forms.Button DetenerBtn;
     private System.Windows.Forms.Button AbrirCarpetaBtn;
+    private System.Windows.Forms.CheckBox TachadoChk;
+    private System.Windows.Forms.Label HtmlLbl;
+    private System.Windows.Forms.ComboBox HtmlCmb;
     private System.Windows.Forms.Label StatusLbl;
     private System.Windows.Forms.RichTextBox OutputTxt;
 }
