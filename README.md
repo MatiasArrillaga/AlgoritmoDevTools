@@ -8,6 +8,7 @@ Suite de utilidades para el desarrollo diario sobre **SoftCerealCore** / **Algor
 - .NET 8 SDK (para compilar) — no hace falta runtime instalado para ejecutar el exe final, va todo bundleado.
 - `git` en PATH (lo usa el Schema Change Detector).
 - Repo `AlgoritmoCore` clonado en `~/source/repos/AlgoritmoCore`. Las tools asumen esa ruta hardcodeada.
+- `pandoc` (sólo para el Convertidor a Markdown): `winget install --id JohnMacFarlane.Pandoc -e`. Sin él, el resto de las tools funciona igual.
 
 ## Cómo correrlo
 
@@ -54,7 +55,8 @@ AlgoritmoDevTools/
 ├── AlgoritmoDevTools.Tools.CommandsMaker/
 ├── AlgoritmoDevTools.Tools.SecretsManager/
 ├── AlgoritmoDevTools.Tools.ModelDriftChecker/      Schema Change Detector
-└── AlgoritmoDevTools.Tools.TyeServiceSelector/     Selector de Servicios (Tye)
+├── AlgoritmoDevTools.Tools.TyeServiceSelector/     Selector de Servicios (Tye)
+└── AlgoritmoDevTools.Tools.MarkdownConverter/      Convertidor a Markdown (pandoc)
 ```
 
 Cada **Tool** es un `classlib` con:
@@ -133,6 +135,31 @@ Cada **Tool** es un `classlib` con:
 **Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/TyeServiceSelector/data.db` — tabla `Profiles` (`Name` PK, `Services` CSV).
 
 > El `tye.devtools.yaml` generado aparece como archivo sin trackear en AlgoritmoCore — conviene agregarlo al `.gitignore` del repo.
+
+### 📝 Convertidor a Markdown
+
+**Qué hace**: convierte ERS, relevamientos y planes a Markdown, para poder pasárselos a un asistente (Claude Code, Copilot) sin gastar contexto de más.
+
+- **Por qué importa**: un PDF no se lee como texto — cada página se procesa como imagen, unos 1500-2000 tokens cada una, así que una ERS de 30 páginas se lleva 50k+ tokens. El mismo documento en HTML cuesta unas 4 veces más que en Markdown. Convertido, la ERS de A Remito (1.370 KB de `.docx`) queda en **5,6 KB de `.md` (~1,4k tokens)**, y además se puede leer por secciones en vez de entera.
+- **Arrastrar y soltar** uno o varios archivos sobre el panel, o `Elegir archivos...`. El `.md` queda **al lado del original**.
+- **Las imágenes van a una carpeta `media/`** con ruta relativa, así el `.md` es liviano, portable y se abren sólo las que hacen falta. Clave en nuestras ERS, donde las tablas de campos y los recuadros rojos son capturas.
+- **Limpieza del relleno de Word** — en una ERS típica es cerca de un tercio del archivo:
+
+  | Se descarta | Por qué |
+  |---|---|
+  | El índice de contenido (`[Introducción [1](#introducción)](#introducción)`) | Los encabezados ya están; el índice es ~22% del archivo |
+  | El `style="width:5.9in;height:1.08in"` de cada imagen | Queda `![](media/image1.png)`, que dice lo mismo |
+  | Las líneas en blanco que deja el índice al salir | Evita un hueco de veinte líneas |
+
+  El patrón del índice exige el número de página anidado a propósito: así **nunca borra un link escrito a mano**.
+- **Formatos**: `.docx` `.odt` `.rtf` `.pptx` `.xlsx` `.html` `.htm` `.epub` `.ipynb` `.csv` `.org` `.rst` `.tex` (sale de `pandoc --list-input-formats`).
+- Los **formatos viejos de Office** (`.doc`, `.ppt`, `.xls`) no los lee pandoc: avisa que hay que reguardarlos como `.docx`/`.pptx`/`.xlsx`. El **PDF** tampoco: avisa que hay que conseguir el `.docx` original.
+
+**Requisito**: pandoc instalado (`winget install --id JohnMacFarlane.Pandoc -e`). La tool lo busca al lado del `.exe` primero — así se puede repartir el Shell con `pandoc.exe` en la misma carpeta —, después en `%LOCALAPPDATA%\Pandoc\` y por último en el PATH. Si no lo encuentra, la vista lo dice y muestra el comando de instalación en vez de fallar.
+
+**Storage**: ninguno. El `.md` se escribe al lado del original, así que no hay nada que recordar entre sesiones.
+
+> No usa `ProcessRunner` del Core: ese wrapper expone `dotnet` y `powershell`, y llamar a pandoc a través de powershell obligaría a escapar rutas con espacios y comillas. `Services/PandocRunner.cs` replica el mismo criterio (sin ventana, UTF-8, `Kill(entireProcessTree)` al cancelar) invocando el ejecutable directo con `ArgumentList`.
 
 ## Servicios compartidos
 
