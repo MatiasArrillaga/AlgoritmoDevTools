@@ -142,7 +142,7 @@ Cada **Tool** es un `classlib` con:
 
 - **Por qué importa**: un PDF no se lee como texto — cada página se procesa como imagen, unos 1500-2000 tokens cada una, así que una ERS de 30 páginas se lleva 50k+ tokens. El mismo documento en HTML cuesta unas 4 veces más que en Markdown. Convertido, la ERS de A Remito (1.370 KB de `.docx`) queda en **5,6 KB de `.md` (~1,4k tokens)**, y además se puede leer por secciones en vez de entera.
 - **Arrastrar y soltar** uno o varios archivos sobre el panel, o `Elegir archivos...`. El `.md` queda **al lado del original**.
-- **Las imágenes van a una carpeta `media/`** con ruta relativa, así el `.md` es liviano, portable y se abren sólo las que hacen falta. Clave en nuestras ERS, donde las tablas de campos y los recuadros rojos son capturas.
+- **Las imágenes van a `media/<nombre del documento>/`** con ruta relativa, así el `.md` es liviano, portable y se abren sólo las que hacen falta. Clave en nuestras ERS, donde las tablas de campos y los recuadros rojos son capturas. La **subcarpeta por documento** es necesaria porque pandoc numera las imágenes `image1`, `image2`... arrancando de uno en cada archivo: sin ella, convertir dos ERS en la misma carpeta hace que la segunda pise las imágenes de la primera.
 - **`Quitar el texto tachado`** (tildado por defecto): en las ERS el tachado marca requisitos que se descartaron. Sacarlo no sólo ahorra contexto — evita que el asistente implemente algo que ya no va. Funciona con el tachado de párrafo entero (la línea desaparece) y con el que está en el medio de una oración (se saca sólo ese fragmento). Destildarlo lo deja pasar tal cual.
 - **`HTML para leer`** (`no generar` / `tema claro` / `tema oscuro`): genera además un `.html` autocontenido con el CSS embebido, para leer el documento cómodo. El Markdown no lleva estilos — cuando se abre un `.md` con `Ctrl+Shift+V` el tema lo pone VS Code, no el archivo —, así que si la preview se ve mal, esta es la salida que sí controla los colores. El HTML se genera **a partir del `.md` ya limpio**, así hereda la misma limpieza.
 - **Limpieza del relleno de Word** — en una ERS típica es cerca de un tercio del archivo:
@@ -160,7 +160,11 @@ Cada **Tool** es un `classlib` con:
 
 #### Menú contextual del explorador
 
-Los botones **`Agregar al menú contextual`** / **`Quitar del menú contextual`** ponen y sacan la opción *"Convertir a Markdown"* del clic derecho, para todas las extensiones soportadas. Al hacer clic derecho sobre un documento se abre el Shell **ya en esta tool y con el archivo convertido**, así se ve el resultado y los errores en el log.
+Los botones **`Agregar al menú contextual`** / **`Quitar del menú contextual`** ponen y sacan la opción *"Convertir a Markdown"* del clic derecho, para todas las extensiones soportadas.
+
+Al hacer clic derecho sobre un documento **la conversión corre sin abrir la ventana**: aparece el `.md` al lado del original y el proceso termina. El éxito no se avisa porque ya se ve en la carpeta; **sólo aparece un cartel cuando algo falla** (falta pandoc, formato viejo de Office, error de pandoc), que es lo que de otro modo pasaría desapercibido.
+
+> En **Windows 11**, los verbos clásicos del registro — los que usa esta tool y cualquier `.reg` — quedan escondidos en *"Mostrar más opciones"*: es una decisión de diseño de Windows 11 y no se puede evitar sin empaquetar un `IExplorerCommand` en un MSIX. Para eso está el botón **`Usar el menú clásico`**, que sólo aparece en Windows 11 y devuelve el menú contextual completo de Windows 10, donde la opción sale directo. Ojo que **cambia el menú de todo el sistema**, no sólo esta opción, y reinicia el explorador para aplicarlo. Es reversible con el mismo botón.
 
 - Escribe en **`HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations`**: aplica sólo al usuario actual y **no necesita permisos de administrador**.
 - Usa `SystemFileAssociations` y no el ProgID de cada extensión: así no pisa la asociación de Word o Excel, que además cambia según lo que esté instalado en cada máquina.
