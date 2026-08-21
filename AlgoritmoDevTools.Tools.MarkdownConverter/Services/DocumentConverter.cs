@@ -56,7 +56,15 @@ public sealed class DocumentConverter
     // de Office no estan y se avisan aparte.
     private static readonly HashSet<string> Soportados = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".docx", ".odt", ".rtf", ".pptx", ".xlsx", ".html", ".htm", ".epub", ".ipynb", ".csv", ".org", ".rst", ".tex"
+        ".docx", ".odt", ".rtf", ".pptx", ".xlsx", ".html", ".htm", ".epub", ".ipynb", ".csv", ".org", ".rst", ".tex",
+        ".md", ".markdown"
+    };
+
+    // Un .md que entra no se puede convertir a .md: el destino seria el mismo archivo. Para estos
+    // la salida es el HTML de lectura y el original queda intacto.
+    private static readonly HashSet<string> YaSonMarkdown = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".md", ".markdown"
     };
 
     private static readonly HashSet<string> FormatosViejos = new(StringComparer.OrdinalIgnoreCase)
@@ -114,6 +122,25 @@ public sealed class DocumentConverter
         if (string.IsNullOrEmpty(carpeta))
         {
             return ConversionResult.Fail(nombre, "No se pudo determinar la carpeta del archivo.");
+        }
+
+        // Un .md ya es Markdown: lo unico que se puede hacer con el es la vista HTML, y el archivo
+        // original no se toca.
+        if (YaSonMarkdown.Contains(extension))
+        {
+            if (options.Html is null)
+            {
+                return ConversionResult.Skip(nombre, "ya es Markdown: elegí un tema en 'HTML para leer' si querés la vista para leerlo.");
+            }
+
+            var html = GenerarHtml(sourcePath, carpeta, options.Html.Value, cancellationToken, out var errorSoloHtml);
+            if (html is null)
+            {
+                return ConversionResult.Fail(nombre, errorSoloHtml ?? "no se pudo generar el HTML.");
+            }
+
+            // El "resultado" es el HTML: es lo unico que se genero.
+            return ConversionResult.Ok(nombre, html, null, new FileInfo(html).Length, 0, 0);
         }
 
         var destino = Path.Combine(carpeta, Path.GetFileNameWithoutExtension(sourcePath) + ".md");
