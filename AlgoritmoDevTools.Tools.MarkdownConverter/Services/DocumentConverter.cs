@@ -1,21 +1,48 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AlgoritmoDevTools.Tools.MarkdownConverter.Services;
+
+/// <summary>
+/// Tema del HTML de lectura. El Markdown no lleva estilos: el tema aplica al HTML que se genera
+/// aparte para leer el documento comodo.
+/// </summary>
+public enum HtmlTheme
+{
+    Claro,
+    Oscuro
+}
+
+/// <summary>
+/// Que hacer con cada documento. <paramref name="Html"/> en null no genera HTML.
+/// </summary>
+public sealed record ConversionOptions(bool QuitarTachado, HtmlTheme? Html)
+{
+    public static ConversionOptions Default => new(QuitarTachado: true, Html: null);
+}
 
 /// <summary>
 /// Resultado de convertir un archivo. Sigue el patron TryXxx del resto de la suite: nunca tira,
 /// el error viaja en <see cref="Error"/>.
 /// </summary>
-public sealed record ConversionResult(string SourceName, string? OutputPath, long OutputBytes, int TrimmedPercent, string? Error, bool Skipped)
+public sealed record ConversionResult(
+    string SourceName,
+    string? OutputPath,
+    string? HtmlPath,
+    long OutputBytes,
+    int TrimmedPercent,
+    int StrikeRemoved,
+    string? Error,
+    bool Skipped)
 {
-    public static ConversionResult Ok(string sourceName, string outputPath, long bytes, int trimmed)
-        => new(sourceName, outputPath, bytes, trimmed, null, false);
+    public static ConversionResult Ok(string sourceName, string outputPath, string? htmlPath, long bytes, int trimmed, int strike)
+        => new(sourceName, outputPath, htmlPath, bytes, trimmed, strike, null, false);
 
     public static ConversionResult Fail(string sourceName, string error)
-        => new(sourceName, null, 0, 0, error, false);
+        => new(sourceName, null, null, 0, 0, 0, error, false);
 
     public static ConversionResult Skip(string sourceName, string motivo)
-        => new(sourceName, null, 0, 0, motivo, true);
+        => new(sourceName, null, null, 0, 0, 0, motivo, true);
 }
 
 /// <summary>
@@ -47,13 +74,17 @@ public sealed class DocumentConverter
     // HTML con los estilos adentro. La ruta es lo unico que hace falta.
     private static readonly Regex ImagenHtml = new(@"<img\s+src=""([^""]+)""[^>]*?/?>", RegexOptions.Compiled);
 
+    // Texto tachado: en las ERS marca requisitos que se descartaron. Sacarlo no solo ahorra
+    // contexto, evita que el asistente implemente algo que ya no va.
+    private static readonly Regex Tachado = new(@"~~(.+?)~~", RegexOptions.Compiled);
+
     public bool PandocDisponible => PandocPath is not null;
 
     public string? PandocPath { get; } = PandocRunner.Locate();
 
     public IReadOnlyCollection<string> ExtensionesSoportadas => Soportados;
 
-    public ConversionResult Convert(string sourcePath, CancellationToken cancellationToken)
+    public ConversionResult Convert(string sourcePath, ConversionOptions options, CancellationToken cancellationToken)
     {
         var nombre = Path.GetFileName(sourcePath);
 
@@ -93,9 +124,11 @@ public sealed class DocumentConverter
             "-t", "gfm",
             "-o", destino,
             "--wrap=none",
-            // Relativo y no absoluto: asi el .md queda portable y las rutas de las imagenes no
-            // arrastran el nombre de usuario de quien convirtio.
-            "--extract-media=media"
+            // Las revisiones de Word se aceptan: lo insertado queda, lo borrado no vuelve.
+            "--track-changes=accept",
+            // El punto y no "media": pandoc le pega adelante la ruta interna del documento
+            // (word/media/), asi que pasarle "media" termina generando media/media/.
+            "--extract-media=."
         };
 
         var error = PandocRunner.TryRun(PandocPath, argumentos, carpeta, cancellationToken);
@@ -110,30 +143,55 @@ public sealed class DocumentConverter
         }
 
         var antes = new FileInfo(destino).Length;
-        Limpiar(destino);
+        var tachadosQuitados = Limpiar(destino, options.QuitarTachado);
         var despues = new FileInfo(destino).Length;
 
         var recorte = antes > 0 && despues < antes ? (int)((antes - despues) * 100 / antes) : 0;
-        return ConversionResult.Ok(nombre, destino, despues, recorte);
+
+        string? htmlPath = null;
+        if (options.Html is not null)
+        {
+            htmlPath = GenerarHtml(destino, carpeta, options.Html.Value, cancellationToken, out var errorHtml);
+            if (htmlPath is null)
+            {
+                return ConversionResult.Fail(nombre, "el .md salio bien pero el HTML fallo: " + errorHtml);
+            }
+        }
+
+        return ConversionResult.Ok(nombre, destino, htmlPath, despues, recorte, tachadosQuitados);
     }
 
     /// <summary>
-    /// Saca del Markdown lo que Word arrastra y no aporta al leerlo: el indice de contenido y el
-    /// alto y ancho de cada imagen. En una ERS tipica eso es cerca de un tercio del archivo.
+    /// Saca del Markdown lo que Word arrastra y no aporta al leerlo: el indice de contenido, el
+    /// alto y ancho de cada imagen y, si se pide, el texto tachado. Devuelve cuantos fragmentos
+    /// tachados se quitaron.
     /// </summary>
-    private static void Limpiar(string path)
+    private static int Limpiar(string path, bool quitarTachado)
     {
         var lineas = File.ReadAllLines(path);
         var salida = new List<string>(lineas.Length);
+        var tachadosQuitados = 0;
 
         foreach (var linea in lineas)
         {
             if (IndiceDeWord.IsMatch(linea.Trim())) continue;
 
-            var limpia = ImagenHtml.Replace(linea, m => "![](" + m.Groups[1].Value.Replace('\\', '/') + ")");
+            var limpia = ImagenHtml.Replace(linea, m => "![](" + NormalizarRuta(m.Groups[1].Value) + ")");
 
-            // Al sacar el indice quedan sus lineas en blanco: se dejan de a una, para no arrastrar
-            // un hueco de veinte lineas donde antes estaba el indice.
+            if (quitarTachado && limpia.Contains("~~", StringComparison.Ordinal))
+            {
+                limpia = Tachado.Replace(limpia, _ =>
+                {
+                    tachadosQuitados++;
+                    return string.Empty;
+                });
+
+                // Si la linea era un parrafo entero tachado, ahora quedo vacia y se descarta.
+                if (string.IsNullOrWhiteSpace(limpia)) continue;
+            }
+
+            // Las lineas en blanco se dejan de a una, para no arrastrar el hueco que deja el
+            // indice al salir.
             var vacia = string.IsNullOrWhiteSpace(limpia);
             var anteriorVacia = salida.Count > 0 && string.IsNullOrWhiteSpace(salida[^1]);
             if (vacia && (anteriorVacia || salida.Count == 0)) continue;
@@ -142,5 +200,82 @@ public sealed class DocumentConverter
         }
 
         File.WriteAllLines(path, salida);
+        return tachadosQuitados;
     }
+
+    /// <summary>
+    /// Pandoc devuelve las rutas de las imagenes como "./media/x.png". El "./" no aporta y ensucia
+    /// el diff cuando el documento se versiona.
+    /// </summary>
+    private static string NormalizarRuta(string ruta)
+    {
+        var normalizada = ruta.Replace('\\', '/');
+        return normalizada.StartsWith("./", StringComparison.Ordinal) ? normalizada[2..] : normalizada;
+    }
+
+    /// <summary>
+    /// Genera un HTML de lectura a partir del .md ya limpio, con el CSS del tema embebido. Se parte
+    /// del .md y no del original para que el HTML herede la misma limpieza.
+    /// </summary>
+    private string? GenerarHtml(string markdownPath, string carpeta, HtmlTheme theme, CancellationToken cancellationToken, out string? error)
+    {
+        var htmlPath = Path.ChangeExtension(markdownPath, ".html");
+        var cssPath = Path.Combine(Path.GetTempPath(), $"devtools-md-{theme}.html");
+
+        File.WriteAllText(cssPath, Css(theme), new UTF8Encoding(false));
+
+        var argumentos = new[]
+        {
+            markdownPath,
+            "-f", "gfm",
+            "-t", "html",
+            "-s",
+            "-o", htmlPath,
+            "--metadata", "title=" + Path.GetFileNameWithoutExtension(markdownPath),
+            "--include-in-header=" + cssPath
+        };
+
+        error = PandocRunner.TryRun(PandocPath!, argumentos, carpeta, cancellationToken);
+        return error is null && File.Exists(htmlPath) ? htmlPath : null;
+    }
+
+    private static string Css(HtmlTheme theme) => theme == HtmlTheme.Oscuro
+        ? """
+          <style>
+            :root { color-scheme: dark; }
+            body { background:#1e1e1e; color:#d4d4d4; font-family:'Segoe UI',system-ui,sans-serif;
+                   line-height:1.6; max-width:52em; margin:2rem auto; padding:0 1.5rem; }
+            h1,h2,h3,h4 { color:#e7e7e7; border-bottom:1px solid #3c3c3c; padding-bottom:.2em; margin-top:1.8em; }
+            a { color:#4daafc; }
+            code { background:#2d2d2d; color:#ce9178; padding:.15em .35em; border-radius:3px; font-family:Consolas,monospace; }
+            pre { background:#252526; border:1px solid #3c3c3c; border-radius:4px; padding:1em; overflow-x:auto; }
+            pre code { background:none; color:#d4d4d4; }
+            table { border-collapse:collapse; width:100%; margin:1em 0; }
+            th,td { border:1px solid #3c3c3c; padding:.5em .7em; text-align:left; }
+            th { background:#2d2d2d; }
+            blockquote { border-left:3px solid #4daafc; margin:1em 0; padding:.2em 1em; color:#b0b0b0; }
+            img { max-width:100%; border-radius:3px; }
+            del, s { color:#7a7a7a; }
+            hr { border:none; border-top:1px solid #3c3c3c; }
+          </style>
+          """
+        : """
+          <style>
+            :root { color-scheme: light; }
+            body { background:#ffffff; color:#24292f; font-family:'Segoe UI',system-ui,sans-serif;
+                   line-height:1.6; max-width:52em; margin:2rem auto; padding:0 1.5rem; }
+            h1,h2,h3,h4 { color:#1f2328; border-bottom:1px solid #d8dee4; padding-bottom:.2em; margin-top:1.8em; }
+            a { color:#0969da; }
+            code { background:#f3f4f6; color:#953800; padding:.15em .35em; border-radius:3px; font-family:Consolas,monospace; }
+            pre { background:#f6f8fa; border:1px solid #d8dee4; border-radius:4px; padding:1em; overflow-x:auto; }
+            pre code { background:none; color:#24292f; }
+            table { border-collapse:collapse; width:100%; margin:1em 0; }
+            th,td { border:1px solid #d8dee4; padding:.5em .7em; text-align:left; }
+            th { background:#f6f8fa; }
+            blockquote { border-left:3px solid #0969da; margin:1em 0; padding:.2em 1em; color:#57606a; }
+            img { max-width:100%; border-radius:3px; }
+            del, s { color:#8c959f; }
+            hr { border:none; border-top:1px solid #d8dee4; }
+          </style>
+          """;
 }
