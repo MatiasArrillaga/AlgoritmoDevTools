@@ -10,7 +10,7 @@ namespace AlgoritmoDevTools.Shell;
 static class Program
 {
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
 
@@ -23,6 +23,10 @@ static class Program
             new MarkdownConverterTool()
         };
 
-        Application.Run(new MainForm(tools));
+        // Los argumentos llegan cuando el .exe se invoca desde el menu contextual del explorador.
+        // Se filtran los que sean archivos existentes: el resto se ignora en silencio.
+        var archivos = args.Where(File.Exists).ToArray();
+
+        Application.Run(new MainForm(tools, archivos));
     }
 }

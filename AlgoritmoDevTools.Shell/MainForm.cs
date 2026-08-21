@@ -8,12 +8,16 @@ public partial class MainForm : Form
     private readonly IReadOnlyList<ITool> _tools;
     private readonly Dictionary<string, UserControl> _viewCache = new();
     private readonly SecretService _secrets = SecretService.Shared;
+    private readonly IReadOnlyList<string>? _archivosDeEntrada;
+    private IReadOnlyList<string>? _archivosPendientes;
     private UserControl? _currentView;
 
-    public MainForm(IEnumerable<ITool> tools)
+    public MainForm(IEnumerable<ITool> tools, IReadOnlyList<string>? archivosDeEntrada = null)
     {
         InitializeComponent();
         _tools = tools.ToList();
+        _archivosDeEntrada = archivosDeEntrada;
+        _archivosPendientes = archivosDeEntrada;
 
         using (var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("app.ico"))
         {
@@ -42,8 +46,32 @@ public partial class MainForm : Form
             toolsList.Items[0].Selected = true;
     }
 
+    /// <summary>
+    /// Indice de la primera tool que declare poder abrir los archivos recibidos, o null si no
+    /// llegaron archivos o ninguna tool los reconoce.
+    /// </summary>
+    private int? IndiceDeLaToolParaLosArchivos()
+    {
+        if (_archivosDeEntrada is null || _archivosDeEntrada.Count == 0) return null;
+
+        for (var i = 0; i < _tools.Count; i++)
+        {
+            if (_tools[i] is IFileTool fileTool && _archivosDeEntrada.Any(fileTool.CanOpen))
+                return i;
+        }
+
+        return null;
+    }
+
     private async void MainForm_Load(object? sender, EventArgs e)
     {
+        // La tool que abre los archivos se selecciona aca y no en el constructor: ahi el ListView
+        // todavia no tiene handle y la seleccion se descarta, con lo cual al mostrarse la ventana
+        // volveria a quedar la primera de la lista.
+        var indice = IndiceDeLaToolParaLosArchivos();
+        if (indice is not null)
+            toolsList.Items[indice.Value].Selected = true;
+
         try
         {
             await Task.Run(() => _secrets.RefreshSecrets());
@@ -123,6 +151,25 @@ public partial class MainForm : Form
         view.Dock = DockStyle.Fill;
         contentPanel.Controls.Add(view);
         _currentView = view;
+
+        EntregarArchivosPendientes(tool, view);
+    }
+
+    /// <summary>
+    /// Le pasa a la vista los archivos con los que se abrio el Shell, la primera vez que se crea la
+    /// vista de una tool que sepa abrirlos. Despues los descarta, para que cambiar de tool no los
+    /// vuelva a procesar.
+    /// </summary>
+    private void EntregarArchivosPendientes(ITool tool, UserControl view)
+    {
+        if (_archivosPendientes is null) return;
+        if (tool is not IFileTool fileTool) return;
+        if (view is not IFileReceiver receptor) return;
+        if (!_archivosPendientes.Any(fileTool.CanOpen)) return;
+
+        var archivos = _archivosPendientes;
+        _archivosPendientes = null;
+        receptor.ReceiveFiles(archivos);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
