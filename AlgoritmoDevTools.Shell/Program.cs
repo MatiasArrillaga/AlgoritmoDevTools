@@ -1,5 +1,6 @@
 using AlgoritmoDevTools.Core.Abstractions;
 using AlgoritmoDevTools.Tools.CommandsMaker;
+using AlgoritmoDevTools.Tools.MarkdownConverter;
 using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
 using AlgoritmoDevTools.Tools.TyeServiceSelector;
@@ -18,7 +19,8 @@ static class Program
             new CommandsMakerTool(),
             new SecretsManagerTool(),
             new ModelDriftCheckerTool(),
-            new TyeServiceSelectorTool()
+            new TyeServiceSelectorTool(),
+            new MarkdownConverterTool()
         };
 
         Application.Run(new MainForm(tools));
