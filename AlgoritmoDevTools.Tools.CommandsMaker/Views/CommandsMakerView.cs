@@ -1,47 +1,35 @@
+using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.UI;
+// Alias y no un using del namespace: Services tiene su propio DomainRepository, duplicado del
+// de Integrations, y traerlo entero vuelve ambiguo el que usa esta vista.
+using GeneradorDeComandos = AlgoritmoDevTools.Tools.CommandsMaker.Services.GeneradorDeComandos;
+using MenuContextualComandos = AlgoritmoDevTools.Tools.CommandsMaker.Services.MenuContextualComandos;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace AlgoritmoDevTools.Tools.CommandsMaker.Views;
 
 public partial class CommandsMakerView : UserControl
 {
-    private const string DOMINIO_TOKEN = "*DOMINIO*";
-    private const string MIGRATION_NAME = "*MIGRATION_NAME*";
-    private const string CONNECTION_STRING = "*CONNECTION_STRING*";
-
-    private const string PROJECT = "Algoritmo." + DOMINIO_TOKEN + ".Infrastructure";
-
-    /// <summary>
-    /// Cola fija de la connection string, compartida por los tres comandos. Encrypt y
-    /// TrustServerCertificate son obligatorios: Microsoft.Data.SqlClient cifra la conexión por
-    /// defecto y el SQL de desarrollo usa un certificado autofirmado, así que sin ellos el
-    /// comando falla con "The certificate chain was issued by an authority that is not trusted".
-    /// </summary>
-    private const string CONNECTION_SUFFIX =
-        "Integrated Security = true; MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;";
-
-    // CS usada por PM Console: Server y Database del secreto Development + Integrated Security (Windows user con permisos SA).
-    private const string FALLBACK_CONNECTION_STRING =
-        "Server=localhost,1433;Database=Algoritmo;" + CONNECTION_SUFFIX;
-
-    private const string COMMON_COMMAND = "-Context " + DOMINIO_TOKEN + "DbContext -Project " + PROJECT + " -StartupProject " + PROJECT;
-    private const string ARGS = " -Args '--Connection \"" + CONNECTION_STRING + "\"'";
-
-    private const string AddMigrationTemplate = "add-migration " + MIGRATION_NAME + " " + COMMON_COMMAND + ARGS;
-    private const string RmvMigrationTemplate = "remove-migration -force " + COMMON_COMMAND + ARGS;
-    private const string UpdateDbTemplate = "update-database " + COMMON_COMMAND + " -Connection \"" + CONNECTION_STRING + "\"" + ARGS;
-
     private readonly DomainRepository _repository;
-    private readonly SecretService _secretService = SecretService.Shared;
 
     public CommandsMakerView(DomainRepository repository)
     {
         _repository = repository;
         InitializeComponent();
         cmbDominios.DataSource = _repository.GetAll();
-        migrationName.Text = ChangeMigrationName(true, "Inicial");
+
+        // Arranca en el último dominio con el que se generó un comando, que es el mismo que el
+        // menú contextual muestra arriba de todo.
+        var ultimo = _repository.GetUltimoDominio();
+        if (!string.IsNullOrWhiteSpace(ultimo) && cmbDominios.Items.Contains(ultimo))
+            cmbDominios.SelectedItem = ultimo;
+
+        migrationName.Text = GeneradorDeComandos.NombreDeMigracionSugerido(cmbDominios.Text);
         SetupTooltips();
+        VisibleChanged += VistaVisibleChanged;
+        ActualizarEstadoDelMenu();
     }
 
     private void SetupTooltips()
@@ -55,42 +43,101 @@ public partial class CommandsMakerView : UserControl
         tips.SetToolTip(bAdd, "Copia al clipboard el comando 'add-migration' con el nombre y la connection string actual, listo para pegarlo en PM Console.");
         tips.SetToolTip(bRemove, "Copia al clipboard el comando 'remove-migration -force', listo para pegarlo en PM Console.");
         tips.SetToolTip(bUpdate, "Copia al clipboard el comando 'update-database' con la connection string del secreto Development.");
+        tips.SetToolTip(MenuAgregarBtn, "Agrega DevTools > Commands Maker al clic derecho sobre el fondo de cualquier carpeta: los tres comandos del dominio actual, y el resto bajo 'Otro dominio'. Va en HKEY_CURRENT_USER: no necesita permisos de administrador.");
+        tips.SetToolTip(MenuQuitarBtn, "Saca el grupo Commands Maker del clic derecho. La raíz DevTools se borra sólo si no quedó ninguna otra tool colgando.");
+        tips.SetToolTip(MenuEstadoLbl, "El menú es estático: el dominio destacado queda clavado al escribirlo. Se regenera solo cuando agregás, borrás o usás un dominio.");
         tips.SetToolTip(rtbText, "Último comando generado. Ya está copiado en el clipboard.");
     }
 
-    private string ResolveConnectionString()
+    private void CastCommand(string command)
     {
-        // Tomamos Server y Database del secreto Development. La autenticación la forzamos
-        // a Integrated Security porque PM Console corre con el user de Windows (que tiene SA en dev).
-        var dev = _secretService.GetConnectionString(Constantes.SecretKeys.Development);
-        if (string.IsNullOrEmpty(dev)) return FALLBACK_CONNECTION_STRING;
-
-        var parts = ConnectionStringParser.Parse(dev);
-        var server = parts.GetValueOrDefault("Server");
-        var database = parts.GetValueOrDefault("Database");
-        if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(database)) return FALLBACK_CONNECTION_STRING;
-
-        return $"Server={server};Database={database};" + CONNECTION_SUFFIX;
-    }
-
-    private void CastCommand(string template)
-    {
-        var command = template
-            .Replace(CONNECTION_STRING, ResolveConnectionString())
-            .Replace(DOMINIO_TOKEN, cmbDominios.Text);
-
         Clipboard.SetData(DataFormats.Text, command);
         rtbText.Text = command;
+
+        // El dominio usado es el que el menú contextual muestra arriba de todo.
+        _repository.RegistrarUso(cmbDominios.Text);
+        SincronizarMenu();
+    }
+
+    // --- Menú contextual del explorador -------------------------------------
+
+    /// <summary>
+    /// Refresca el cartel cada vez que la pantalla vuelve a mostrarse. Hace falta porque las vistas
+    /// quedan cacheadas en el Shell: sin esto, el cartel sigue mostrando lo que habia cuando se
+    /// abrio, y el presupuesto de 16 items es COMPARTIDO, asi que lo que haga la otra tool cambia
+    /// lo que esta pantalla deberia estar diciendo.
+    /// </summary>
+    private void VistaVisibleChanged(object? sender, EventArgs e)
+    {
+        if (Visible) ActualizarEstadoDelMenu();
+    }
+
+    private void MenuAgregarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextualComandos.TryInstalar(_repository.GetAll(), _repository.GetRecientes());
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo agregar al menú: {error}",
+                "Commands Maker", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    private void MenuQuitarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextualComandos.TryDesinstalar();
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo quitar del menú: {error}",
+                "Commands Maker", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    /// <summary>
+    /// Reescribe el menú si está instalado y refresca el cartel. Hace falta ante cualquier cambio
+    /// en los dominios o en cuál es el último usado: el menú es estático, así que un dominio
+    /// borrado seguiría apareciendo y el acceso directo de arriba apuntaría al anterior.
+    /// </summary>
+    private void SincronizarMenu()
+    {
+        MenuContextualComandos.Sincronizar(_repository.GetAll(), _repository.GetRecientes());
+        ActualizarEstadoDelMenu();
+    }
+
+    private void ActualizarEstadoDelMenu()
+    {
+        var instalado = MenuContextualComandos.EstaInstalado();
+        MenuAgregarBtn.Text = instalado ? "Regenerar menú" : "Agregar al menú";
+        MenuQuitarBtn.Enabled = instalado;
+
+        if (!instalado)
+        {
+            MenuEstadoLbl.Text = "Menú contextual: no instalado.";
+            MenuEstadoLbl.ForeColor = Color.Gray;
+            return;
+        }
+
+        // Se muestra el presupuesto porque es la unica pista de por que faltan opciones: pasarse
+        // de 16 no da error, el explorador descarta el resto en silencio.
+        var usados = MenuContextualDevTools.ContarItems();
+        var destacado = _repository.GetUltimoDominio();
+        var cual = string.IsNullOrWhiteSpace(destacado) ? string.Empty : $" — destaca {destacado}";
+
+        MenuEstadoLbl.Text = $"Menú contextual: {usados}/{MenuContextualDevTools.LimiteDeItems} ítems{cual}.";
+        MenuEstadoLbl.ForeColor = usados >= MenuContextualDevTools.LimiteDeItems ? Color.Firebrick : Color.ForestGreen;
     }
 
     private void bAdd_Click(object? sender, EventArgs e)
-        => CastCommand(AddMigrationTemplate.Replace(MIGRATION_NAME, migrationName.Text));
+        => CastCommand(GeneradorDeComandos.AddMigration(cmbDominios.Text, migrationName.Text));
 
     private void bRemove_Click(object? sender, EventArgs e)
-        => CastCommand(RmvMigrationTemplate);
+        => CastCommand(GeneradorDeComandos.RemoveMigration(cmbDominios.Text));
 
     private void bUpdate_Click(object? sender, EventArgs e)
-        => CastCommand(UpdateDbTemplate);
+        => CastCommand(GeneradorDeComandos.UpdateDatabase(cmbDominios.Text));
 
     private void addDomain_Click(object? sender, EventArgs e)
     {
@@ -99,6 +146,7 @@ public partial class CommandsMakerView : UserControl
         {
             _repository.Add(input);
             cmbDominios.DataSource = _repository.GetAll();
+            SincronizarMenu();
         }
     }
 
@@ -118,6 +166,7 @@ public partial class CommandsMakerView : UserControl
 
         _repository.Remove(dominio);
         cmbDominios.DataSource = _repository.GetAll();
+        SincronizarMenu();
     }
 
     private void cmbDominios_SelectedIndexChanged(object? sender, EventArgs e)

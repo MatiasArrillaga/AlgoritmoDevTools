@@ -1,5 +1,6 @@
 using AlgoritmoDevTools.Core.Abstractions;
 using AlgoritmoDevTools.Tools.CommandsMaker;
+using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.Tools.MarkdownConverter;
 using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
@@ -61,6 +62,22 @@ static class Program
             case MenuContextualSecretos.VerboElegir:
                 SecretosSinVentana.Elegir();
                 return true;
+
+            case MenuContextualComandos.VerboAdd:
+                EjecutarPorDominio(args, ComandosSinVentana.Add);
+                return true;
+
+            case MenuContextualComandos.VerboRemove:
+                EjecutarPorDominio(args, ComandosSinVentana.Remove);
+                return true;
+
+            case MenuContextualComandos.VerboUpdate:
+                EjecutarPorDominio(args, ComandosSinVentana.Update);
+                return true;
+
+            case MenuContextualComandos.VerboElegir:
+                ComandosSinVentana.Elegir();
+                return true;
         }
 
         var archivosDeEntrada = args.Where(File.Exists).ToArray();
@@ -68,5 +85,22 @@ static class Program
 
         ConversionSinVentana.Ejecutar(archivosDeEntrada);
         return true;
+    }
+
+    /// <summary>
+    /// Los verbos del Commands Maker llevan el dominio como segundo argumento. Si falta, el menu
+    /// quedo escrito por una version vieja o a mano: lo unico util es decir que se regenere.
+    /// </summary>
+    private static void EjecutarPorDominio(string[] args, Action<string> accion)
+    {
+        if (args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]))
+        {
+            accion(args[1]);
+            return;
+        }
+
+        MessageBox.Show(
+            "Falta el dominio. Volve a generar el menu contextual desde el Commands Maker.",
+            "Commands Maker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 }

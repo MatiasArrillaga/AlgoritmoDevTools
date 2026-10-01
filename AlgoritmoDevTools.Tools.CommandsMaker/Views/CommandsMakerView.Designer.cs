@@ -26,22 +26,25 @@ partial class CommandsMakerView
         migrationName = new TextBox();
         label2 = new Label();
         checkBox1 = new CheckBox();
+        MenuEstadoLbl = new Label();
+        MenuAgregarBtn = new Button();
+        MenuQuitarBtn = new Button();
         SuspendLayout();
         // 
         // rtbText
         // 
         rtbText.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        rtbText.Location = new Point(14, 85);
+        rtbText.Location = new Point(14, 105);
         rtbText.Margin = new Padding(3, 4, 3, 4);
         rtbText.Name = "rtbText";
-        rtbText.Size = new Size(1165, 263);
+        rtbText.Size = new Size(1165, 243);
         rtbText.TabIndex = 9;
         rtbText.Text = "";
         // 
         // bAdd
         // 
         bAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        bAdd.Location = new Point(927, 13);
+        bAdd.Location = new Point(492, 50);
         bAdd.Margin = new Padding(3, 4, 3, 4);
         bAdd.Name = "bAdd";
         bAdd.Size = new Size(80, 31);
@@ -53,7 +56,7 @@ partial class CommandsMakerView
         // bRemove
         // 
         bRemove.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        bRemove.Location = new Point(1013, 13);
+        bRemove.Location = new Point(578, 50);
         bRemove.Margin = new Padding(3, 4, 3, 4);
         bRemove.Name = "bRemove";
         bRemove.Size = new Size(80, 31);
@@ -65,7 +68,7 @@ partial class CommandsMakerView
         // bUpdate
         // 
         bUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        bUpdate.Location = new Point(1099, 13);
+        bUpdate.Location = new Point(664, 50);
         bUpdate.Margin = new Padding(3, 4, 3, 4);
         bUpdate.Name = "bUpdate";
         bUpdate.Size = new Size(80, 31);
@@ -119,7 +122,7 @@ partial class CommandsMakerView
         // migrationName
         // 
         migrationName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        migrationName.Location = new Point(536, 15);
+        migrationName.Location = new Point(101, 52);
         migrationName.Margin = new Padding(3, 4, 3, 4);
         migrationName.Name = "migrationName";
         migrationName.Size = new Size(385, 27);
@@ -127,7 +130,7 @@ partial class CommandsMakerView
         // 
         // label2
         // 
-        label2.Location = new Point(440, 9);
+        label2.Location = new Point(5, 46);
         label2.Name = "label2";
         label2.Size = new Size(90, 40);
         label2.TabIndex = 4;
@@ -138,7 +141,7 @@ partial class CommandsMakerView
         checkBox1.AutoSize = true;
         checkBox1.Checked = true;
         checkBox1.CheckState = CheckState.Checked;
-        checkBox1.Location = new Point(101, 51);
+        checkBox1.Location = new Point(445, 18);
         checkBox1.Margin = new Padding(3, 4, 3, 4);
         checkBox1.Name = "checkBox1";
         checkBox1.Size = new Size(299, 24);
@@ -151,6 +154,42 @@ partial class CommandsMakerView
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
+        //
+        // MenuEstadoLbl
+        //
+        MenuEstadoLbl.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        MenuEstadoLbl.AutoSize = false;
+        MenuEstadoLbl.Location = new Point(760, 18);
+        MenuEstadoLbl.Name = "MenuEstadoLbl";
+        MenuEstadoLbl.Size = new Size(346, 24);
+        MenuEstadoLbl.TabIndex = 12;
+        MenuEstadoLbl.Text = "";
+        //
+        // MenuAgregarBtn
+        //
+        MenuAgregarBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        MenuAgregarBtn.Location = new Point(760, 50);
+        MenuAgregarBtn.Name = "MenuAgregarBtn";
+        MenuAgregarBtn.Size = new Size(170, 31);
+        MenuAgregarBtn.TabIndex = 13;
+        MenuAgregarBtn.Text = "Agregar al menú";
+        MenuAgregarBtn.UseVisualStyleBackColor = true;
+        MenuAgregarBtn.Click += MenuAgregarBtn_Click;
+        //
+        // MenuQuitarBtn
+        //
+        MenuQuitarBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        MenuQuitarBtn.Location = new Point(936, 50);
+        MenuQuitarBtn.Name = "MenuQuitarBtn";
+        MenuQuitarBtn.Size = new Size(170, 31);
+        MenuQuitarBtn.TabIndex = 14;
+        MenuQuitarBtn.Text = "Quitar del menú";
+        MenuQuitarBtn.UseVisualStyleBackColor = true;
+        MenuQuitarBtn.Click += MenuQuitarBtn_Click;
+        //
+        Controls.Add(MenuEstadoLbl);
+        Controls.Add(MenuAgregarBtn);
+        Controls.Add(MenuQuitarBtn);
         Controls.Add(rtbText);
         Controls.Add(checkBox1);
         Controls.Add(bUpdate);
@@ -180,4 +219,7 @@ partial class CommandsMakerView
     private System.Windows.Forms.TextBox migrationName;
     private System.Windows.Forms.Label label2;
     private System.Windows.Forms.CheckBox checkBox1;
+    private System.Windows.Forms.Label MenuEstadoLbl;
+    private System.Windows.Forms.Button MenuAgregarBtn;
+    private System.Windows.Forms.Button MenuQuitarBtn;
 }

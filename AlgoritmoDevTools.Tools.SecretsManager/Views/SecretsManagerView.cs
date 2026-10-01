@@ -20,6 +20,7 @@ public partial class SecretsManagerView : UserControl
         _savedConnections = savedConnections;
         InitializeComponent();
         SetupTooltips();
+        VisibleChanged += VistaVisibleChanged;
     }
 
     private void SetupTooltips()
@@ -281,6 +282,17 @@ public partial class SecretsManagerView : UserControl
     }
 
     // --- Menú contextual del explorador -------------------------------------
+
+    /// <summary>
+    /// Refresca el cartel cada vez que la pantalla vuelve a mostrarse. Hace falta porque las vistas
+    /// quedan cacheadas en el Shell: sin esto, el cartel sigue mostrando lo que habia cuando se
+    /// abrio, y el presupuesto de 16 items es COMPARTIDO, asi que lo que haga la otra tool cambia
+    /// lo que esta pantalla deberia estar diciendo.
+    /// </summary>
+    private void VistaVisibleChanged(object? sender, EventArgs e)
+    {
+        if (Visible) ActualizarEstadoDelMenu();
+    }
 
     private void MenuAgregarBtn_Click(object? sender, EventArgs e)
     {
