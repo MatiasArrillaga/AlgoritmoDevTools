@@ -26,7 +26,9 @@ public static class TyeServiceToggler
     public static string MasterYamlPath => Path.Combine(AlgoritmoCoreRoot, "tye.yaml");
     public static string GeneratedYamlPath => Path.Combine(AlgoritmoCoreRoot, GeneratedFileName);
 
-    // "- name: cereales" (sobre la línea ya descomentada y sin indentación)
+    // "- name: cereales" en la columna 0 (sobre la línea ya descomentada).
+    // El ancla "^" sin TrimStart es lo que distingue un servicio de una variable de entorno:
+    // las entradas de "env:" son también "- name: X" pero indentadas ("  - name: ASPNETCORE_URLS").
     private static readonly Regex ServiceNameRegex =
         new(@"^-\s*name:\s*(\S+)", RegexOptions.Compiled);
 
@@ -106,7 +108,11 @@ public static class TyeServiceToggler
         for (int i = regionStart; i < regionEnd; i++)
         {
             var (decommented, wasCommented) = Decomment(lines[i]);
-            var m = ServiceNameRegex.Match(decommented.TrimStart());
+
+            // Sin TrimStart: solo los items en la columna 0 son servicios. Las líneas hijas
+            // indentadas ("  - name: SOFTCEREALCORE_PROCESS_CULTURE" dentro de "env:") quedan
+            // absorbidas por el bloque del servicio en curso, que es lo que corresponde.
+            var m = ServiceNameRegex.Match(decommented);
             if (!m.Success) continue;
 
             if (curStart is not null)
@@ -147,6 +153,10 @@ public static class TyeServiceToggler
         bool curEnabled = false;
         int regionEnd = lines.Length;
 
+        // Indentación del primer hijo directo: solo ese nivel son servicios. Cualquier clave
+        // sin valor más adentro es una sub-clave del servicio, no otro servicio.
+        int entryIndent = -1;
+
         for (int i = header + 1; i < lines.Length; i++)
         {
             if (string.IsNullOrWhiteSpace(lines[i])) continue;
@@ -163,6 +173,9 @@ public static class TyeServiceToggler
 
             var m = DaprEntryRegex.Match(decommented.TrimStart());
             if (!m.Success) continue;
+
+            if (entryIndent < 0) entryIndent = indent;
+            if (indent != entryIndent) continue;
 
             if (curStart is not null)
                 blocks.Add((curName!, curStart.Value, i, curEnabled));

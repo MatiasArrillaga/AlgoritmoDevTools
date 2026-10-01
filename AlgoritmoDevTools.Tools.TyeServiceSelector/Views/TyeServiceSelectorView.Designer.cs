@@ -15,6 +15,7 @@ partial class TyeServiceSelectorView
 
     private void InitializeComponent()
     {
+        components = new System.ComponentModel.Container();
         PathLbl = new System.Windows.Forms.Label();
         PerfilLbl = new System.Windows.Forms.Label();
         ProfilesCombo = new System.Windows.Forms.ComboBox();
@@ -23,7 +24,7 @@ partial class TyeServiceSelectorView
         RefrescarBtn = new System.Windows.Forms.Button();
         MarcarTodosBtn = new System.Windows.Forms.Button();
         DesmarcarTodosBtn = new System.Windows.Forms.Button();
-        ServicesList = new System.Windows.Forms.CheckedListBox();
+        ServicesPanel = new System.Windows.Forms.TableLayoutPanel();
         GenerarBtn = new System.Windows.Forms.Button();
         CopiarComandoBtn = new System.Windows.Forms.Button();
         StatusLbl = new System.Windows.Forms.Label();
@@ -35,7 +36,7 @@ partial class TyeServiceSelectorView
         PathLbl.AutoSize = false;
         PathLbl.Location = new System.Drawing.Point(12, 12);
         PathLbl.Name = "PathLbl";
-        PathLbl.Size = new System.Drawing.Size(696, 36);
+        PathLbl.Size = new System.Drawing.Size(1156, 36);
         PathLbl.TabIndex = 0;
         PathLbl.Text = "Master: ...";
         PathLbl.Font = new System.Drawing.Font("Segoe UI", 9F);
@@ -110,22 +111,24 @@ partial class TyeServiceSelectorView
         DesmarcarTodosBtn.UseVisualStyleBackColor = true;
         DesmarcarTodosBtn.Click += new System.EventHandler(DesmarcarTodosBtn_Click);
         //
-        // ServicesList
+        // ServicesPanel
         //
-        ServicesList.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-        ServicesList.CheckOnClick = true;
-        ServicesList.IntegralHeight = false;
-        ServicesList.Location = new System.Drawing.Point(12, 128);
-        ServicesList.Name = "ServicesList";
-        ServicesList.Size = new System.Drawing.Size(696, 360);
-        ServicesList.TabIndex = 8;
-        ServicesList.Font = new System.Drawing.Font("Segoe UI", 10F);
-        ServicesList.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(ServicesList_ItemCheck);
+        // CheckedListBox no soporta MultiColumn (tira NotSupportedException al setearlo), así que
+        // la grilla de servicios es un TableLayoutPanel de CheckBox. Las columnas se reparten el
+        // ancho en partes iguales; las filas las arma RenderServices() en orden vertical.
+        ServicesPanel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+        ServicesPanel.AutoScroll = true;
+        ServicesPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+        ServicesPanel.Location = new System.Drawing.Point(12, 128);
+        ServicesPanel.Name = "ServicesPanel";
+        ServicesPanel.Padding = new System.Windows.Forms.Padding(8, 6, 8, 6);
+        ServicesPanel.Size = new System.Drawing.Size(1156, 244);
+        ServicesPanel.TabIndex = 8;
         //
         // GenerarBtn
         //
         GenerarBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-        GenerarBtn.Location = new System.Drawing.Point(12, 498);
+        GenerarBtn.Location = new System.Drawing.Point(12, 384);
         GenerarBtn.Name = "GenerarBtn";
         GenerarBtn.Size = new System.Drawing.Size(200, 34);
         GenerarBtn.TabIndex = 9;
@@ -136,7 +139,7 @@ partial class TyeServiceSelectorView
         // CopiarComandoBtn
         //
         CopiarComandoBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-        CopiarComandoBtn.Location = new System.Drawing.Point(220, 498);
+        CopiarComandoBtn.Location = new System.Drawing.Point(220, 384);
         CopiarComandoBtn.Name = "CopiarComandoBtn";
         CopiarComandoBtn.Size = new System.Drawing.Size(200, 34);
         CopiarComandoBtn.TabIndex = 10;
@@ -148,9 +151,9 @@ partial class TyeServiceSelectorView
         //
         StatusLbl.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
         StatusLbl.AutoSize = false;
-        StatusLbl.Location = new System.Drawing.Point(12, 538);
+        StatusLbl.Location = new System.Drawing.Point(12, 424);
         StatusLbl.Name = "StatusLbl";
-        StatusLbl.Size = new System.Drawing.Size(696, 24);
+        StatusLbl.Size = new System.Drawing.Size(1156, 24);
         StatusLbl.TabIndex = 11;
         StatusLbl.Text = "Listo.";
         StatusLbl.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
@@ -167,12 +170,12 @@ partial class TyeServiceSelectorView
         Controls.Add(RefrescarBtn);
         Controls.Add(MarcarTodosBtn);
         Controls.Add(DesmarcarTodosBtn);
-        Controls.Add(ServicesList);
+        Controls.Add(ServicesPanel);
         Controls.Add(GenerarBtn);
         Controls.Add(CopiarComandoBtn);
         Controls.Add(StatusLbl);
         Name = "TyeServiceSelectorView";
-        Size = new System.Drawing.Size(720, 580);
+        Size = new System.Drawing.Size(1180, 460);
         Load += new System.EventHandler(TyeServiceSelectorView_Load);
         ResumeLayout(false);
     }
@@ -185,7 +188,7 @@ partial class TyeServiceSelectorView
     private System.Windows.Forms.Button RefrescarBtn;
     private System.Windows.Forms.Button MarcarTodosBtn;
     private System.Windows.Forms.Button DesmarcarTodosBtn;
-    private System.Windows.Forms.CheckedListBox ServicesList;
+    private System.Windows.Forms.TableLayoutPanel ServicesPanel;
     private System.Windows.Forms.Button GenerarBtn;
     private System.Windows.Forms.Button CopiarComandoBtn;
     private System.Windows.Forms.Label StatusLbl;

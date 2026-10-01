@@ -12,7 +12,20 @@ public partial class TyeServiceSelectorView : UserControl
     /// <summary>Servicio que siempre queda tildado y no se puede destildar.</summary>
     private const string ServicioObligatorio = "seguridad";
 
+    /// <summary>Cantidad de columnas en las que se reparte la grilla de servicios.</summary>
+    private const int ColumnasServicios = 3;
+
+    private const int AltoFilaServicio = 30;
+
     private readonly ProfileRepository _profiles;
+
+    /// <summary>Un CheckBox por servicio, en el mismo orden en que vienen del tye.yaml. El nombre
+    /// real del servicio va en el <c>Tag</c>, porque el <c>Text</c> puede llevar decoración.</summary>
+    private readonly List<CheckBox> _serviceChecks = new();
+
+    /// <summary>Se cuelga del contenedor de componentes de la vista para que se libere con ella.</summary>
+    private ToolTip _tips = null!;
+
     private bool _suppressProfileEvent;
 
     public TyeServiceSelectorView(ProfileRepository profiles)
@@ -24,16 +37,17 @@ public partial class TyeServiceSelectorView : UserControl
 
     private void SetupTooltips()
     {
-        var tips = new ToolTip { AutoPopDelay = 12_000, InitialDelay = 400, ReshowDelay = 200 };
-        tips.SetToolTip(RefrescarBtn, "Vuelve a leer el tye.yaml y refleja qué servicios están activos según el archivo generado.");
-        tips.SetToolTip(MarcarTodosBtn, "Tilda todos los servicios.");
-        tips.SetToolTip(DesmarcarTodosBtn, "Destilda todos los servicios.");
-        tips.SetToolTip(ServicesList, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. El master tye.yaml no se modifica.");
-        tips.SetToolTip(ProfilesCombo, "Elegí un perfil guardado para tildar automáticamente sus servicios.");
-        tips.SetToolTip(GuardarPerfilBtn, "Guarda la selección actual como un perfil con nombre (o sobrescribe el existente).");
-        tips.SetToolTip(EliminarPerfilBtn, "Elimina el perfil seleccionado.");
-        tips.SetToolTip(GenerarBtn, $"Genera {TyeServiceToggler.GeneratedFileName} en la raíz de AlgoritmoCore con los servicios tildados activos y el resto comentados.");
-        tips.SetToolTip(CopiarComandoBtn, $"Copia al portapapeles: {TyeServiceToggler.RunCommand}");
+        _tips = new ToolTip(components) { AutoPopDelay = 12_000, InitialDelay = 400, ReshowDelay = 200 };
+
+        _tips.SetToolTip(RefrescarBtn, "Vuelve a leer el tye.yaml y refleja qué servicios están activos según el archivo generado.");
+        _tips.SetToolTip(MarcarTodosBtn, "Tilda todos los servicios.");
+        _tips.SetToolTip(DesmarcarTodosBtn, "Destilda todos los servicios.");
+        _tips.SetToolTip(ServicesPanel, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. El master tye.yaml no se modifica.");
+        _tips.SetToolTip(ProfilesCombo, "Elegí un perfil guardado para tildar automáticamente sus servicios.");
+        _tips.SetToolTip(GuardarPerfilBtn, "Guarda la selección actual como un perfil con nombre (o sobrescribe el existente).");
+        _tips.SetToolTip(EliminarPerfilBtn, "Elimina el perfil seleccionado.");
+        _tips.SetToolTip(GenerarBtn, $"Genera {TyeServiceToggler.GeneratedFileName} en la raíz de AlgoritmoCore con los servicios tildados activos y el resto comentados.");
+        _tips.SetToolTip(CopiarComandoBtn, $"Copia al portapapeles: {TyeServiceToggler.RunCommand}");
     }
 
     private void TyeServiceSelectorView_Load(object? sender, EventArgs e)
@@ -47,23 +61,21 @@ public partial class TyeServiceSelectorView : UserControl
 
     private void LoadServices()
     {
-        ServicesList.Items.Clear();
-
         if (!File.Exists(TyeServiceToggler.MasterYamlPath))
         {
+            RenderServices(Array.Empty<TyeService>());
             SetStatus($"No se encontró el master en {TyeServiceToggler.MasterYamlPath}.", Color.Firebrick);
             return;
         }
 
         var services = TyeServiceToggler.ReadServices();
+        RenderServices(services);
+
         if (services.Count == 0)
         {
             SetStatus("No se encontraron servicios en la lista 'services:' del tye.yaml.", Color.DarkOrange);
             return;
         }
-
-        foreach (var s in services)
-            ServicesList.Items.Add(s.Name, s.Enabled || EsObligatorio(s.Name));
 
         int activos = services.Count(s => s.Enabled);
         bool hayGenerado = File.Exists(TyeServiceToggler.GeneratedYamlPath);
@@ -74,12 +86,79 @@ public partial class TyeServiceSelectorView : UserControl
             Color.Gray);
     }
 
-    /// <summary>Veta el destildado del servicio obligatorio (clicks, "Desmarcar todos", aplicar perfil).</summary>
-    private void ServicesList_ItemCheck(object? sender, ItemCheckEventArgs e)
+    /// <summary>
+    /// Arma la grilla de checkboxes repartiendo los servicios en <see cref="ColumnasServicios"/>
+    /// columnas. El llenado es vertical (se completa la primera columna, después la segunda), que
+    /// es como se lee una lista: el orden del tye.yaml se sigue leyendo de arriba hacia abajo.
+    /// </summary>
+    private void RenderServices(IReadOnlyList<TyeService> services)
     {
-        if (e.NewValue == CheckState.Unchecked && EsObligatorio((string)ServicesList.Items[e.Index]))
-            e.NewValue = CheckState.Checked;
+        ServicesPanel.SuspendLayout();
+        try
+        {
+            ServicesPanel.Controls.Clear();
+            foreach (var viejo in _serviceChecks)
+                viejo.Dispose();
+            _serviceChecks.Clear();
+
+            ServicesPanel.ColumnStyles.Clear();
+            ServicesPanel.RowStyles.Clear();
+
+            int filas = Math.Max(1, (services.Count + ColumnasServicios - 1) / ColumnasServicios);
+            ServicesPanel.ColumnCount = ColumnasServicios;
+
+            // Una fila extra de relleno al final: con todas las filas en Absolute, el alto sobrante
+            // del panel se lo lleva la última, y el CheckBox queda centrado en una celda alta
+            // (el salto que se veía entre la anteúltima y la última fila). La de relleno se come
+            // ese excedente y las de contenido quedan todas del mismo alto.
+            ServicesPanel.RowCount = filas + 1;
+
+            for (int c = 0; c < ColumnasServicios; c++)
+                ServicesPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / ColumnasServicios));
+            for (int f = 0; f < filas; f++)
+                ServicesPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, AltoFilaServicio));
+            ServicesPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            for (int i = 0; i < services.Count; i++)
+            {
+                var servicio = services[i];
+                bool obligatorio = EsObligatorio(servicio.Name);
+
+                var check = new CheckBox
+                {
+                    Tag = servicio.Name,
+                    Text = obligatorio ? $"{servicio.Name}  (siempre activo)" : servicio.Name,
+                    AutoSize = true,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                    Margin = new Padding(8, 4, 8, 4),
+                    Font = new Font("Segoe UI", 10F, obligatorio ? FontStyle.Bold : FontStyle.Regular),
+                    Checked = servicio.Enabled || obligatorio,
+                };
+
+                // El handler se engancha después de fijar Checked para no disparar el veto al armar la grilla.
+                check.CheckedChanged += ServiceCheck_CheckedChanged;
+                _tips.SetToolTip(check, obligatorio
+                    ? $"'{servicio.Name}' siempre se levanta: el resto de los microservicios no arranca sin él."
+                    : $"Levantar el microservicio '{servicio.Name}'.");
+
+                _serviceChecks.Add(check);
+                ServicesPanel.Controls.Add(check, i / filas, i % filas);
+            }
+        }
+        finally
+        {
+            ServicesPanel.ResumeLayout();
+        }
     }
+
+    /// <summary>Veta el destildado del servicio obligatorio (clicks, "Desmarcar todos", aplicar perfil).</summary>
+    private void ServiceCheck_CheckedChanged(object? sender, EventArgs e)
+    {
+        if (sender is not CheckBox check) return;
+        if (!check.Checked && EsObligatorio(NombreDe(check))) check.Checked = true;
+    }
+
+    private static string NombreDe(CheckBox check) => (string)check.Tag!;
 
     private static bool EsObligatorio(string serviceName)
         => string.Equals(serviceName, ServicioObligatorio, StringComparison.OrdinalIgnoreCase);
@@ -92,8 +171,8 @@ public partial class TyeServiceSelectorView : UserControl
 
     private void SetAllChecked(bool value)
     {
-        for (int i = 0; i < ServicesList.Items.Count; i++)
-            ServicesList.SetItemChecked(i, value);
+        foreach (var check in _serviceChecks)
+            check.Checked = value || EsObligatorio(NombreDe(check));
     }
 
     // --- Perfiles -----------------------------------------------------------
@@ -131,10 +210,13 @@ public partial class TyeServiceSelectorView : UserControl
             return;
         }
 
-        for (int i = 0; i < ServicesList.Items.Count; i++)
-            ServicesList.SetItemChecked(i, enabled.Contains((string)ServicesList.Items[i]));
+        foreach (var check in _serviceChecks)
+        {
+            var servicio = NombreDe(check);
+            check.Checked = enabled.Contains(servicio) || EsObligatorio(servicio);
+        }
 
-        int activos = ServicesList.CheckedItems.Count;
+        int activos = _serviceChecks.Count(c => c.Checked);
         SetStatus($"Perfil '{name}' aplicado — {activos} servicio(s) tildado(s). Tocá 'Generar y guardar' para escribir el archivo.", Color.RoyalBlue);
     }
 
@@ -192,18 +274,13 @@ public partial class TyeServiceSelectorView : UserControl
     }
 
     private List<string> GetCheckedServiceNames()
-    {
-        var names = new List<string>();
-        foreach (var item in ServicesList.CheckedItems)
-            names.Add((string)item);
-        return names;
-    }
+        => _serviceChecks.Where(c => c.Checked).Select(NombreDe).ToList();
 
     private async void GenerarBtn_Click(object? sender, EventArgs e)
     {
         var selection = new Dictionary<string, bool>(StringComparer.Ordinal);
-        for (int i = 0; i < ServicesList.Items.Count; i++)
-            selection[(string)ServicesList.Items[i]] = ServicesList.GetItemChecked(i);
+        foreach (var check in _serviceChecks)
+            selection[NombreDe(check)] = check.Checked;
 
         if (selection.Count == 0 || selection.Values.All(v => !v))
         {
@@ -254,7 +331,7 @@ public partial class TyeServiceSelectorView : UserControl
         DesmarcarTodosBtn.Enabled = !busy;
         GenerarBtn.Enabled = !busy;
         CopiarComandoBtn.Enabled = !busy;
-        ServicesList.Enabled = !busy;
+        ServicesPanel.Enabled = !busy;
         ProfilesCombo.Enabled = !busy;
         GuardarPerfilBtn.Enabled = !busy;
         EliminarPerfilBtn.Enabled = !busy;

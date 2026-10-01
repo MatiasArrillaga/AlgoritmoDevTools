@@ -119,7 +119,11 @@ partial class MainForm
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(1382, 311);
+        // El alto tiene que entrar la vista más alta de las tools (460 px del Selector de Servicios)
+        // más la descripción de arriba (40) y el status bar (30); si no hay que estirar la ventana
+        // a mano cada vez. El mínimo evita que se achique por debajo de eso.
+        ClientSize = new Size(1460, 580);
+        MinimumSize = new Size(1180, 560);
         Controls.Add(contentPanel);
         Controls.Add(descriptionLabel);
         Controls.Add(splitter);
