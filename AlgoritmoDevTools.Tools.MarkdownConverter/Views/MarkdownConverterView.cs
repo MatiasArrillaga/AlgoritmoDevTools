@@ -1,4 +1,5 @@
 ﻿using AlgoritmoDevTools.Core.Abstractions;
+using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
 using System.Diagnostics;
 
@@ -161,7 +162,7 @@ public partial class MarkdownConverterView : UserControl
     /// </summary>
     private void MenuClasicoBtn_Click(object? sender, EventArgs e)
     {
-        var activado = MenuContextual.MenuClasicoActivado();
+        var activado = ShellIntegration.MenuClasicoActivado();
 
         var pregunta = activado
             ? "Esto vuelve al menú contextual nuevo de Windows 11, donde la opción queda dentro de \"Mostrar más opciones\".\n\n¿Seguimos?"
@@ -174,8 +175,8 @@ public partial class MarkdownConverterView : UserControl
             return;
 
         var error = activado
-            ? MenuContextual.TryDesactivarMenuClasico()
-            : MenuContextual.TryActivarMenuClasico();
+            ? ShellIntegration.TryDesactivarMenuClasico()
+            : ShellIntegration.TryActivarMenuClasico();
 
         if (error is not null)
         {
@@ -188,7 +189,7 @@ public partial class MarkdownConverterView : UserControl
         Escribir("Reiniciando el explorador...");
         Escribir(string.Empty);
 
-        MenuContextual.ReiniciarExplorador();
+        ShellIntegration.ReiniciarExplorador();
         ActualizarEstadoDelMenu();
     }
 
@@ -206,7 +207,7 @@ public partial class MarkdownConverterView : UserControl
 
         // El botón del menú clásico sólo tiene sentido en Windows 11: en Windows 10 el clásico ya
         // es el único que hay.
-        MenuClasicoBtn.Visible = MenuContextual.EsWindows11OPosterior();
+        MenuClasicoBtn.Visible = ShellIntegration.EsWindows11OPosterior();
 
         var estado = instalado
             ? "En el menú contextual: sí."
@@ -214,7 +215,7 @@ public partial class MarkdownConverterView : UserControl
 
         if (MenuClasicoBtn.Visible)
         {
-            var clasico = MenuContextual.MenuClasicoActivado();
+            var clasico = ShellIntegration.MenuClasicoActivado();
             MenuClasicoBtn.Text = clasico ? "Volver al menú de Windows 11" : "Usar el menú clásico";
             estado += clasico ? " Menú clásico activado." : " Está en \"Mostrar más opciones\".";
         }

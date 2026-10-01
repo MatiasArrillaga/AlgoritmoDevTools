@@ -39,6 +39,13 @@ public sealed class SavedConnectionsRepository
             alter.CommandText = "ALTER TABLE SavedConnections ADD COLUMN UseIntegratedSecurity INTEGER NOT NULL DEFAULT 0";
             alter.ExecuteNonQuery();
         }
+
+        if (!ColumnExists(db, "SavedConnections", "LastDataBase"))
+        {
+            using var alter = db.CreateCommand();
+            alter.CommandText = "ALTER TABLE SavedConnections ADD COLUMN LastDataBase TEXT NOT NULL DEFAULT ''";
+            alter.ExecuteNonQuery();
+        }
     }
 
     private static bool ColumnExists(SqliteConnection db, string table, string column)
@@ -59,7 +66,7 @@ public sealed class SavedConnectionsRepository
         var items = new List<SavedConnection>();
         using var db = _storage.OpenConnection();
         using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT Id, Server, DataBase, UserName, Password, UseIntegratedSecurity FROM SavedConnections ORDER BY Server, DataBase, UserName";
+        cmd.CommandText = "SELECT Id, Server, DataBase, UserName, Password, UseIntegratedSecurity, LastDataBase FROM SavedConnections ORDER BY Server, DataBase, UserName";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -70,7 +77,8 @@ public sealed class SavedConnectionsRepository
                 DataBase = reader.GetString(2),
                 User = reader.GetString(3),
                 Password = reader.GetString(4),
-                UseIntegratedSecurity = reader.GetInt64(5) != 0
+                UseIntegratedSecurity = reader.GetInt64(5) != 0,
+                LastDataBase = reader.GetString(6)
             });
         }
         return items;
@@ -98,13 +106,14 @@ public sealed class SavedConnectionsRepository
     {
         using var db = _storage.OpenConnection();
         using var cmd = db.CreateCommand();
-        cmd.CommandText = @"INSERT INTO SavedConnections (Server, DataBase, UserName, Password, UseIntegratedSecurity)
-                            VALUES (@server, @database, @user, @password, @integrated)";
+        cmd.CommandText = @"INSERT INTO SavedConnections (Server, DataBase, UserName, Password, UseIntegratedSecurity, LastDataBase)
+                            VALUES (@server, @database, @user, @password, @integrated, @lastdb)";
         cmd.Parameters.AddWithValue("@server", connection.Server);
         cmd.Parameters.AddWithValue("@database", connection.DataBase);
         cmd.Parameters.AddWithValue("@user", connection.User ?? string.Empty);
         cmd.Parameters.AddWithValue("@password", connection.Password ?? string.Empty);
         cmd.Parameters.AddWithValue("@integrated", connection.UseIntegratedSecurity ? 1 : 0);
+        cmd.Parameters.AddWithValue("@lastdb", connection.LastDataBase ?? string.Empty);
         cmd.ExecuteNonQuery();
     }
 
@@ -118,7 +127,8 @@ public sealed class SavedConnectionsRepository
                 DataBase = @database,
                 UserName = @user,
                 Password = @password,
-                UseIntegratedSecurity = @integrated
+                UseIntegratedSecurity = @integrated,
+                LastDataBase = @lastdb
             WHERE Id = @id";
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@server", connection.Server);
@@ -126,8 +136,27 @@ public sealed class SavedConnectionsRepository
         cmd.Parameters.AddWithValue("@user", connection.User ?? string.Empty);
         cmd.Parameters.AddWithValue("@password", connection.Password ?? string.Empty);
         cmd.Parameters.AddWithValue("@integrated", connection.UseIntegratedSecurity ? 1 : 0);
+        cmd.Parameters.AddWithValue("@lastdb", connection.LastDataBase ?? string.Empty);
         cmd.ExecuteNonQuery();
     }
+
+    /// <summary>
+    /// Deja registrada la base contra la que se acaban de aplicar los secretos. Se toca sólo esa
+    /// columna a propósito: no forma parte de la clave única, así que no puede chocar con otra fila
+    /// ni cambiar la identidad de la conexión.
+    /// </summary>
+    public void UpdateLastDataBase(int id, string dataBase)
+    {
+        using var db = _storage.OpenConnection();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "UPDATE SavedConnections SET LastDataBase = @lastdb WHERE Id = @id";
+        cmd.Parameters.AddWithValue("@id", id);
+        cmd.Parameters.AddWithValue("@lastdb", dataBase ?? string.Empty);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Devuelve una conexión por Id, o null si ya no existe.</summary>
+    public SavedConnection? GetById(int id) => GetAll().FirstOrDefault(c => c.Id == id);
 
     public void Delete(int id)
     {

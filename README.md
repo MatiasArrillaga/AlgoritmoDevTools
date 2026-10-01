@@ -85,10 +85,29 @@ Cada **Tool** es un `classlib` con:
 - **Conexiones guardadas**: CRUD con validación — `Nuevo` / `Modificar` / `Eliminar`. Cada conexión tiene Server, User, Password (o Integrated Security) y se valida abriendo una conexión real antes de guardar.
 - **DataBase** (combo externo al CRUD): cuando elegís una conexión, lista las BDs del server (`SELECT name FROM sys.databases`) para que puedas apuntar a una sin tener que crear otra conexión.
 - **Listar Secretos**: re-ejecuta `dotnet user-secrets list --project Algoritmo.Microservices.Shared.API`. Los valores se muestran en **negrita** en el visor.
-- **Modificar Secreto**: toma la conexión + BD seleccionadas y reescribe los secretos `SoftCerealCore.Development.ConnectionString` y `SoftCerealCore.DAPR.ConnectionString`.
+- **Modificar Secreto**: toma la conexión + BD seleccionadas y reescribe los secretos `SoftCerealCore.Development.ConnectionString` y `SoftCerealCore.DAPR.ConnectionString`. Los otros dos (`Staging`, `Production`) **se conservan tal cual**: se releen antes de escribir, porque modificar uno reescribe los cuatro.
+- Las cadenas generadas terminan en `;TrustServerCertificate=True;Encrypt=False` (constante `Constantes.ParametrosDeCifrado`), **igual que las del archivo de restauración**. Si no coincidieran, la cadena cambiaría de forma según si tocaste `Restaurar` o `Modificar`. `Encrypt=False` no es decorativo: `Microsoft.Data.SqlClient` cifra por defecto desde la versión 4.
 - **Restaurar Secretos**: carga desde `secrets/SoftCerealCore.ConnectionString.json` (si existe en el repo).
+- **Menú contextual del explorador** (`Agregar al menú` / `Regenerar menú` / `Quitar del menú`): agrega al clic derecho sobre el **fondo de cualquier carpeta** y del escritorio:
 
-**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/Shared/data.db` — tabla `SavedConnections` con constraint único `(Server, DataBase, UserName)` y columna `UseIntegratedSecurity`. Lo consume también el Schema Change Detector.
+  ```text
+  DevTools ▸
+      Secrets Manager ▸
+          Restaurar secretos
+          ────────────────
+          localhost,1433 - Algoritmo93 (softcereal)
+          10.1.85.93,1433 - Algoritmo (softcereal)
+          ────────────────
+          Elegir base...
+  ```
+
+  La raíz es **DevTools** y no el Secrets Manager para que las demás tools puedan colgar su propio grupo del mismo menú en vez de agregar cada una un verbo suelto arriba de todo. `Quitar del menú` borra el grupo `Secrets Manager`, y la raíz `DevTools` sólo si no quedó ninguna otra tool colgando. Va en `HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell`, así que no pide permisos de administrador. A diferencia del Convertidor a Markdown, **siempre pide confirmación y avisa el resultado**: `ApplySecrets` corre `user-secrets clear` antes de reescribir, así que un clic por error dejaría el proyecto sin secretos.
+
+> **El menú es estático.** El explorador no ejecuta código nuestro para dibujarlo, así que las bases **no se pueden consultar en vivo**: cada entrada lleva clavada la última base usada de esa conexión (columna `LastDataBase`). Por eso el menú se **reescribe solo** cada vez que agregás, borrás o reapuntás una conexión (`MenuContextualSecretos.Sincronizar`). Las conexiones que todavía no tienen base no se listan — se llega a ellas por `Elegir base...`, que sí consulta el servidor.
+
+**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/Shared/data.db` — tabla `SavedConnections` con constraint único `(Server, DataBase, UserName)` y columnas `UseIntegratedSecurity` y `LastDataBase`. Lo consume también el Schema Change Detector.
+
+> `LastDataBase` es **deliberadamente distinta** de `DataBase`: esa última forma parte de la clave única, así que pisarla cambiaría la identidad de la conexión y podría chocar con otra fila. La conexión es el servidor más las credenciales; la base es un dato de uso.
 
 **Status bar**: siempre muestra `Server: X | Base: Y` del secreto Development actual; se actualiza automáticamente cuando modificás un secreto.
 

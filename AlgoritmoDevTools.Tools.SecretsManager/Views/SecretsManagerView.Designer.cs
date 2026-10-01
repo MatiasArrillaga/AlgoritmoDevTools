@@ -26,11 +26,14 @@ partial class SecretsManagerView
         NuevaConexionBtn = new Button();
         ModificarConexionBtn = new Button();
         EliminarConexionBtn = new Button();
+        MenuAgregarBtn = new Button();
+        MenuQuitarBtn = new Button();
+        MenuEstadoLbl = new Label();
         SuspendLayout();
         // 
         // ListarSecretosBtn
         // 
-        ListarSecretosBtn.Location = new Point(12, 60);
+        ListarSecretosBtn.Location = new Point(110, 84);
         ListarSecretosBtn.Name = "ListarSecretosBtn";
         ListarSecretosBtn.Size = new Size(139, 32);
         ListarSecretosBtn.TabIndex = 6;
@@ -41,17 +44,17 @@ partial class SecretsManagerView
         // VisorTxt
         // 
         VisorTxt.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        VisorTxt.Location = new Point(12, 105);
+        VisorTxt.Location = new Point(12, 124);
         VisorTxt.Name = "VisorTxt";
         VisorTxt.ReadOnly = true;
-        VisorTxt.Size = new Size(1169, 238);
+        VisorTxt.Size = new Size(1169, 234);
         VisorTxt.TabIndex = 9;
         VisorTxt.Text = "";
         VisorTxt.WordWrap = false;
         // 
         // RestaurarSecretosBtn
         // 
-        RestaurarSecretosBtn.Location = new Point(160, 60);
+        RestaurarSecretosBtn.Location = new Point(255, 84);
         RestaurarSecretosBtn.Name = "RestaurarSecretosBtn";
         RestaurarSecretosBtn.Size = new Size(159, 32);
         RestaurarSecretosBtn.TabIndex = 7;
@@ -61,9 +64,9 @@ partial class SecretsManagerView
         // 
         // ModificarSecretoBtn
         // 
-        ModificarSecretoBtn.Location = new Point(328, 60);
+        ModificarSecretoBtn.Location = new Point(516, 46);
         ModificarSecretoBtn.Name = "ModificarSecretoBtn";
-        ModificarSecretoBtn.Size = new Size(159, 32);
+        ModificarSecretoBtn.Size = new Size(153, 32);
         ModificarSecretoBtn.TabIndex = 8;
         ModificarSecretoBtn.Text = "Modificar Secreto";
         ModificarSecretoBtn.UseVisualStyleBackColor = true;
@@ -91,7 +94,7 @@ partial class SecretsManagerView
         // DataBaseLbl
         // 
         DataBaseLbl.AutoSize = true;
-        DataBaseLbl.Location = new Point(525, 15);
+        DataBaseLbl.Location = new Point(12, 49);
         DataBaseLbl.Name = "DataBaseLbl";
         DataBaseLbl.Size = new Size(72, 20);
         DataBaseLbl.TabIndex = 2;
@@ -102,40 +105,67 @@ partial class SecretsManagerView
         DataBaseCmb.DropDownStyle = ComboBoxStyle.DropDownList;
         DataBaseCmb.Enabled = false;
         DataBaseCmb.FormattingEnabled = true;
-        DataBaseCmb.Location = new Point(605, 12);
+        DataBaseCmb.Location = new Point(110, 46);
         DataBaseCmb.Name = "DataBaseCmb";
-        DataBaseCmb.Size = new Size(220, 28);
+        DataBaseCmb.Size = new Size(400, 28);
         DataBaseCmb.TabIndex = 3;
         // 
         // NuevaConexionBtn
         // 
-        NuevaConexionBtn.Location = new Point(840, 10);
+        NuevaConexionBtn.Location = new Point(516, 10);
         NuevaConexionBtn.Name = "NuevaConexionBtn";
         NuevaConexionBtn.Size = new Size(100, 31);
         NuevaConexionBtn.TabIndex = 4;
         NuevaConexionBtn.Text = "Nuevo";
         NuevaConexionBtn.UseVisualStyleBackColor = true;
         NuevaConexionBtn.Click += NuevaConexionBtn_Click;
-        //
+        // 
         // ModificarConexionBtn
-        //
-        ModificarConexionBtn.Location = new Point(950, 10);
+        // 
+        ModificarConexionBtn.Location = new Point(626, 10);
         ModificarConexionBtn.Name = "ModificarConexionBtn";
         ModificarConexionBtn.Size = new Size(100, 31);
         ModificarConexionBtn.TabIndex = 5;
         ModificarConexionBtn.Text = "Modificar";
         ModificarConexionBtn.UseVisualStyleBackColor = true;
         ModificarConexionBtn.Click += ModificarConexionBtn_Click;
-        //
+        // 
         // EliminarConexionBtn
-        //
-        EliminarConexionBtn.Location = new Point(1060, 10);
+        // 
+        EliminarConexionBtn.Location = new Point(736, 10);
         EliminarConexionBtn.Name = "EliminarConexionBtn";
         EliminarConexionBtn.Size = new Size(100, 31);
         EliminarConexionBtn.TabIndex = 6;
         EliminarConexionBtn.Text = "Eliminar";
         EliminarConexionBtn.UseVisualStyleBackColor = true;
         EliminarConexionBtn.Click += EliminarConexionBtn_Click;
+        // 
+        // MenuAgregarBtn
+        // 
+        MenuAgregarBtn.Location = new Point(516, 84);
+        MenuAgregarBtn.Name = "MenuAgregarBtn";
+        MenuAgregarBtn.Size = new Size(153, 32);
+        MenuAgregarBtn.TabIndex = 10;
+        MenuAgregarBtn.Text = "Agregar al menú";
+        MenuAgregarBtn.UseVisualStyleBackColor = true;
+        MenuAgregarBtn.Click += MenuAgregarBtn_Click;
+        // 
+        // MenuQuitarBtn
+        // 
+        MenuQuitarBtn.Location = new Point(675, 86);
+        MenuQuitarBtn.Name = "MenuQuitarBtn";
+        MenuQuitarBtn.Size = new Size(155, 32);
+        MenuQuitarBtn.TabIndex = 11;
+        MenuQuitarBtn.Text = "Quitar del menú";
+        MenuQuitarBtn.UseVisualStyleBackColor = true;
+        MenuQuitarBtn.Click += MenuQuitarBtn_Click;
+        // 
+        // MenuEstadoLbl
+        // 
+        MenuEstadoLbl.Location = new Point(836, 86);
+        MenuEstadoLbl.Name = "MenuEstadoLbl";
+        MenuEstadoLbl.Size = new Size(345, 22);
+        MenuEstadoLbl.TabIndex = 12;
         // 
         // SecretsManagerView
         // 
@@ -148,13 +178,15 @@ partial class SecretsManagerView
         Controls.Add(NuevaConexionBtn);
         Controls.Add(ModificarConexionBtn);
         Controls.Add(EliminarConexionBtn);
-        Controls.Add(ListarSecretosBtn);
+        Controls.Add(MenuAgregarBtn);
+        Controls.Add(MenuQuitarBtn);
+        Controls.Add(MenuEstadoLbl);
         Controls.Add(RestaurarSecretosBtn);
         Controls.Add(ModificarSecretoBtn);
         Controls.Add(VisorTxt);
         Controls.Add(ListarSecretosBtn);
         Name = "SecretsManagerView";
-        Size = new Size(1193, 358);
+        Size = new Size(1193, 373);
         Load += SecretsManagerView_Load;
         ResumeLayout(false);
         PerformLayout();
@@ -171,4 +203,7 @@ partial class SecretsManagerView
     private System.Windows.Forms.Button NuevaConexionBtn;
     private System.Windows.Forms.Button ModificarConexionBtn;
     private System.Windows.Forms.Button EliminarConexionBtn;
+    private System.Windows.Forms.Button MenuAgregarBtn;
+    private System.Windows.Forms.Button MenuQuitarBtn;
+    private System.Windows.Forms.Label MenuEstadoLbl;
 }

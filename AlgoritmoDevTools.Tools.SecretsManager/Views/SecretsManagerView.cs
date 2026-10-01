@@ -1,5 +1,6 @@
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.SecretsManager.Dialogs;
+using AlgoritmoDevTools.Tools.SecretsManager.Services;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -32,6 +33,9 @@ public partial class SecretsManagerView : UserControl
         tips.SetToolTip(ListarSecretosBtn, "Re-ejecuta 'dotnet user-secrets list' y muestra los secretos actuales del proyecto.");
         tips.SetToolTip(RestaurarSecretosBtn, "Restaura los secretos desde secrets/SoftCerealCore.ConnectionString.json.");
         tips.SetToolTip(ModificarSecretoBtn, "Actualiza los user-secrets Development y DAPR con la conexión + base de datos seleccionadas.");
+        tips.SetToolTip(MenuAgregarBtn, "Agrega DevTools > Secrets Manager al clic derecho sobre el fondo de cualquier carpeta, con Restaurar secretos, una entrada por conexión guardada y Elegir base... Va en HKEY_CURRENT_USER: no necesita permisos de administrador.");
+        tips.SetToolTip(MenuQuitarBtn, "Saca el grupo Secrets Manager del clic derecho. La raíz DevTools se borra sólo si no quedó ninguna otra tool colgando.");
+        tips.SetToolTip(MenuEstadoLbl, "El menú es estático: cada conexión lleva clavada su última base. Se regenera solo cuando agregás, borrás o reapuntás una conexión.");
         tips.SetToolTip(VisorTxt, "Listado actual de user-secrets. Valores variables en negrita.");
     }
 
@@ -41,6 +45,7 @@ public partial class SecretsManagerView : UserControl
         _initialized = true;
 
         RefreshSavedConnections(selectNone: true);
+        ActualizarEstadoDelMenu();
 
         SetVisorPlain("Cargando secretos...");
         SetBusy(true);
@@ -165,6 +170,7 @@ public partial class SecretsManagerView : UserControl
 
         _savedConnections.Add(dialog.Result);
         RefreshSavedConnections(selectNone: true);
+        SincronizarMenu();
     }
 
     private void ModificarConexionBtn_Click(object? sender, EventArgs e)
@@ -181,6 +187,7 @@ public partial class SecretsManagerView : UserControl
 
         _savedConnections.Update(sc.Id, dialog.Result);
         RefreshSavedConnections(selectNone: true);
+        SincronizarMenu();
     }
 
     private void EliminarConexionBtn_Click(object? sender, EventArgs e)
@@ -198,6 +205,7 @@ public partial class SecretsManagerView : UserControl
 
         _savedConnections.Delete(sc.Id);
         RefreshSavedConnections(selectNone: true);
+        SincronizarMenu();
     }
 
     private async void ListarSecretosBtn_Click(object? sender, EventArgs e)
@@ -246,19 +254,20 @@ public partial class SecretsManagerView : UserControl
             return;
         }
 
-        var selectedDb = DataBaseCmb.SelectedItem as string ?? sc.DataBase;
-        var cn = new SQLService.ConnectionData(
-            server: sc.Server,
-            user: sc.User,
-            password: sc.Password,
-            dataBase: selectedDb,
-            useIntegratedSecurity: sc.UseIntegratedSecurity);
+        var selectedDb = DataBaseCmb.SelectedItem as string ?? sc.BaseEfectiva;
+        if (string.IsNullOrWhiteSpace(selectedDb))
+        {
+            MessageBox.Show("Elegí una base de datos antes de modificar el secreto.",
+                "Secret Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
 
         SetBusy(true);
         try
         {
-            await Task.Run(() => _service.SetSecrets(cn));
+            await Task.Run(() => AplicadorDeSecretos.Aplicar(sc, selectedDb, _savedConnections));
             SetVisorWithHighlight(_service.LastRawOutput);
+            ActualizarEstadoDelMenu();
             MessageBox.Show("Secretos Modificados", "Secret Manager");
         }
         catch (Exception ex)
@@ -271,6 +280,60 @@ public partial class SecretsManagerView : UserControl
         }
     }
 
+    // --- Menú contextual del explorador -------------------------------------
+
+    private void MenuAgregarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextualSecretos.TryInstalar(_savedConnections.GetAll());
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo agregar al menú: {error}",
+                "Secret Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    private void MenuQuitarBtn_Click(object? sender, EventArgs e)
+    {
+        var error = MenuContextualSecretos.TryDesinstalar();
+        if (error is not null)
+        {
+            MessageBox.Show($"No se pudo quitar del menú: {error}",
+                "Secret Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        ActualizarEstadoDelMenu();
+    }
+
+    /// <summary>
+    /// Reescribe el menú si está instalado y refresca el cartel. Se llama ante cualquier cambio en
+    /// las conexiones: el menú es estático, así que una conexión borrada seguiría apareciendo.
+    /// </summary>
+    private void SincronizarMenu()
+    {
+        MenuContextualSecretos.Sincronizar(_savedConnections.GetAll());
+        ActualizarEstadoDelMenu();
+    }
+
+    private void ActualizarEstadoDelMenu()
+    {
+        var instalado = MenuContextualSecretos.EstaInstalado();
+        MenuAgregarBtn.Text = instalado ? "Regenerar menú" : "Agregar al menú";
+        MenuQuitarBtn.Enabled = instalado;
+
+        if (!instalado)
+        {
+            MenuEstadoLbl.Text = "Menú contextual: no instalado.";
+            MenuEstadoLbl.ForeColor = Color.Gray;
+            return;
+        }
+
+        var listables = _savedConnections.GetAll().Count(c => !string.IsNullOrWhiteSpace(c.BaseEfectiva));
+        MenuEstadoLbl.Text = $"Menú contextual: instalado ({listables} conexión(es) listada(s)).";
+        MenuEstadoLbl.ForeColor = Color.ForestGreen;
+    }
+
     private void SetBusy(bool busy)
     {
         UseWaitCursor = busy;
@@ -281,5 +344,10 @@ public partial class SecretsManagerView : UserControl
         ModificarConexionBtn.Enabled = !busy;
         EliminarConexionBtn.Enabled = !busy;
         SavedConnectionsCmb.Enabled = !busy;
+        MenuAgregarBtn.Enabled = !busy;
+
+        // Quitar sólo tiene sentido si está instalado: ActualizarEstadoDelMenu es quien manda
+        // sobre este botón, así que al salir de "ocupado" se le devuelve la decisión.
+        MenuQuitarBtn.Enabled = !busy && MenuContextualSecretos.EstaInstalado();
     }
 }

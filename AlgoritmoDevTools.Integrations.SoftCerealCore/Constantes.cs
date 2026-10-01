@@ -36,6 +36,19 @@ public static class Constantes
     public static string GetSecretKey(string secretType)
         => SecretConectionStringName.Replace(ConstKeyWords.SecretName, secretType);
 
+    /// <summary>
+    /// Cola de cifrado que llevan los cuatro secretos. Tiene que coincidir con la del archivo de
+    /// restauración (<see cref="DefaultConectionDataFile"/>), porque "Restaurar Secretos" y
+    /// "Modificar Secreto" escriben las mismas claves: si no coinciden, la cadena cambia de forma
+    /// según cuál de los dos botones tocaste.
+    ///
+    /// <c>Encrypt=False</c> no es decorativo: Microsoft.Data.SqlClient cifra por defecto desde la
+    /// versión 4, así que sin esto la conexión al SQL de desarrollo falla por el certificado
+    /// autofirmado. Antes DAPR se quedaba sin la cola y Development la recibía como
+    /// <c>TrustServerCertificate=Yes</c>, que no incluye el <c>Encrypt</c>.
+    /// </summary>
+    public const string ParametrosDeCifrado = ";TrustServerCertificate=True;Encrypt=False";
+
     public static string GetConnectionString(SQLService.ConnectionData connectionData, string? secretType = "")
         => DefaultConectionString
             .Replace(ConstKeyWords.ServerKey, connectionData.Server)
@@ -44,5 +57,5 @@ public static class Constantes
                 ? connectionData.User
                 : "dapr")
             .Replace(ConstKeyWords.PasswordKey, connectionData.Password)
-            + (!string.Equals(secretType, SecretKeys.DAPR) ? ";TrustServerCertificate=Yes" : string.Empty);
+            + ParametrosDeCifrado;
 }
