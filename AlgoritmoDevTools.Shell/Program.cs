@@ -41,12 +41,25 @@ static class Program
     /// Convertidor a Markdown no registra un verbo propio en la linea de comandos: le llega el
     /// archivo directo como "%1".
     /// </summary>
+    /// <summary>Levanta el widget de bandeja en vez de la ventana principal.</summary>
+    public const string VerboWidget = "--widget";
+
+    /// <summary>
+    /// Nombre del mutex que mantiene una sola instancia del widget. Es global al usuario, no a la
+    /// sesion: dos widgets serian dos iconos haciendo lo mismo.
+    /// </summary>
+    private const string MUTEX_WIDGET = "AlgoritmoDevTools.Widget.InstanciaUnica";
+
     private static bool EjecutarAccionDirecta(string[] args)
     {
         if (args.Length == 0) return false;
 
         switch (args[0])
         {
+            case VerboWidget:
+                EjecutarWidget();
+                return true;
+
             case MenuContextualSecretos.VerboRestaurar:
                 SecretosSinVentana.Restaurar();
                 return true;
@@ -85,6 +98,27 @@ static class Program
 
         ConversionSinVentana.Ejecutar(archivosDeEntrada);
         return true;
+    }
+
+    /// <summary>
+    /// Corre el widget de bandeja, uno solo por usuario. Si ya hay uno, no abre un segundo icono:
+    /// avisa y sale, porque dos widgets haciendo lo mismo solo confunden.
+    /// </summary>
+    private static void EjecutarWidget()
+    {
+        using var mutex = new Mutex(initiallyOwned: true, MUTEX_WIDGET, out var esElPrimero);
+        if (!esElPrimero)
+        {
+            MessageBox.Show("El widget ya esta corriendo: miralo en la bandeja, al lado del reloj.",
+                "Algoritmo DevTools", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        Application.Run(new Widget.WidgetContext());
+
+        // El mutex se libera al salir del using, no antes: mientras el widget corre, tiene que
+        // seguir tomado para que el proximo intento lo vea.
+        GC.KeepAlive(mutex);
     }
 
     /// <summary>

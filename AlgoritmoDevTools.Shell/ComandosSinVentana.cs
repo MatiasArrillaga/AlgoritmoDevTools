@@ -1,5 +1,4 @@
 using AlgoritmoDevTools.Core.Infrastructure;
-using AlgoritmoDevTools.Core.UI;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Dialogs;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
@@ -27,14 +26,16 @@ internal static class ComandosSinVentana
     private static Integrations.SoftCerealCore.DomainRepository AbrirRepositorio()
         => new(new ToolStorage("CommandsMaker"));
 
+    /// <summary>
+    /// El nombre no se pregunta: va el sugerido, que es una marca temporal
+    /// (<c>[Cereales].MIG20261001-143052</c>) y ya es única y ordenable. Preguntarlo sólo agregaba
+    /// una ventana para aceptar lo que el campo venía proponiendo. Si hace falta otro nombre, está
+    /// la pantalla del Commands Maker, donde el campo se edita.
+    /// </summary>
     public static void Add(string dominio)
-    {
-        var sugerido = GeneradorDeComandos.NombreDeMigracionSugerido(dominio);
-        var nombre = InputDialog.Show("Nombre de la migración:", TITULO, sugerido)?.Trim();
-        if (string.IsNullOrWhiteSpace(nombre)) return;
-
-        Copiar(GeneradorDeComandos.AddMigration(dominio, nombre), dominio);
-    }
+        => Copiar(
+            GeneradorDeComandos.AddMigration(dominio, GeneradorDeComandos.NombreDeMigracionSugerido(dominio)),
+            dominio);
 
     public static void Remove(string dominio)
         => Copiar(GeneradorDeComandos.RemoveMigration(dominio), dominio);

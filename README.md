@@ -203,6 +203,42 @@ Al hacer clic derecho sobre un documento **la conversión corre sin abrir la ven
 
 > **Cuidado con `--extract-media`**: va con un punto (`--extract-media=.`), no con `media`. Pandoc le pega adelante la ruta interna del documento (`word/media/`), así que pasarle `media` termina generando `media/media/image1.png`. Con el punto queda `media/image1.png`.
 
+## 🪟 Widget de bandeja
+
+**Qué hace**: el **mismo ejecutable** corriendo con `--widget`, sin ventana principal. Deja en la bandeja, al lado del reloj, contra qué server y base está apuntando el proyecto, y a mano lo que más se usa.
+
+```text
+Server: localhost,1433   —   Base: Algoritmo93      (encabezado, informativo)
+─────────
+Secretos ▸                 Restaurar secretos
+                           ─────
+                           localhost,1433 - Algoritmo93 (softcereal)
+                           ─────
+                           Elegir base...
+Comandos de migración ▸    Dominio: Cereales ▸   Cereales ✓
+                                                  Contabilidad
+                                                  ...   (los 13)
+                           ─────
+                           Add-Migration (Cereales)...
+                           Remove-Migration (Cereales)
+                           Update-Database (Cereales)
+─────────
+Iniciar con Windows  ☑
+Abrir DevTools
+Salir
+```
+
+- **No es un proyecto aparte**: es una rama del dispatcher de `Program.Main`, así que comparte binario, publish y todo el código con el resto. Doble clic en el icono abre el Shell normal.
+- **Mismo flujo que el menú contextual**: se elige el dominio una vez y después los tres comandos quedan a un clic. La diferencia es que acá el dominio se elige en el propio menú y no por diálogo — **no rige el límite de 16 ítems**, porque lo dibuja WinForms y no el registro, así que los 13 entran como submenú. Cambiar el dominio acá también reescribe el menú del explorador, para que los dos muestren el mismo.
+- **Las acciones son las mismas** que las del menú del explorador (`SecretosSinVentana`, `ComandosSinVentana`): confirmación antes de tocar secretos, nada de cartel al copiar un comando.
+- **Instancia única** por `Mutex`: un segundo `--widget` avisa y sale en vez de poner otro icono.
+- **Iniciar con Windows** escribe en `HKEY_CURRENT_USER\...\Run` (sin permisos de administrador). La tilde sólo aparece si la entrada apunta al exe que está corriendo: si publicaste a otra carpeta, se muestra apagada para que la regeneres.
+- **El estado se relee al abrir el menú y tras cada acción, nunca por polling**: `RefreshSecrets` levanta PowerShell y tarda uno o dos segundos, así que corre fuera del hilo de UI.
+
+> ⚠️ **Al desarrollar, correlo desde el publish y no desde `bin\Debug`.** Un widget residente mantiene los DLL tomados y cualquier `dotnet build` de la solución falla con `MSB3027`. Por eso el menú tiene **Salir** bien a mano. Para generar el exe único: `dotnet publish -c Release`.
+
+Para levantarlo: `AlgoritmoDevTools.exe --widget`.
+
 ## Servicios compartidos
 
 ### `SecretService.Shared`

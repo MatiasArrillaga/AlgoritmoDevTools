@@ -11,7 +11,7 @@ namespace AlgoritmoDevTools.Tools.CommandsMaker.Services;
 ///     Commands Maker ▸
 ///         Elegir dominio...                  ← cambia el dominio activo
 ///         ────────────────
-///         Add-Migration (Cereales)...        ← los tres, sobre el dominio activo
+///         Add-Migration (Cereales)           ← los tres, sobre el dominio activo
 ///         Remove-Migration (Cereales)
 ///         Update-Database (Cereales)
 /// </code>
@@ -121,9 +121,9 @@ public static class MenuContextualComandos
     /// <summary>Los tres comandos del dominio activo, debajo del separador.</summary>
     private static void EscribirAcciones(string dominio)
     {
-        // Los puntos suspensivos son la convención de Windows para "esto abre una ventana":
-        // Add-Migration pide el nombre de la migración.
-        MenuContextualDevTools.EscribirItem(RutaDelGrupo, "10Add", $"Add-Migration ({dominio})...", $"{VerboAdd} {dominio}", separadorAntes: true);
+        // Ninguno abre ventana: los tres copian el comando y listo. El nombre de la migración
+        // de Add sale del sugerido, no se pregunta.
+        MenuContextualDevTools.EscribirItem(RutaDelGrupo, "10Add", $"Add-Migration ({dominio})", $"{VerboAdd} {dominio}", separadorAntes: true);
         MenuContextualDevTools.EscribirItem(RutaDelGrupo, "11Remove", $"Remove-Migration ({dominio})", $"{VerboRemove} {dominio}");
         MenuContextualDevTools.EscribirItem(RutaDelGrupo, "12Update", $"Update-Database ({dominio})", $"{VerboUpdate} {dominio}");
     }
