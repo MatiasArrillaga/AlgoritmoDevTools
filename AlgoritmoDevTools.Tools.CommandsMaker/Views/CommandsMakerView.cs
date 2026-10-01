@@ -11,9 +11,19 @@ public partial class CommandsMakerView : UserControl
     private const string CONNECTION_STRING = "*CONNECTION_STRING*";
 
     private const string PROJECT = "Algoritmo." + DOMINIO_TOKEN + ".Infrastructure";
+
+    /// <summary>
+    /// Cola fija de la connection string, compartida por los tres comandos. Encrypt y
+    /// TrustServerCertificate son obligatorios: Microsoft.Data.SqlClient cifra la conexión por
+    /// defecto y el SQL de desarrollo usa un certificado autofirmado, así que sin ellos el
+    /// comando falla con "The certificate chain was issued by an authority that is not trusted".
+    /// </summary>
+    private const string CONNECTION_SUFFIX =
+        "Integrated Security = true; MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;";
+
     // CS usada por PM Console: Server y Database del secreto Development + Integrated Security (Windows user con permisos SA).
     private const string FALLBACK_CONNECTION_STRING =
-        "Server=localhost,1433;Database=Algoritmo;Integrated Security = true; MultipleActiveResultSets=True";
+        "Server=localhost,1433;Database=Algoritmo;" + CONNECTION_SUFFIX;
 
     private const string COMMON_COMMAND = "-Context " + DOMINIO_TOKEN + "DbContext -Project " + PROJECT + " -StartupProject " + PROJECT;
     private const string ARGS = " -Args '--Connection \"" + CONNECTION_STRING + "\"'";
@@ -40,12 +50,12 @@ public partial class CommandsMakerView : UserControl
         tips.SetToolTip(cmbDominios, "Dominio actual. Se usa para armar los comandos. Compartido con Schema Change Detector.");
         tips.SetToolTip(addDomain, "Agrega un dominio nuevo a la lista.");
         tips.SetToolTip(removeDomain, "Elimina el dominio seleccionado.");
-        tips.SetToolTip(migrationName, "Nombre de la migraci�n (editable). Se sustituye en el comando add-migration.");
-        tips.SetToolTip(checkBox1, "Si est� activo, antepone '[Dominio].' al nombre de la migraci�n.");
+        tips.SetToolTip(migrationName, "Nombre de la migración (editable). Se sustituye en el comando add-migration.");
+        tips.SetToolTip(checkBox1, "Si está activo, antepone '[Dominio].' al nombre de la migración.");
         tips.SetToolTip(bAdd, "Copia al clipboard el comando 'add-migration' con el nombre y la connection string actual, listo para pegarlo en PM Console.");
         tips.SetToolTip(bRemove, "Copia al clipboard el comando 'remove-migration -force', listo para pegarlo en PM Console.");
         tips.SetToolTip(bUpdate, "Copia al clipboard el comando 'update-database' con la connection string del secreto Development.");
-        tips.SetToolTip(rtbText, "�ltimo comando generado. Ya est� copiado en el clipboard.");
+        tips.SetToolTip(rtbText, "Último comando generado. Ya está copiado en el clipboard.");
     }
 
     private string ResolveConnectionString()
@@ -60,7 +70,7 @@ public partial class CommandsMakerView : UserControl
         var database = parts.GetValueOrDefault("Database");
         if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(database)) return FALLBACK_CONNECTION_STRING;
 
-        return $"Server={server};Database={database};Integrated Security = true; MultipleActiveResultSets=True";
+        return $"Server={server};Database={database};" + CONNECTION_SUFFIX;
     }
 
     private void CastCommand(string template)

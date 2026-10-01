@@ -72,7 +72,7 @@ Cada **Tool** es un `classlib` con:
 **Qué hace**: genera los comandos `Add-Migration`, `Remove-Migration` y `Update-Database` listos para pegar en la **Package Manager Console** de Visual Studio.
 
 - Lee `Server` y `Database` del user-secret `SoftCerealCore.Development.ConnectionString`.
-- Reemplaza las credenciales por `Integrated Security = true; MultipleActiveResultSets=True` (equivalente a lo que usan los scripts PowerShell del backend — corre como tu user de Windows con SA).
+- Reemplaza las credenciales por `Integrated Security = true; MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;` (equivalente a lo que usan los scripts PowerShell del backend — corre como tu user de Windows con SA). `Encrypt` y `TrustServerCertificate` no son opcionales: `Microsoft.Data.SqlClient` cifra por defecto y el SQL de desarrollo usa un certificado autofirmado. La cola vive en una sola constante (`CONNECTION_SUFFIX`), así que la toman los tres comandos.
 - Mantiene una lista local de dominios (Cereales, Contabilidad, etc.) que se comparte con el Schema Change Detector.
 - Al dar click en Add/Remove/UpdateD, el comando se copia al clipboard.
 
