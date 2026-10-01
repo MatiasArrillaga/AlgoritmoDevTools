@@ -35,9 +35,7 @@ internal sealed class WidgetContext : ApplicationContext
     private readonly NotifyIcon _icono;
     private readonly SecretService _secretos = SecretService.Shared;
     private readonly SavedConnectionsRepository _conexiones = new(new ToolStorage("Shared"));
-    // Calificado porque hay dos clases DomainRepository duplicadas en el repo (ésta y una en
-    // Tools.CommandsMaker.Services) y el nombre suelto es ambiguo.
-    private readonly Integrations.SoftCerealCore.DomainRepository _dominios = new(new ToolStorage("CommandsMaker"));
+    private readonly DomainRepository _dominios = new(new ToolStorage("CommandsMaker"));
 
     /// <summary>
     /// Dominio sobre el que trabajan los tres comandos. Es un campo y no una variable capturada

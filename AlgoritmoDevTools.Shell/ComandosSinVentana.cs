@@ -18,13 +18,8 @@ internal static class ComandosSinVentana
 {
     private const string TITULO = "Commands Maker";
 
-    /// <summary>
-    /// Mismo storage y mismo repositorio que usa <c>CommandsMakerTool</c>: los dominios son los
-    /// mismos. Va calificado porque hay dos clases <c>DomainRepository</c> duplicadas en el repo
-    /// (ésta y una en <c>Tools.CommandsMaker.Services</c>) y el nombre suelto es ambiguo.
-    /// </summary>
-    private static Integrations.SoftCerealCore.DomainRepository AbrirRepositorio()
-        => new(new ToolStorage("CommandsMaker"));
+    /// <summary>Mismo storage que usa <c>CommandsMakerTool</c>: los dominios son los mismos.</summary>
+    private static DomainRepository AbrirRepositorio() => new(new ToolStorage("CommandsMaker"));
 
     /// <summary>
     /// El nombre no se pregunta: va el sugerido, que es una marca temporal

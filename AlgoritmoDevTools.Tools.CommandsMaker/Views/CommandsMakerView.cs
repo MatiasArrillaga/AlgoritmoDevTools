@@ -1,9 +1,6 @@
 using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.UI;
-// Alias y no un using del namespace: Services tiene su propio DomainRepository, duplicado del
-// de Integrations, y traerlo entero vuelve ambiguo el que usa esta vista.
-using GeneradorDeComandos = AlgoritmoDevTools.Tools.CommandsMaker.Services.GeneradorDeComandos;
-using MenuContextualComandos = AlgoritmoDevTools.Tools.CommandsMaker.Services.MenuContextualComandos;
+using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using System.Drawing;
 using System.Windows.Forms;
