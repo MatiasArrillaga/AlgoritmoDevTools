@@ -1,0 +1,51 @@
+@using AlgoritmoDevTools.UI.Servicios
+@using AlgoritmoDevTools.Tools.ModelDriftChecker.Services
+@using System.Text
+
+@*
+    Schema Change Detector: compara el baseline —el commit hasta el que el usuario confirmó tener la
+    base migrada— contra HEAD, y lista los archivos de Domain e Infrastructure que podrían exigir
+    correr migraciones.
+
+    Es la misma funcionalidad de la ventana clásica: cambia la pantalla, no el servicio.
+*@
+
+<TituloDePagina Texto="Schema Change Detector" Ayuda="Compara el baseline con HEAD y lista los archivos que podrían exigir una migración." />
+
+<div class="metadatos">
+    <span>Repositorio: <b class="mono">@_repoPath</b></span>
+    <span>Baseline: <b class="mono">@_baselineTexto</b></span>
+    <span>HEAD: <b class="mono">@_headTexto</b></span>
+</div>
+
+<div class="acciones">
+    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Verificar"
+            title="Compara el baseline con HEAD y lista los archivos que podrían requerir migración.">
+        Verificar
+    </button>
+    <button type="button" class="btn btn-secundario" disabled="@_ocupado" @onclick="UsarHeadComoBaseline"
+            title="Marca HEAD como punto de referencia. Se usa la primera vez, o para reinicializar sin haber migrado.">
+        Usar HEAD como baseline
+    </button>
+    <button type="button" class="btn btn-secundario" disabled="@_ocupado" @onclick="AlternarConfirmacionMigrado"
+            title="Después de correr las migraciones en tu base local, mueve el baseline a HEAD.">
+        Ya migré
+    </button>
+</div>
+
+@if (_confirmandoMigrado)
+{
+    @* El visor no muestra los dialogos del navegador, asi que la confirmacion es parte de la pagina. *@
+    <div class="confirmacion">
+        <p>Se va a mover el baseline a <b class="mono">@Corto(_headSha)</b>. ¿Ya corriste las migraciones en tu base local?</p>
+        <div class="acciones">
+            <button type="button" class="btn btn-primario" @onclick="ConfirmarMigrado">Sí, ya migré</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _confirmandoMigrado = false">Cancelar</button>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_salida))
+{
+    <pre class="salida">@_salida</pre>
+}

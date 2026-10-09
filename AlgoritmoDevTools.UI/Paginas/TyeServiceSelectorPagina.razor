@@ -1,0 +1,78 @@
+@using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.Tools.TyeServiceSelector.Services
+@using AlgoritmoDevTools.UI.Servicios
+
+@*
+    Selector de Servicios (Tye): elige qué microservicios levanta el entorno local y escribe el
+    tye.devtools.yaml a partir del tye.yaml maestro, que nunca se modifica.
+
+    El servicio de seguridad no se puede destildar: sin él no levanta ninguno de los demás.
+*@
+
+<TituloDePagina Texto="Selector de Servicios (Tye)" Ayuda="Genera tye.devtools.yaml con los servicios que elijas. El maestro no se toca." />
+
+<p class="grupo">Perfil</p>
+
+<div class="fila" style="margin-top:0">
+    <select class="campo" style="max-width:280px" value="@_perfilElegido" @onchange="CambiarPerfil">
+        <option value="@SinPerfil">@SinPerfil</option>
+        @foreach (var nombre in _nombresDePerfil)
+        {
+            <option value="@nombre">@nombre</option>
+        }
+    </select>
+    <button type="button" class="btn btn-secundario" @onclick="AlternarGuardarPerfil">Guardar perfil</button>
+    <button type="button" class="btn btn-secundario" disabled="@(PerfilActual() is null)" @onclick="AlternarEliminarPerfil">Eliminar perfil</button>
+</div>
+
+@if (_guardandoPerfil)
+{
+    <div class="confirmacion">
+        <p>Nombre del perfil:</p>
+        <div class="fila">
+            <input class="campo" style="max-width:280px" @bind="_nombreNuevoPerfil" @bind:event="oninput"
+                   @onkeydown="TeclaEnNombreDePerfil" />
+            <button type="button" class="btn btn-primario" @onclick="GuardarPerfil">Guardar</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _guardandoPerfil = false">Cancelar</button>
+        </div>
+    </div>
+}
+
+@if (_eliminandoPerfil)
+{
+    <div class="confirmacion">
+        <p>¿Eliminar el perfil <b>@PerfilActual()</b>?</p>
+        <div class="acciones">
+            <button type="button" class="btn btn-primario" @onclick="EliminarPerfil">Eliminar</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _eliminandoPerfil = false">Cancelar</button>
+        </div>
+    </div>
+}
+
+<p class="grupo">Servicios</p>
+
+<div class="fila" style="margin-top:0">
+    <button type="button" class="btn btn-secundario" @onclick="Releer">Refrescar</button>
+    <button type="button" class="btn btn-secundario" @onclick="() => MarcarTodos(true)">Marcar todos</button>
+    <button type="button" class="btn btn-secundario" @onclick="() => MarcarTodos(false)">Desmarcar todos</button>
+</div>
+
+@if (_servicios.Count > 0)
+{
+    <div class="lista-chk columnas">
+        @foreach (var servicio in _servicios)
+        {
+            var actual = servicio;
+            <label class="chk" title="@(EsObligatorio(actual.Nombre) ? "Sin este servicio no levanta ninguno de los demás." : actual.Nombre)">
+                <input type="checkbox" checked="@actual.Activo" disabled="@EsObligatorio(actual.Nombre)"
+                       @onchange="e => Alternar(actual, e)" />
+                <span>@actual.Nombre</span>
+            </label>
+        }
+    </div>
+}
+
+<div class="acciones">
+    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Generar">Generar y guardar</button>
+    <button type="button" class="btn btn-secundario" @onclick="CopiarComando">Copiar comando run</button>
+</div>

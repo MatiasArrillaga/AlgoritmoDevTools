@@ -1,0 +1,99 @@
+@using AlgoritmoDevTools.UI.Servicios
+@using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.Integrations.SoftCerealCore
+@using AlgoritmoDevTools.Tools.CommandsMaker.Services
+
+@*
+    Commands Maker: arma los comandos de migraciones de EF Core para el dominio elegido y los deja
+    en el portapapeles, listos para pegar en la consola del administrador de paquetes.
+
+    El dominio que se usa queda registrado como el último, y es el que el menú contextual del
+    explorador muestra arriba de todo.
+*@
+
+<TituloDePagina Texto="Commands Maker" Ayuda="Los comandos salen con la cadena de conexión actual y quedan en el portapapeles." />
+
+<p class="grupo">Dominio</p>
+
+<div class="fila" style="margin-top:0">
+    <select class="campo" style="max-width:260px" value="@_dominio" @onchange="CambiarDominio">
+        @foreach (var dominio in _todosLosDominios)
+        {
+            <option value="@dominio">@dominio</option>
+        }
+    </select>
+    <button type="button" class="btn btn-secundario" title="Agrega un dominio nuevo a la lista."
+            @onclick="AlternarAgregarDominio">Agregar</button>
+    <button type="button" class="btn btn-secundario" title="Elimina el dominio seleccionado."
+            disabled="@string.IsNullOrWhiteSpace(_dominio)"
+            @onclick="AlternarEliminarDominio">Eliminar</button>
+</div>
+
+@if (_agregandoDominio)
+{
+    <div class="confirmacion">
+        <p>Nombre del dominio:</p>
+        <div class="fila">
+            <input class="campo" style="max-width:260px" @bind="_dominioNuevo" @bind:event="oninput"
+                   @onkeydown="TeclaEnDominioNuevo" />
+            <button type="button" class="btn btn-primario" @onclick="AgregarDominio">Agregar</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _agregandoDominio = false">Cancelar</button>
+        </div>
+    </div>
+}
+
+@if (_eliminandoDominio)
+{
+    <div class="confirmacion">
+        <p>¿Eliminar el dominio <b>@_dominio</b>?</p>
+        <div class="acciones">
+            <button type="button" class="btn btn-primario" @onclick="EliminarDominio">Eliminar</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _eliminandoDominio = false">Cancelar</button>
+        </div>
+    </div>
+}
+
+<p class="grupo">Migración</p>
+
+<div class="fila" style="margin-top:0">
+    <input class="campo" style="max-width:420px" @bind="_nombreDeMigracion" @bind:event="oninput"
+           title="Nombre de la migración. Se sustituye en el comando add-migration." />
+</div>
+
+<label class="chk" title="Antepone el dominio entre corchetes al nombre de la migración.">
+    <input type="checkbox" checked="@_conPrefijoDeDominio" @onchange="CambiarPrefijo" />
+    <span>Incluir el dominio en el nombre de la migración</span>
+</label>
+
+<div class="acciones">
+    <button type="button" class="btn btn-primario" @onclick="CopiarAdd"
+            title="Copia el comando add-migration con el nombre y la cadena de conexión actuales.">
+        add-migration
+    </button>
+    <button type="button" class="btn btn-secundario" @onclick="CopiarRemove"
+            title="Copia el comando remove-migration -force.">
+        remove-migration
+    </button>
+    <button type="button" class="btn btn-secundario" @onclick="CopiarUpdate"
+            title="Copia update-database con la cadena de conexión del secreto Development.">
+        update-database
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(_ultimoComando))
+{
+    <pre class="salida">@_ultimoComando</pre>
+}
+
+<p class="grupo">Menú contextual del explorador</p>
+
+<div class="fila" style="margin-top:0">
+    <button type="button" class="btn btn-secundario" @onclick="InstalarMenu">
+        @(_menuInstalado ? "Regenerar menú" : "Agregar al menú")
+    </button>
+    <button type="button" class="btn btn-secundario" disabled="@(!_menuInstalado)" @onclick="QuitarMenu">
+        Quitar del menú
+    </button>
+</div>
+
+<p class="linea-estado @_claseEstadoMenu">@_estadoMenu</p>

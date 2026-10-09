@@ -1,0 +1,72 @@
+@using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.Tools.MarkdownConverter.Services
+@using AlgoritmoDevTools.UI.Servicios
+@using System.Text
+
+@*
+    Convertidor a Markdown: pasa ERS, relevamientos y planes a Markdown para poder dárselos a un
+    asistente sin gastar contexto de más.
+
+    La zona donde se sueltan los documentos la dibuja la ventana al pie, con Windows Forms y los
+    colores del tema: el motor de Edge entrega el contenido de lo que se suelta pero nunca su ruta,
+    y pandoc necesita la ruta real para dejar el .md al lado del original. Esta pantalla sólo la
+    pide al entrar y la suelta al salir.
+*@
+
+<TituloDePagina Texto="Convertidor a Markdown" Ayuda="@TextoDeAyuda" />
+
+@if (!_hayPandoc)
+{
+    <div class="confirmacion">
+        <p>Falta pandoc, que es lo que hace la conversión. Instalalo y volvé a entrar:</p>
+        <pre class="salida" style="margin-top:10px">winget install --id JohnMacFarlane.Pandoc -e</pre>
+    </div>
+}
+else
+{
+    <p class="grupo">Opciones</p>
+
+    <label class="chk">
+        <input type="checkbox" checked="@_quitarTachado" @onchange="e => _quitarTachado = e.Value is true" />
+        <span>Quitar el texto tachado</span>
+    </label>
+
+    <div class="fila" style="margin-top:8px">
+        <span style="font-size:12.5px">HTML para leer:</span>
+        <select class="campo" style="max-width:200px" value="@_html" @onchange="e => _html = e.Value?.ToString() ?? HtmlNo">
+            <option value="@HtmlNo">no generar</option>
+            <option value="@HtmlClaro">tema claro</option>
+            <option value="@HtmlOscuro">tema oscuro</option>
+        </select>
+    </div>
+
+    <div class="acciones">
+        <button type="button" class="btn btn-primario" disabled="@_convirtiendo" @onclick="ElegirYConvertir">
+            Elegir archivos...
+        </button>
+        <button type="button" class="btn btn-secundario" disabled="@(!_convirtiendo)" @onclick="Detener">
+            Detener
+        </button>
+        <button type="button" class="btn btn-secundario" disabled="@string.IsNullOrEmpty(_ultimaCarpeta)" @onclick="AbrirCarpeta">
+            Abrir carpeta
+        </button>
+    </div>
+
+        @if (_registro.Length > 0)
+    {
+        <pre class="salida">@_registro.ToString()</pre>
+    }
+
+    <p class="grupo">Menú contextual del explorador</p>
+
+    <div class="fila" style="margin-top:0">
+        <button type="button" class="btn btn-secundario" @onclick="InstalarMenu">
+            @(_menuInstalado ? "Regenerar menú contextual" : "Agregar al menú contextual")
+        </button>
+        <button type="button" class="btn btn-secundario" disabled="@(!_menuInstalado)" @onclick="QuitarMenu">
+            Quitar del menú contextual
+        </button>
+    </div>
+
+    <p class="linea-estado @_claseEstadoMenu">@_estadoMenu</p>
+}
