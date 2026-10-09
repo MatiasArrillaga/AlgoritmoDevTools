@@ -1,0 +1,95 @@
+@using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.Integrations.SoftCerealCore
+@using AlgoritmoDevTools.Tools.ModelDriftChecker.Services
+@using AlgoritmoDevTools.Tools.TyeServiceSelector.Services
+
+@*
+    Inicio: en qué estado quedó configurado el entorno, sin tener que entrar a cada herramienta.
+
+    Todo lo que se muestra acá es barato de leer: los secretos ya están en memoria, el estado de los
+    servicios sale del yaml generado y el baseline de una consulta a SQLite. Nada corre git ni abre
+    procesos, porque esta pantalla es lo primero que se ve y tiene que aparecer al instante.
+*@
+
+<h1 class="saludo">Hola @_usuario!</h1>
+<p class="saludo-sub">Así quedó configurado tu entorno.</p>
+
+<div class="tarjetas">
+
+    <div class="tarjeta">
+        <p class="tarjeta-titulo">Base de datos</p>
+        @if (_leyendoSecretos)
+        {
+            <p class="tarjeta-valor sin-dato"><span class="girando"></span> Leyendo...</p>
+            <p class="tarjeta-detalle">Consultando los secretos del proyecto.</p>
+        }
+        else if (_haySecreto)
+        {
+            <p class="tarjeta-valor">@_baseDeDatos</p>
+            <p class="tarjeta-detalle">en <span class="mono">@_servidor</span></p>
+        }
+        else
+        {
+            <p class="tarjeta-valor sin-dato">Sin configurar</p>
+            <p class="tarjeta-detalle">El secreto Development no está puesto.</p>
+        }
+    </div>
+
+    <div class="tarjeta">
+        <p class="tarjeta-titulo">Servicios de Tye</p>
+        @if (_totalDeServicios == 0)
+        {
+            <p class="tarjeta-valor sin-dato">—</p>
+            <p class="tarjeta-detalle">No se encontró el <span class="mono">tye.yaml</span> maestro.</p>
+        }
+        else
+        {
+            <p class="tarjeta-valor">@_serviciosActivos <span class="de">de @_totalDeServicios</span></p>
+            @if (_perfil is not null)
+            {
+                <p class="tarjeta-detalle">Perfil <b>@_perfil</b></p>
+            }
+            <p class="tarjeta-detalle">
+                @if (_hayYamlGenerado)
+                {
+                    @($"Van a levantar: {_nombresActivos}")
+                }
+                else
+                {
+                    @("Todavía no generaste el archivo: levantan todos.")
+                }
+            </p>
+        }
+    </div>
+
+    <div class="tarjeta">
+        <p class="tarjeta-titulo">Migraciones</p>
+        @if (_baseline is null)
+        {
+            <p class="tarjeta-valor sin-dato">Sin baseline</p>
+            <p class="tarjeta-detalle">El detector no sabe desde dónde comparar.</p>
+        }
+        else
+        {
+            <p class="tarjeta-valor mono">@_baseline</p>
+            <p class="tarjeta-detalle">Último commit que marcaste como migrado.</p>
+        }
+    </div>
+
+    <div class="tarjeta">
+        <p class="tarjeta-titulo">Repositorio</p>
+        @if (!_hayAlgoritmoCore)
+        {
+            <p class="tarjeta-valor sin-dato">No encontrado</p>
+            <p class="tarjeta-detalle mono">@RutasDeTrabajo.AlgoritmoCore</p>
+        }
+        else
+        {
+            <p class="tarjeta-valor mono">@(_rama ?? RutasDeTrabajo.NombreDeAlgoritmoCore)</p>
+            <p class="tarjeta-detalle">
+                @RutasDeTrabajo.NombreDeAlgoritmoCore en <span class="mono">@RutasDeTrabajo.CarpetaDeRepositorios</span>
+            </p>
+        }
+    </div>
+
+</div>

@@ -1,0 +1,58 @@
+@using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.UI.Servicios
+
+@*
+    Pantalla de Configuraciones: la apariencia y el comportamiento de arranque.
+
+    Las tarjetas salen del catálogo de temas, así que agregar un quinto tema no obliga a tocar esta
+    pantalla. Cada miniatura se pinta con los colores de SU tema y no con los del tema vigente: la
+    gracia es poder comparar los cuatro antes de elegir.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md
+*@
+
+<TituloDePagina Texto="Configuraciones" Ayuda="Se guardan por usuario y se aplican al instante." />
+
+<p class="grupo">Apariencia</p>
+
+<div class="temas">
+    @foreach (var tema in Temas.Todos)
+    {
+        var actual = tema;
+        <button type="button"
+                class="tema-card @(_temas.Actual.Id == actual.Id ? "elegido" : "")"
+                @onclick="() => Elegir(actual)">
+            <span class="tema-mini">
+                <span class="mini-lateral" style="background:@Hex(actual.FondoLateral)"></span>
+                <span class="mini-cuerpo" style="background:@Hex(actual.FondoPrincipal)">
+                    <span class="mini-boton" style="background:@Hex(actual.Acento)"></span>
+                </span>
+            </span>
+            <span class="tema-nombre">
+                <span class="tema-radio"></span>
+                <span>@actual.Nombre</span>
+            </span>
+        </button>
+    }
+</div>
+
+<p class="grupo">Repositorios</p>
+
+<div class="fila" style="margin-top:10px">
+    <input class="campo mono" readonly value="@RutasDeTrabajo.CarpetaDeRepositorios" />
+    <button type="button" class="btn btn-secundario" @onclick="ElegirCarpetaDeRepositorios">Examinar...</button>
+    @if (!string.IsNullOrWhiteSpace(_temas.Configuracion.CarpetaDeRepositorios))
+    {
+        <button type="button" class="btn btn-secundario" @onclick="RestaurarCarpetaPorDefecto">Restaurar</button>
+    }
+</div>
+
+@if (!_carpetaExiste)
+{
+    <p class="linea-estado estado-advertencia">Esa carpeta no existe. Las herramientas que leen el repositorio no van a encontrar nada.</p>
+}
+else if (!_hayAlgoritmoCore)
+{
+    <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
+}
