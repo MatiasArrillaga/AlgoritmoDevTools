@@ -11,13 +11,31 @@ public sealed record TyeService(string Name, bool Enabled);
 ///
 /// El toggle es por comentarios de línea (prefijo "# ") para que sea reversible y preserve
 /// todo el formato del yaml — no se usa un parser YAML que reformatearía y perdería comentarios.
-/// Se togglea tanto el bloque en la lista <c>services:</c> como la entrada del servicio en la
-/// extensión <c>dapr</c>, para que el archivo quede consistente.
+///
+/// <para>
+/// <b>Cada servicio arrastra su sidecar Dapr.</b> Hasta el commit <c>0dd570fa5</c> de
+/// AlgoritmoCore ("Corregir autenticación y arranque de Dapr", 2026-10-02) los sidecars los
+/// derivaba Tye solo: la extensión <c>dapr</c> declaraba el mapa de puertos y le generaba uno a
+/// cada servicio de la lista, así que comentar el servicio alcanzaba. Esa extensión se eliminó y
+/// ahora los sidecars son servicios top-level propios (<c>produccion-dapr</c>, que ejecuta
+/// <c>Utils/Tye/Start-DevelopmentDapr.ps1</c>): Tye no los deriva de nada, los levanta porque
+/// están escritos en la lista. Por eso acá se emparejan por nombre (<c>X</c> con
+/// <c>X</c><see cref="DaprSuffix"/>) y se comentan juntos. Las dos mitades sueltas fallan:
+/// un servicio sin sidecar no puede invocar a nadie, y un sidecar sin servicio queda esperando
+/// para siempre una app que no va a arrancar.
+/// </para>
+/// <para>
+/// Los sidecars no se ofrecen en la UI: no son una elección del desarrollador sino un detalle de
+/// implementación del servicio que acompañan.
+/// </para>
 /// </summary>
 public static class TyeServiceToggler
 {
     public const string GeneratedFileName = "tye.devtools.yaml";
     public const string RunCommand = "tye run " + GeneratedFileName + " --watch";
+
+    /// <summary>Sufijo que identifica al sidecar Dapr de otro servicio de la misma lista.</summary>
+    public const string DaprSuffix = "-dapr";
 
     public static string AlgoritmoCoreRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -32,15 +50,10 @@ public static class TyeServiceToggler
     private static readonly Regex ServiceNameRegex =
         new(@"^-\s*name:\s*(\S+)", RegexOptions.Compiled);
 
-    // Entrada de servicio en la extensión dapr: "cereales:" (clave sin valor a continuación).
-    // Las líneas hijas "grpc-port: 42735" no matchean porque tienen valor después del ':'.
-    private static readonly Regex DaprEntryRegex =
-        new(@"^([A-Za-z][\w-]*):\s*$", RegexOptions.Compiled);
-
     /// <summary>
-    /// Lista los servicios desde el master (fuente de la lista completa) y superpone el estado
-    /// activo/inactivo desde el archivo generado si ya existe. Servicios nuevos en el master que
-    /// todavía no están en el generado se consideran activos.
+    /// Lista los servicios seleccionables desde el master (fuente de la lista completa, sin los
+    /// sidecars) y superpone el estado activo/inactivo desde el archivo generado si ya existe.
+    /// Servicios nuevos en el master que todavía no están en el generado se consideran activos.
     /// </summary>
     public static IReadOnlyList<TyeService> ReadServices()
     {
@@ -50,6 +63,7 @@ public static class TyeServiceToggler
         var masterNames = FindServiceBlocks(File.ReadAllLines(MasterYamlPath))
             .Select(b => b.Name)
             .ToList();
+        var declarados = Declarados(masterNames);
 
         Dictionary<string, bool>? state = null;
         if (File.Exists(GeneratedYamlPath))
@@ -57,6 +71,7 @@ public static class TyeServiceToggler
                 .ToDictionary(b => b.Name, b => b.Enabled);
 
         return masterNames
+            .Where(name => !EsSidecar(name, declarados))
             .Select(name =>
             {
                 bool enabled = state is null || !state.TryGetValue(name, out var on) || on;
@@ -66,9 +81,9 @@ public static class TyeServiceToggler
     }
 
     /// <summary>
-    /// Copia el master comentando/descomentando cada servicio según <paramref name="selection"/>
-    /// (en la lista services: y en la extensión dapr) y escribe el archivo generado.
-    /// Servicios ausentes en el diccionario quedan activos.
+    /// Copia el master comentando los servicios que <paramref name="selection"/> da por apagados
+    /// —cada uno junto con su sidecar Dapr— y escribe el archivo generado. Servicios ausentes en
+    /// el diccionario quedan activos.
     /// </summary>
     public static void GenerateSelection(IReadOnlyDictionary<string, bool> selection)
     {
@@ -77,20 +92,52 @@ public static class TyeServiceToggler
 
         var lines = File.ReadAllLines(MasterYamlPath);
 
-        // Comment/Uncomment no cambia la cantidad de líneas, así que los índices de ambos
-        // conjuntos de bloques (calculados sobre el master original) siguen siendo válidos.
-        var serviceBlocks = FindServiceBlocks(lines);
-        var daprBlocks = FindDaprServiceBlocks(lines);
+        // Comment/Uncomment no cambia la cantidad de líneas, así que los índices de los bloques
+        // (calculados sobre el master original) siguen siendo válidos.
+        var blocks = FindServiceBlocks(lines);
+        var declarados = Declarados(blocks.Select(b => b.Name));
 
-        foreach (var b in serviceBlocks.Concat(daprBlocks))
+        foreach (var b in blocks)
         {
-            bool enabled = !selection.TryGetValue(b.Name, out var on) || on;
+            // El sidecar sigue la decisión de su servicio, no la propia: nunca se ofreció en la UI.
+            var principal = ServicioPrincipal(b.Name, declarados);
+            bool enabled = !selection.TryGetValue(principal, out var on) || on;
+
+            // Tocar solo lo que cambia de estado. Un bloque que ya viene del master como
+            // corresponde se copia tal cual, y así sobreviven los comentarios escritos a mano que
+            // caen dentro de él (p. ej. "# Cada proceso prepara el estado persistente antes de
+            // ejecutar su sidecar." justo antes de cereales-dapr): descomentar el bloque entero
+            // los convertiría en yaml inválido.
+            if (enabled == b.Enabled) continue;
+
             for (int i = b.Start; i < b.End; i++)
                 lines[i] = enabled ? Uncomment(lines[i]) : Comment(lines[i]);
         }
 
         File.WriteAllLines(GeneratedYamlPath, lines);
     }
+
+    // --- Servicios y sus sidecars -------------------------------------------
+
+    private static HashSet<string> Declarados(IEnumerable<string> names)
+        => new(names, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Servicio cuya decisión manda sobre <paramref name="name"/>: el propio, salvo que sea el
+    /// sidecar de otro servicio de la lista, caso en el que manda ese otro.
+    /// </summary>
+    private static string ServicioPrincipal(string name, IReadOnlySet<string> declarados)
+        => EsSidecar(name, declarados) ? name[..^DaprSuffix.Length] : name;
+
+    /// <summary>
+    /// Un servicio es sidecar si se llama "X-dapr" y "X" también está declarado. La condición
+    /// sobre "X" es lo que evita esconder un sidecar huérfano: sin servicio que lo arrastre, no
+    /// habría forma de apagarlo desde la UI.
+    /// </summary>
+    private static bool EsSidecar(string name, IReadOnlySet<string> declarados)
+        => name.Length > DaprSuffix.Length
+           && name.EndsWith(DaprSuffix, StringComparison.OrdinalIgnoreCase)
+           && declarados.Contains(name[..^DaprSuffix.Length]);
 
     // --- Parseo de bloques --------------------------------------------------
 
@@ -114,68 +161,6 @@ public static class TyeServiceToggler
             // absorbidas por el bloque del servicio en curso, que es lo que corresponde.
             var m = ServiceNameRegex.Match(decommented);
             if (!m.Success) continue;
-
-            if (curStart is not null)
-                blocks.Add((curName!, curStart.Value, i, curEnabled));
-
-            curStart = i;
-            curName = m.Groups[1].Value;
-            curEnabled = !wasCommented;
-        }
-
-        if (curStart is not null)
-            blocks.Add((curName!, curStart.Value, regionEnd, curEnabled));
-
-        return blocks;
-    }
-
-    /// <summary>Entradas de servicio dentro del bloque <c>services:</c> de la extensión dapr.</summary>
-    private static List<(string Name, int Start, int End, bool Enabled)> FindDaprServiceBlocks(string[] lines)
-    {
-        var blocks = new List<(string, int, int, bool)>();
-
-        // El "services:" de dapr está indentado (el top-level está en la columna 0).
-        int header = -1, headerIndent = 0;
-        for (int i = 0; i < lines.Length; i++)
-        {
-            var trimmed = lines[i].TrimStart();
-            if (trimmed == "services:" && lines[i].Length > trimmed.Length)
-            {
-                header = i;
-                headerIndent = lines[i].Length - trimmed.Length;
-                break;
-            }
-        }
-        if (header < 0) return blocks;
-
-        int? curStart = null;
-        string? curName = null;
-        bool curEnabled = false;
-        int regionEnd = lines.Length;
-
-        // Indentación del primer hijo directo: solo ese nivel son servicios. Cualquier clave
-        // sin valor más adentro es una sub-clave del servicio, no otro servicio.
-        int entryIndent = -1;
-
-        for (int i = header + 1; i < lines.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(lines[i])) continue;
-
-            var (decommented, wasCommented) = Decomment(lines[i]);
-            int indent = LeadingWhitespace(decommented);
-
-            // Dedent hasta el nivel del header (o menos) cierra el bloque dapr.
-            if (indent <= headerIndent)
-            {
-                regionEnd = i;
-                break;
-            }
-
-            var m = DaprEntryRegex.Match(decommented.TrimStart());
-            if (!m.Success) continue;
-
-            if (entryIndent < 0) entryIndent = indent;
-            if (indent != entryIndent) continue;
 
             if (curStart is not null)
                 blocks.Add((curName!, curStart.Value, i, curEnabled));

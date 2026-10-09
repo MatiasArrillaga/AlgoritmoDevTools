@@ -42,7 +42,7 @@ public partial class TyeServiceSelectorView : UserControl
         _tips.SetToolTip(RefrescarBtn, "Vuelve a leer el tye.yaml y refleja qué servicios están activos según el archivo generado.");
         _tips.SetToolTip(MarcarTodosBtn, "Tilda todos los servicios.");
         _tips.SetToolTip(DesmarcarTodosBtn, "Destilda todos los servicios.");
-        _tips.SetToolTip(ServicesPanel, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. El master tye.yaml no se modifica.");
+        _tips.SetToolTip(ServicesPanel, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. Cada uno arrastra su sidecar Dapr. El master tye.yaml no se modifica.");
         _tips.SetToolTip(ProfilesCombo, "Elegí un perfil guardado para tildar automáticamente sus servicios.");
         _tips.SetToolTip(GuardarPerfilBtn, "Guarda la selección actual como un perfil con nombre (o sobrescribe el existente).");
         _tips.SetToolTip(EliminarPerfilBtn, "Elimina el perfil seleccionado.");
@@ -139,7 +139,7 @@ public partial class TyeServiceSelectorView : UserControl
                 check.CheckedChanged += ServiceCheck_CheckedChanged;
                 _tips.SetToolTip(check, obligatorio
                     ? $"'{servicio.Name}' siempre se levanta: el resto de los microservicios no arranca sin él."
-                    : $"Levantar el microservicio '{servicio.Name}'.");
+                    : $"Levantar el microservicio '{servicio.Name}' junto con su sidecar Dapr.");
 
                 _serviceChecks.Add(check);
                 ServicesPanel.Controls.Add(check, i / filas, i % filas);
