@@ -1,293 +1,259 @@
 # AlgoritmoDevTools
 
-Suite de utilidades para el desarrollo diario sobre **SoftCerealCore** / **AlgoritmoCore**. Shell WinForms que hospeda varias tools como pestañas, comparte servicios comunes (SQLite local, user-secrets, conexiones guardadas) y se distribuye como un único `.exe`.
+Suite de utilidades para el desarrollo diario sobre **SoftCerealCore** / **AlgoritmoCore**. Un único `.exe` que hospeda varias herramientas, comparte servicios comunes —SQLite local, user-secrets, conexiones guardadas— y se distribuye sin instalador.
+
+La interfaz se dibuja en HTML con **Blazor Hybrid**, dentro de la misma aplicación de escritorio.
 
 ## Requisitos
 
-- Windows 10/11.
-- .NET 10 SDK (para compilar) — no hace falta runtime instalado para ejecutar el exe final, va todo bundleado.
-- `git` en PATH (lo usa el Schema Change Detector).
-- Repo `AlgoritmoCore` clonado en `~/source/repos/AlgoritmoCore`. Las tools asumen esa ruta hardcodeada.
-- `pandoc` (sólo para el Convertidor a Markdown): `winget install --id JohnMacFarlane.Pandoc -e`. Sin él, el resto de las tools funciona igual.
+- Windows 10 o 11.
+- **WebView2 Runtime**. Viene con Windows 11 y llega a Windows 10 por Windows Update junto con Edge; en la práctica ya está. Para confirmarlo:
+  ```bash
+  reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" /v pv
+  ```
+- .NET 10 SDK para compilar. Para ejecutar el `.exe` final no hace falta nada: va todo incluido.
+- `git` en el PATH, que lo usa el Schema Change Detector.
+- El repositorio `AlgoritmoCore` clonado. La carpeta se elige en **Configuraciones**; por defecto es `%USERPROFILE%\source\repos`.
+- `pandoc` sólo para el Convertidor a Markdown. Sin él, el resto funciona igual.
 
 ## Cómo correrlo
-
-**Debug (durante desarrollo):**
 
 ```bash
 dotnet run --project AlgoritmoDevTools.Shell
 ```
 
-**Generar el ejecutable único (Release):**
+Generar el ejecutable único:
 
 ```bash
 dotnet publish AlgoritmoDevTools.Shell -c Release
 ```
 
-Salida: `AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/publish/AlgoritmoDevTools.Shell.exe` (~56 MB, self-contained, incluye runtime .NET 10).
+Salida en `AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/publish/`, autocontenido, con el runtime de .NET 10 adentro.
 
-## Estructura de la solución
+### Modos de arranque
+
+| Comando | Qué abre |
+|---|---|
+| sin argumentos | La ventana con la interfaz HTML |
+| `--clasico` | La ventana de Windows Forms, mientras dure la transición |
+| `--widget` | El widget de bandeja, sin ventana principal |
+| verbos del menú contextual | Ejecuta la acción y sale, sin abrir nada |
+
+## Las herramientas
+
+Cada una tiene su documento de referencia, con sus reglas, sus decisiones y sus trampas:
+
+| Herramienta | Qué hace | Documento |
+|---|---|---|
+| **Commands Maker** | Comandos de migraciones de EF Core por dominio | [referencia](AlgoritmoDevTools.Tools.CommandsMaker/README.referencia-tecnica-funcional-commands-maker.md) |
+| **Secrets Manager** | User-secrets y conexiones guardadas | [referencia](AlgoritmoDevTools.Tools.SecretsManager/README.referencia-tecnica-funcional-secrets-manager.md) |
+| **Schema Change Detector** | Si los commits traídos exigen migraciones | [referencia](AlgoritmoDevTools.Tools.ModelDriftChecker/README.referencia-tecnica-funcional-schema-change-detector.md) |
+| **Selector de Servicios (Tye)** | Qué microservicios levanta el entorno local | [referencia](AlgoritmoDevTools.Tools.TyeServiceSelector/README.referencia-tecnica-funcional-selector-de-servicios.md) |
+| **Convertidor a Markdown** | Documentos a Markdown para pasarle a un asistente | [referencia](AlgoritmoDevTools.Tools.MarkdownConverter/README.referencia-tecnica-funcional-convertidor-markdown.md) |
+
+Transversales:
+
+- [Interfaz HTML](AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md) — cómo está armada, qué puede y qué no.
+- [Temas](AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md) — las cuatro paletas y cómo se aplican.
+
+## Estructura
 
 ```
 AlgoritmoDevTools/
-├── AlgoritmoDevTools.Core/                         Abstracciones comunes
-│   ├── Abstractions/ITool.cs                       Contrato que implementa cada tool
-│   ├── Abstractions/IToolStorage.cs                Storage SQLite aislado por tool
-│   ├── Infrastructure/ToolStorage.cs               Implementación (%LOCALAPPDATA%/AlgoritmoDevTools/{id}/data.db)
-│   ├── Infrastructure/ProcessRunner.cs             Wrapper de git/dotnet/powershell con UTF-8 y cancelación
-│   ├── UI/InputDialog.cs                           Diálogo genérico para pedir texto
-│   └── UI/IconLoader.cs                            Carga iconos embebidos por assembly
+├── AlgoritmoDevTools.Core/                     Abstracciones y servicios comunes
+│   ├── Abstractions/                           ITool, IToolStorage
+│   ├── Infrastructure/                         ToolStorage, ProcessRunner, Configuracion, RutasDeTrabajo
+│   ├── Theming/                                Los cuatro temas y su aplicador
+│   └── UI/                                     InputDialog, IconLoader
 │
-├── AlgoritmoDevTools.Integrations.SoftCerealCore/  Servicios específicos del stack AlgoritmoCore
-│   ├── Constantes.cs                               Constantes (nombres de secret, project API, etc.)
-│   ├── SecretService.cs                            Wrapper de `dotnet user-secrets` (shared singleton)
-│   ├── SavedConnection.cs                          Modelo de conexión guardada
-│   ├── SavedConnectionsRepository.cs               CRUD SQLite de conexiones
-│   ├── DomainRepository.cs                         CRUD de dominios (compartido entre tools)
-│   ├── SQLService.cs                               TryTestConnection + TryGetDatabases
-│   └── ConnectionStringParser.cs                   Parseo simple de connection strings
+├── AlgoritmoDevTools.Integrations.SoftCerealCore/   Lo propio del stack
+│   ├── SecretService.cs                        user-secrets (singleton compartido)
+│   ├── SavedConnectionsRepository.cs           Conexiones guardadas
+│   ├── DomainRepository.cs                     Dominios, compartidos entre herramientas
+│   └── SQLService.cs                           Probar conexión y listar bases
 │
-├── AlgoritmoDevTools.Shell/                        Host WinForms + MainForm
-│   ├── MainForm.cs                                 Nav lateral (ListView con iconos) + ContentPanel + StatusStrip
-│   ├── Program.cs                                  Registra los ITool disponibles
-│   └── Assets/app.ico                              Icono del ejecutable
+├── AlgoritmoDevTools.UI/                       La interfaz en HTML
+│   ├── Layout/Shell.razor                      Armazón: lateral, contenido, barra de estado
+│   ├── Paginas/                                Una por herramienta, más Inicio y Configuraciones
+│   ├── Componentes/                            Piezas compartidas
+│   ├── Servicios/                              Lo que la interfaz le pide a la ventana
+│   ├── CatalogoDeHerramientas.cs               Qué herramientas hay y qué componente las dibuja
+│   └── wwwroot/app.css                         Los temas y todos los estilos
 │
-├── AlgoritmoDevTools.Tools.CommandsMaker/
-├── AlgoritmoDevTools.Tools.SecretsManager/
-├── AlgoritmoDevTools.Tools.ModelDriftChecker/      Schema Change Detector
-├── AlgoritmoDevTools.Tools.TyeServiceSelector/     Selector de Servicios (Tye)
-└── AlgoritmoDevTools.Tools.MarkdownConverter/      Convertidor a Markdown (pandoc)
+├── AlgoritmoDevTools.Shell/                    La aplicación de escritorio
+│   ├── MainFormBlazor.cs                       Ventana que hospeda la interfaz HTML
+│   ├── MainForm.cs                             Ventana clásica, bajo --clasico
+│   ├── ZonaDeArrastre.cs                       Franja para soltar archivos
+│   ├── DialogosDelSistema.cs                   Diálogos de Windows
+│   └── Program.cs                              Arranque y verbos
+│
+└── AlgoritmoDevTools.Tools.*/                  Una por herramienta: servicios y vista clásica
 ```
-
-Cada **Tool** es un `classlib` con:
-- Una clase que implementa `ITool` (`Id`, `DisplayName`, `Description`, `Icon`, `CreateView()`).
-- Un `UserControl` que hace de vista principal.
-- `Assets/icon.ico` embebido como recurso.
-- Servicios propios en `Services/`.
-
-## Tools incluidas
-
-### 🔵 Commands Maker
-
-**Qué hace**: genera los comandos `Add-Migration`, `Remove-Migration` y `Update-Database` listos para pegar en la **Package Manager Console** de Visual Studio.
-
-- Lee `Server` y `Database` del user-secret `SoftCerealCore.Development.ConnectionString`.
-- Reemplaza las credenciales por `Integrated Security = true; MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;` (equivalente a lo que usan los scripts PowerShell del backend — corre como tu user de Windows con SA). `Encrypt` y `TrustServerCertificate` no son opcionales: `Microsoft.Data.SqlClient` cifra por defecto y el SQL de desarrollo usa un certificado autofirmado. La cola vive en una sola constante (`CONNECTION_SUFFIX`), así que la toman los tres comandos.
-- Mantiene una lista local de dominios (Cereales, Contabilidad, etc.) que se comparte con el Schema Change Detector.
-- Al dar click en Add/Remove/UpdateD, el comando se copia al clipboard.
-
-**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/CommandsMaker/data.db` — tabla `DOMINIOS`.
-
-### 🔒 Secrets Manager
-
-**Qué hace**: gestiona los `dotnet user-secrets` del proyecto `Algoritmo.Microservices.Shared.API` y un CRUD de **conexiones guardadas**.
-
-- **Conexiones guardadas**: CRUD con validación — `Nuevo` / `Modificar` / `Eliminar`. Cada conexión tiene Server, User, Password (o Integrated Security) y se valida abriendo una conexión real antes de guardar.
-- **DataBase** (combo externo al CRUD): cuando elegís una conexión, lista las BDs del server (`SELECT name FROM sys.databases`) para que puedas apuntar a una sin tener que crear otra conexión.
-- **Listar Secretos**: re-ejecuta `dotnet user-secrets list --project Algoritmo.Microservices.Shared.API`. Los valores se muestran en **negrita** en el visor, y las líneas salen agrupadas: primero las cadenas modificables, después las fijas, y al final el resto de las claves.
-- **Modificar Secreto**: toma la conexión + BD seleccionadas y reescribe las tres cadenas modificables — `SoftCerealCore.Development.ConnectionString`, `SoftCerealCore.DAPR.ConnectionString` y `SoftCerealCore.Seguridad.ConnectionString`. Las otras dos (`Staging`, `Production`) **se conservan tal cual**: se releen antes de escribir, porque modificar una reescribe todas. La de `Seguridad` sale con `Integrated Security=true` y sin `Encrypt`, igual que viene en el archivo: de la conexión elegida sólo toma servidor y base, nunca usuario ni clave. Qué grupo es cuál lo define `Constantes.SecretTypesModificables`.
-- Las claves que la herramienta **no** administra (las diecisiete `SoftCerealCore.Seguridad.<Dominio>` del archivo de secretos) se releen y se vuelven a escribir sin tocarlas. Hace falta porque `ApplySecrets` corre `user-secrets clear` antes de reescribir: sin esa copia, aplicar una conexión las borraba.
-- Las cadenas generadas terminan en `;TrustServerCertificate=True;Encrypt=False` (constante `Constantes.ParametrosDeCifrado`), **igual que las del archivo de restauración**. Si no coincidieran, la cadena cambiaría de forma según si tocaste `Restaurar` o `Modificar`. `Encrypt=False` no es decorativo: `Microsoft.Data.SqlClient` cifra por defecto desde la versión 4.
-- **Restaurar Secretos**: carga desde `secrets/SoftCerealCore.Secrets.json` (si existe en el repo). El archivo se llamaba `SoftCerealCore.ConnectionString.json` hasta el commit `68f43acb0` de AlgoritmoCore (01/10/2026), que además renombró las claves de seguridad por dominio.
-- **Menú contextual del explorador** (`Agregar al menú` / `Regenerar menú` / `Quitar del menú`): agrega al clic derecho sobre el **fondo de cualquier carpeta** y del escritorio:
-
-  ```text
-  DevTools ▸
-      Secrets Manager ▸
-          Restaurar secretos
-          ────────────────
-          localhost,1433 - Algoritmo93 (softcereal)
-          10.1.85.93,1433 - Algoritmo (softcereal)
-          ────────────────
-          Elegir base...
-  ```
-
-  La raíz es **DevTools** y no el Secrets Manager para que las demás tools puedan colgar su propio grupo del mismo menú en vez de agregar cada una un verbo suelto arriba de todo. `Quitar del menú` borra el grupo `Secrets Manager`, y la raíz `DevTools` sólo si no quedó ninguna otra tool colgando. Va en `HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell`, así que no pide permisos de administrador. A diferencia del Convertidor a Markdown, **siempre pide confirmación y avisa el resultado**: `ApplySecrets` corre `user-secrets clear` antes de reescribir, así que un clic por error dejaría el proyecto sin secretos.
-
-> **El menú es estático.** El explorador no ejecuta código nuestro para dibujarlo, así que las bases **no se pueden consultar en vivo**: cada entrada lleva clavada la última base usada de esa conexión (columna `LastDataBase`). Por eso el menú se **reescribe solo** cada vez que agregás, borrás o reapuntás una conexión (`MenuContextualSecretos.Sincronizar`). Las conexiones que todavía no tienen base no se listan — se llega a ellas por `Elegir base...`, que sí consulta el servidor.
-
-**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/Shared/data.db` — tabla `SavedConnections` con constraint único `(Server, DataBase, UserName)` y columnas `UseIntegratedSecurity` y `LastDataBase`. Lo consume también el Schema Change Detector.
-
-> `LastDataBase` es **deliberadamente distinta** de `DataBase`: esa última forma parte de la clave única, así que pisarla cambiaría la identidad de la conexión y podría chocar con otra fila. La conexión es el servidor más las credenciales; la base es un dato de uso.
-
-**Status bar**: siempre muestra `Server: X | Base: Y` del secreto Development actual; se actualiza automáticamente cuando modificás un secreto.
-
-### 🔄 Schema Change Detector (Model Drift Checker)
-
-**Qué hace**: contesta la pregunta *"¿los commits que acabo de traer de master requieren correr migraciones?"*.
-
-- Mantiene un **baseline** (SHA de git) por repo — el último commit donde confirmaste que tu BD local estaba migrada.
-- Al verificar: corre `git diff --name-only <baseline> HEAD` y clasifica los archivos tocados en tres niveles:
-
-  | Severidad | Regla | Qué significa |
-  |---|---|---|
-  | 🔴 Definitiva | `*/Algoritmo.*.Infrastructure/**/*DbContext*.cs` | Seguro hay que migrar |
-  | 🔴 Probable | `*/Algoritmo.*.Infrastructure/**/*Configuration*.cs` | Muy probable que haya migración |
-  | ⚠️ Posible | `*/Algoritmo.*.Domain/**/*.cs` | Archivo de dominio tocado — puede ser propiedad, lógica o comentario |
-
-- **Filtros del nivel Possible** (se excluyen por falsos positivos conocidos):
-  - Filename que termine en `Event`, `Rule`, `Repository`, `RepositoryAsync`, `Error`, `Errors`, `Request`, `Requests`, `Command`, `Commands`, `Handler`, `Handlers`, `Response`, `Responses`, `Query`, `Queries`.
-  - Interfaces de repositorio (`I*Repository*`).
-  - Archivos con `public enum`.
-  - Archivos con `[NotMapped]`.
-- **Deduplicación por nombre de clase**: si `Usuario.cs` aparece en 8 dominios diferentes, se muestra una sola vez con la lista de paths debajo.
-- **Workflow típico**:
-  1. Primera vez: click `Usar HEAD como baseline` (asume que tu BD está en ese estado).
-  2. Hacés `git pull` → volvés a la tool → auto-verifica.
-  3. Si dice 🔴: corré las migraciones → `Ya migré (mover baseline a HEAD)`.
-  4. Si ✅: arrancá el backend tranquilo.
-
-**Por qué no usamos `dotnet ef`**: porque el `AlgoritmoDbContextFactory` de AlgoritmoCore corre `CheckTablesInventoryResources` al construir el DbContext (requiere la función SQL `GetTableColumnsInfo` y permisos que no todos los usuarios tienen). El approach por git diff evita ese problema por completo — no toca la BD, no compila, no carga assemblies. Limitación: compara **código vs archivos**, no contra el esquema real de la BD. En la práctica cubre el 95% de los casos.
-
-**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/ModelDriftChecker/data.db` — tabla `SchemaBaseline` indexada por ruta del repo.
-
-### 🚀 Selector de Servicios (Tye)
-
-**Qué hace**: permite elegir, con checkboxes, **qué microservicios levantar** sin tener que tocar a mano el `tye.yaml`.
-
-- **No modifica el `tye.yaml` original** (queda limpio en git). Lee la lista `services:` del master y genera un archivo derivado `tye.devtools.yaml` en la raíz de AlgoritmoCore (tiene que estar ahí para que las rutas relativas `project:` resuelvan).
-- **Solo lista microservicios.** La lista sale de los items en la **columna 0** de `services:`; las entradas indentadas de `env:` tienen la misma forma (`- name: X`) pero no son servicios. Hasta que se acotó el parseo a la columna 0, `SOFTCEREALCORE_PROCESS_CULTURE`, `ASPNETCORE_URLS` y demás variables aparecían como opciones tildables, y al destildar un servicio sus líneas hijas quedaban a medio comentar.
-- **Cada servicio arrastra su sidecar Dapr.** Los sidecars (`cereales-dapr`, `produccion-dapr`, …) no se ofrecen en la lista: al tildar `produccion` quedan activos `produccion` y `produccion-dapr`, y al destildarlo se comentan los dos. Hasta el commit `0dd570fa5` de AlgoritmoCore ("Corregir autenticación y arranque de Dapr", 2026-10-02) los sidecars los derivaba Tye solo desde la extensión `dapr`, así que comentar el servicio alcanzaba; esa extensión se eliminó y ahora son servicios top-level propios que ejecutan `Utils/Tye/Start-DevelopmentDapr.ps1`, que Tye levanta porque están escritos en la lista. Las dos mitades sueltas fallan: un servicio sin sidecar no puede invocar a nadie, y un sidecar sin servicio queda esperando para siempre una app que no va a arrancar.
-- Los servicios se muestran en una **grilla de 3 columnas** (`ServicesPanel`, un `TableLayoutPanel` de `CheckBox`) con llenado vertical, así entran los 17 sin estirar la ventana. No se usa `CheckedListBox` porque su `MultiColumn` tira `NotSupportedException`.
-- El toggle es **por comentarios de línea** (`# `): los servicios destildados se comentan en vez de borrarse, así re-tildarlos los descomenta sin perder su definición. Es reversible y preserva todo el formato (no se usa un parser YAML que reformatearía). Solo se toca lo que cambia de estado: un bloque que el master ya trae como corresponde se copia tal cual, así sobreviven los comentarios escritos a mano que caen dentro de él (descomentarlos los volvería yaml inválido).
-- Al reabrir, el estado tildado/destildado se lee desde el `tye.devtools.yaml` generado; los servicios nuevos que aparezcan en el master se asumen activos.
-- **Perfiles**: podés guardar la selección actual con un nombre (ej: *"Logística mínima"*, *"Solo Cereales+Stock"*) y volver a aplicarla desde el combo. CRUD completo: `Guardar perfil` / `Eliminar perfil`.
-- **Copiar comando run**: copia al clipboard `tye run tye.devtools.yaml --watch`.
-- **Workflow típico**: tildás los servicios (o elegís un perfil) → `Generar y guardar` → corrés `tye run tye.devtools.yaml --watch`.
-
-**Storage**: `%LOCALAPPDATA%/AlgoritmoDevTools/TyeServiceSelector/data.db` — tabla `Profiles` (`Name` PK, `Services` CSV).
-
-> El `tye.devtools.yaml` generado aparece como archivo sin trackear en AlgoritmoCore — conviene agregarlo al `.gitignore` del repo.
-
-### 📝 Convertidor a Markdown
-
-**Qué hace**: convierte ERS, relevamientos y planes a Markdown, para poder pasárselos a un asistente (Claude Code, Copilot) sin gastar contexto de más.
-
-- **Por qué importa**: un PDF no se lee como texto — cada página se procesa como imagen, unos 1500-2000 tokens cada una, así que una ERS de 30 páginas se lleva 50k+ tokens. El mismo documento en HTML cuesta unas 4 veces más que en Markdown. Convertido, la ERS de A Remito (1.370 KB de `.docx`) queda en **5,6 KB de `.md` (~1,4k tokens)**, y además se puede leer por secciones en vez de entera.
-- **Arrastrar y soltar** uno o varios archivos sobre el panel, o `Elegir archivos...`. El `.md` queda **al lado del original**.
-- **Las imágenes van a `media/<nombre del documento>/`** con ruta relativa, así el `.md` es liviano, portable y se abren sólo las que hacen falta. Clave en nuestras ERS, donde las tablas de campos y los recuadros rojos son capturas. La **subcarpeta por documento** es necesaria porque pandoc numera las imágenes `image1`, `image2`... arrancando de uno en cada archivo: sin ella, convertir dos ERS en la misma carpeta hace que la segunda pise las imágenes de la primera.
-- **`Quitar el texto tachado`** (tildado por defecto): en las ERS el tachado marca requisitos que se descartaron. Sacarlo no sólo ahorra contexto — evita que el asistente implemente algo que ya no va. Funciona con el tachado de párrafo entero (la línea desaparece) y con el que está en el medio de una oración (se saca sólo ese fragmento). Destildarlo lo deja pasar tal cual.
-- **`HTML para leer`** (`no generar` / `tema claro` / `tema oscuro`): genera además un `.html` autocontenido con el CSS embebido, para leer el documento cómodo. El Markdown no lleva estilos — cuando se abre un `.md` con `Ctrl+Shift+V` el tema lo pone VS Code, no el archivo —, así que si la preview se ve mal, esta es la salida que sí controla los colores. El HTML se genera **a partir del `.md` ya limpio**, así hereda la misma limpieza.
-- **Limpieza del relleno de Word** — en una ERS típica es cerca de un tercio del archivo:
-
-  | Se descarta | Por qué |
-  |---|---|
-  | El índice de contenido (`[Introducción [1](#introducción)](#introducción)`) | Los encabezados ya están; el índice es ~22% del archivo |
-  | El `style="width:5.9in;height:1.08in"` de cada imagen | Queda `![](media/image1.png)`, que dice lo mismo |
-  | Las líneas en blanco que deja el índice al salir | Evita un hueco de veinte líneas |
-
-  El patrón del índice exige el número de página anidado a propósito: así **nunca borra un link escrito a mano**.
-- **Formatos**: `.docx` `.odt` `.rtf` `.pptx` `.xlsx` `.html` `.htm` `.epub` `.ipynb` `.csv` `.org` `.rst` `.tex` (sale de `pandoc --list-input-formats`), más `.md` y `.markdown`.
-- **Si lo que entra ya es un `.md`** (uno que generó un asistente, un plan, un README), lo único que se puede hacer con él es la vista HTML: se genera el `.html` con el tema elegido y **el `.md` original no se toca**. Si no se eligió tema, avisa que no hay nada que convertir en vez de hacer algo raro — el destino sería el mismo archivo.
-- Los **formatos viejos de Office** (`.doc`, `.ppt`, `.xls`) no los lee pandoc: avisa que hay que reguardarlos como `.docx`/`.pptx`/`.xlsx`. El **PDF** tampoco: avisa que hay que conseguir el `.docx` original.
-
-#### Menú contextual del explorador
-
-Los botones **`Agregar al menú contextual`** / **`Quitar del menú contextual`** ponen y sacan la opción *"Convertir a Markdown"* del clic derecho, para todas las extensiones soportadas.
-
-Al hacer clic derecho sobre un documento **la conversión corre sin abrir la ventana**: aparece el `.md` al lado del original y el proceso termina. El éxito no se avisa porque ya se ve en la carpeta; **sólo aparece un cartel cuando algo falla** (falta pandoc, formato viejo de Office, error de pandoc), que es lo que de otro modo pasaría desapercibido.
-
-> En **Windows 11**, los verbos clásicos del registro — los que usa esta tool y cualquier `.reg` — quedan escondidos en *"Mostrar más opciones"*: es una decisión de diseño de Windows 11 y no se puede evitar sin empaquetar un `IExplorerCommand` en un MSIX. Para eso está el botón **`Usar el menú clásico`**, que sólo aparece en Windows 11 y devuelve el menú contextual completo de Windows 10, donde la opción sale directo. Ojo que **cambia el menú de todo el sistema**, no sólo esta opción, y reinicia el explorador para aplicarlo. Es reversible con el mismo botón.
-
-- Escribe en **`HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations`**: aplica sólo al usuario actual y **no necesita permisos de administrador**.
-- Usa `SystemFileAssociations` y no el ProgID de cada extensión: así no pisa la asociación de Word o Excel, que además cambia según lo que esté instalado en cada máquina.
-- La ruta que registra es la de `Environment.ProcessPath`, o sea el `.exe` que está corriendo. Con `PublishSingleFile` el ensamblado se extrae a una carpeta temporal, así que `Assembly.Location` viene vacío y no sirve. **Si movés el `.exe` de lugar, hay que volver a agregarlo.**
-- Las dos operaciones son **idempotentes**: agregar dos veces no duplica nada (`CreateSubKey` abre si ya existe y `SetValue` sobreescribe) y quitar sobre algo que no está no falla. Igual, sólo se habilita el botón que corresponde al estado actual, que se muestra al lado.
-- Al terminar avisa al explorador con `SHChangeNotify(SHCNE_ASSOCCHANGED)`, si no el menú puede tardar en reflejar el cambio.
-
-> Con `"%1"` Windows lanza **un proceso por archivo**: si seleccionás diez documentos y hacés clic derecho, arrancan diez instancias. Para varios archivos conviene arrastrarlos juntos a la ventana, que los procesa en lote.
-
-**Requisito**: pandoc instalado (`winget install --id JohnMacFarlane.Pandoc -e`). La tool lo busca al lado del `.exe` primero — así se puede repartir el Shell con `pandoc.exe` en la misma carpeta —, después en `%LOCALAPPDATA%\Pandoc\` y por último en el PATH. Si no lo encuentra, la vista lo dice y muestra el comando de instalación en vez de fallar.
-
-**Storage**: ninguno. El `.md` se escribe al lado del original, así que no hay nada que recordar entre sesiones.
-
-> No usa `ProcessRunner` del Core: ese wrapper expone `dotnet` y `powershell`, y llamar a pandoc a través de powershell obligaría a escapar rutas con espacios y comillas. `Services/PandocRunner.cs` replica el mismo criterio (sin ventana, UTF-8, `Kill(entireProcessTree)` al cancelar) invocando el ejecutable directo con `ArgumentList`.
-
-> **Cuidado con `--extract-media`**: va con un punto (`--extract-media=.`), no con `media`. Pandoc le pega adelante la ruta interna del documento (`word/media/`), así que pasarle `media` termina generando `media/media/image1.png`. Con el punto queda `media/image1.png`.
-
-## 🪟 Widget de bandeja
-
-**Qué hace**: el **mismo ejecutable** corriendo con `--widget`, sin ventana principal. Deja en la bandeja, al lado del reloj, contra qué server y base está apuntando el proyecto, y a mano lo que más se usa.
-
-```text
-Server: localhost,1433   —   Base: Algoritmo93      (encabezado, informativo)
-─────────
-Secretos ▸                 Restaurar secretos
-                           ─────
-                           localhost,1433 - Algoritmo93 (softcereal)
-                           ─────
-                           Elegir base...
-Comandos de migración ▸    Dominio: Cereales ▸   Cereales ✓
-                                                  Contabilidad
-                                                  ...   (los 13)
-                           ─────
-                           Add-Migration (Cereales)...
-                           Remove-Migration (Cereales)
-                           Update-Database (Cereales)
-─────────
-Iniciar con Windows  ☑
-Abrir DevTools
-Salir
-```
-
-- **No es un proyecto aparte**: es una rama del dispatcher de `Program.Main`, así que comparte binario, publish y todo el código con el resto. Doble clic en el icono abre el Shell normal.
-- **Mismo flujo que el menú contextual**: se elige el dominio una vez y después los tres comandos quedan a un clic. La diferencia es que acá el dominio se elige en el propio menú y no por diálogo — **no rige el límite de 16 ítems**, porque lo dibuja WinForms y no el registro, así que los 13 entran como submenú. Cambiar el dominio acá también reescribe el menú del explorador, para que los dos muestren el mismo.
-- **Las acciones son las mismas** que las del menú del explorador (`SecretosSinVentana`, `ComandosSinVentana`): confirmación antes de tocar secretos, nada de cartel al copiar un comando.
-- **Instancia única** por `Mutex`: un segundo `--widget` avisa y sale en vez de poner otro icono.
-- **Iniciar con Windows** escribe en `HKEY_CURRENT_USER\...\Run` (sin permisos de administrador). La tilde sólo aparece si la entrada apunta al exe que está corriendo: si publicaste a otra carpeta, se muestra apagada para que la regeneres.
-- **El estado se relee al abrir el menú y tras cada acción, nunca por polling**: `RefreshSecrets` levanta PowerShell y tarda uno o dos segundos, así que corre fuera del hilo de UI.
-
-> ⚠️ **Al desarrollar, correlo desde el publish y no desde `bin\Debug`.** Un widget residente mantiene los DLL tomados y cualquier `dotnet build` de la solución falla con `MSB3027`. Por eso el menú tiene **Salir** bien a mano. Para generar el exe único: `dotnet publish -c Release`.
-
-Para levantarlo: `AlgoritmoDevTools.exe --widget`.
 
 ## Servicios compartidos
 
 ### `SecretService.Shared`
-Singleton Lazy. Ejecuta `dotnet user-secrets list` una vez al inicio del Shell, cachea el resultado, y notifica cambios vía evento `SecretsChanged` (las vistas que lo escuchan — p.ej. el status bar — se actualizan solas).
+
+Singleton. Lee los secretos **una sola vez al arrancar** y avisa por el evento `SecretsChanged`; quien los necesite escucha ese evento en lugar de volver a pedirlos.
+
+La lectura tarda unos 2,2 segundos porque levanta el CLI de `dotnet`. **No la dispares de nuevo**: dos lecturas simultáneas contra el mismo archivo se bloquean entre sí.
 
 ### `ToolStorage(toolId)`
-Resuelve a `%LOCALAPPDATA%/AlgoritmoDevTools/{toolId}/data.db`. Cada tool (o área) puede tener su propio SQLite aislado, o usar un ID compartido:
-- `"CommandsMaker"` → compartido entre Commands Maker y Schema Change Detector (dominios).
-- `"Shared"` → usado por Secrets Manager (conexiones).
-- `"ModelDriftChecker"` → sólo el detector (baselines).
+
+Resuelve a `%LOCALAPPDATA%/AlgoritmoDevTools/{toolId}/data.db`. Cada herramienta tiene su SQLite aislado, o comparte uno:
+
+| Clave | Quién la usa |
+|---|---|
+| `CommandsMaker` | Commands Maker y Schema Change Detector (dominios) |
+| `Shared` | Secrets Manager (conexiones), también el menú contextual |
+| `ModelDriftChecker` | Sólo el detector (baselines) |
+| `TyeServiceSelector` | Sólo el selector (perfiles) |
+
+**La clave es lo que aísla los datos: cambiarla deja a la herramienta sin su historial.**
+
+### `RutasDeTrabajo`
+
+Dónde están los repositorios. Sale de Configuraciones y cae en `%USERPROFILE%\source\repos` si no hay preferencia. **Ninguna herramienta debe volver a armar esa ruta por su cuenta.**
+
+Se resuelve en cada consulta y no se guarda en un campo, para que al cambiarla las herramientas abiertas tomen la nueva sin reiniciar.
+
+### `ConfiguracionDevTools.Compartida`
+
+Las preferencias que valen para toda la aplicación. Una sola instancia: dos leyendo el mismo archivo se pisarían al guardar.
+
+### `BarraDeEstado`
+
+El canal por el que una pantalla escribe en la barra de abajo. **Los avisos van ahí, no a un renglón dentro de la vista**: son estado de la aplicación, no contenido.
 
 ### `ProcessRunner`
-- `RunDotnet(args, workingDirectory, cancellationToken)`
-- `RunPowerShell(command, workingDirectory, cancellationToken)`
-- Stdout/stderr en UTF-8, env var `DOTNET_CLI_UI_LANGUAGE=en`, `process.Kill(entireProcessTree)` al cancelar.
 
-## Agregar una tool nueva
+`RunDotnet` y `RunPowerShell`, con stdout y stderr en UTF-8, `DOTNET_CLI_UI_LANGUAGE=en` y `Kill(entireProcessTree)` al cancelar.
 
-1. `dotnet new classlib -n AlgoritmoDevTools.Tools.MiTool -f net10.0`
-2. Editar el `.csproj`: `<TargetFramework>net10.0-windows</TargetFramework>` + `<UseWindowsForms>true</UseWindowsForms>`.
-3. Referenciar `AlgoritmoDevTools.Core` (y `Integrations.SoftCerealCore` si necesita secrets/conexiones).
-4. Implementar `ITool`:
-   ```csharp
-   public sealed class MiTool : ITool
-   {
-       private static readonly Image? _icon = IconLoader.LoadEmbedded(typeof(MiTool).Assembly, "icon.ico");
-       public string Id => "MiTool";
-       public string DisplayName => "Mi Tool";
-       public string Description => "Qué hace.";
-       public Image? Icon => _icon;
-       public UserControl CreateView() => new MiToolView(new ToolStorage(Id));
-   }
-   ```
-5. Agregar `Assets/icon.ico` embebido con `<LogicalName>icon.ico</LogicalName>` en el csproj.
-6. Registrar en `Shell.csproj` (ProjectReference) y en `Shell/Program.cs` (nueva instancia en el array `tools`).
-7. Recompilar.
+**Si vas a llamar a `dotnet`, usá `RunDotnet` y no `RunPowerShell` con un `dotnet` adentro**: son dos procesos para el mismo comando, y se nota.
+
+---
+
+# Agregar una herramienta nueva
+
+## 1. El proyecto
+
+```bash
+dotnet new classlib -n AlgoritmoDevTools.Tools.MiTool
+```
+
+En el `.csproj`:
+
+```xml
+<TargetFramework>net10.0-windows</TargetFramework>
+<UseWindowsForms>true</UseWindowsForms>
+<Nullable>enable</Nullable>
+<ImplicitUsings>enable</ImplicitUsings>
+```
+
+Referenciar `AlgoritmoDevTools.Core`, y `Integrations.SoftCerealCore` si necesita secretos o conexiones.
+
+## 2. Los servicios
+
+Van en `Services/`, **sin nada de interfaz adentro**. Es lo que permitió migrar las cinco herramientas a HTML sin tocarlos.
+
+Reglas:
+
+- **Todo I/O fuera del hilo de interfaz.** Git, `dotnet`, SQL y archivos van en `Task.Run`, con `CancellationToken` donde haya un botón de detener.
+- **Patrón `TryXxx`.** Las operaciones de red y de disco devuelven un resultado con `Error` en lugar de tirar. Evita que el depurador rompa en "user-unhandled" al cruzar un `await`.
+- **Las rutas de repositorio salen de `RutasDeTrabajo`.** Nunca `%USERPROFILE%\source\repos` escrito a mano.
+- **El almacenamiento, por `ToolStorage`** con una clave propia, o una existente si los datos se comparten de verdad.
+
+## 3. La pantalla
+
+Un componente en `AlgoritmoDevTools.UI/Paginas/MiToolPagina.razor`, con **el código en su `.razor.cs`**: en el `.razor` sólo markup y sus `@using`.
+
+```csharp
+public partial class MiToolPagina : IDisposable
+{
+    [Inject] private MiServicio Servicio { get; set; } = default!;
+    [Inject] private BarraDeEstado Barra { get; set; } = default!;
+}
+```
+
+Estándares de la pantalla:
+
+- **Título con `<TituloDePagina>`**, que trae el signo de pregunta con la explicación. Sin subtítulo debajo: lo que haya que aclarar va en ese tooltip.
+- **Los avisos van a `BarraDeEstado`**, no a un renglón propio. Limpiala en `Dispose`.
+- **Las confirmaciones son bloques dentro de la página.** El visor no muestra `alert`, `confirm` ni `prompt`: devuelven falso o nulo al instante.
+- **El botón que despliega un bloque también lo cierra**, y abrir uno cierra el otro.
+- **Ningún color escrito a mano.** Todo sale de las variables del tema; un literal queda igual en las cuatro paletas.
+- **Clases ya disponibles**: `btn btn-primario`, `btn btn-secundario`, `campo`, `grupo`, `fila`, `chk`, `lista-chk`, `salida`, `confirmacion`, `metadatos`, `tarjeta`, `estado-exito` / `estado-error` / `estado-advertencia` / `estado-neutro`.
+- **Una sola acción primaria por pantalla.** Si todo es primario, nada lo es.
+
+## 4. Registrarla
+
+En `MainFormBlazor.RegistrarServiciosDeHerramientas`:
+
+```csharp
+servicios.AddSingleton(new MiServicio(new ToolStorage("MiTool")));
+```
+
+En `CatalogoDeHerramientas.Todas`, respetando el orden en que se muestran:
+
+```csharp
+new HerramientaUI(
+    "MiTool",                        // Id: el mismo que usa ToolStorage
+    "Mi Herramienta",                // Nombre en el panel lateral
+    "Qué hace, en una línea.",       // Va al signo de pregunta del título
+    IconosSvg.MiIcono,
+    typeof(Paginas.MiToolPagina)),
+```
+
+Y el ícono en `IconosSvg`: **SVG en línea de 16×16, trazo 1,6, sin relleno**, en la misma grilla que los demás. Es lo que hace que se lean como un juego y no como íconos sueltos; además toman el color del tema solos.
+
+## 5. Si además va en la ventana clásica
+
+Mientras exista `--clasico`, una herramienta puede tener su vista de Windows Forms: una clase que implemente `ITool` y un `UserControl`. En ese caso:
+
+- Los colores **no se escriben**: el tema los aplica solo. Lo único que se declara es el rol de los controles que se salen de lo común, con la propiedad `Tag` del diseñador: `primario`, `lateral`, `sutil`, `separador`.
+- Los colores de estado salen de `ColoresDeEstado`, nunca de `Color.Firebrick` y compañía.
+- Registrarla en `Program.CrearHerramientas()` y en el `.csproj` del Shell.
+
+Para una herramienta nueva conviene hacer sólo la pantalla HTML.
+
+## 6. Lo que no puede hacer la interfaz HTML
+
+Vale la pena saberlo antes de diseñar la pantalla:
+
+| No puede | Cómo se resuelve |
+|---|---|
+| Saber la ruta en disco de un archivo elegido o soltado | `IDialogosDelSistema` abre el diálogo de Windows; para arrastrar, la franja de `ZonaDeArrastre` |
+| Mostrar `alert`, `confirm`, `prompt` | Bloques dentro de la página |
+| Abrir una ventana de Windows | Lo hace la ventana, por un servicio del espacio `UI/Servicios` |
+
+El patrón es siempre el mismo: una interfaz en `AlgoritmoDevTools.UI/Servicios/`, su implementación en el Shell, y registro en `MainFormBlazor`.
+
+## 7. Documentarla
+
+Una herramienta nueva deja su documento en su propia carpeta:
+
+```
+AlgoritmoDevTools.Tools.MiTool/README.referencia-tecnica-funcional-mi-tool.md
+```
+
+Y una fila en la tabla de este README. Lo que tiene que decir: qué hace, las reglas en vigor, dónde guarda, las decisiones que no conviene revisitar, qué deberían cubrir las pruebas y la deuda conocida. **Las trampas verificadas son lo más valioso**: un síntoma que no se parece a su causa ahorra una tarde entera.
 
 ## Convenciones
 
-- **Idioma**: UI y mensajes al usuario en español (voseo). Código, comentarios y commits pueden ser bilingües pero se prefiere español cuando es contexto de negocio (ej: `Dominio` vs `Domain`).
-- **Tooltips**: cada botón principal tiene tooltip en español describiendo su efecto. Se setean en el constructor después de `InitializeComponent()` (no en el Designer, para que VS no los pise al regenerar).
-- **Async UI**: todo I/O (git, dotnet, SQL) corre en `Task.Run`. Cancelación vía `CancellationTokenSource` disparada por botón "Detener" donde aplique.
-- **Errors pattern**: operaciones de red/IO exponen `TryXxx` que devuelve `null` / result con `Error` en vez de tirar. Evita que VS rompa el debugger en "user-unhandled" al cruzar `await`.
+- **Idioma**: interfaz y mensajes en español rioplatense (voseo). Código y comentarios en español cuando es contexto de negocio.
+- **Comentarios**: sólo cuando aportan. Explican el *por qué*, no el *qué*.
+- **Archivos nuevos**: UTF-8 **con BOM**. Sin él, Visual Studio lee con la codificación ANSI y los acentos de los comentarios se ven rotos; el compilador no avisa.
+- **Miembros de una línea** con `=>`; con más de una sentencia, llaves. El cuerpo de un `if` va con llaves salvo una guarda de salida temprana.
 
-## Configuración del publish
+## Widget de bandeja
 
-En `AlgoritmoDevTools.Shell.csproj`:
+El **mismo ejecutable** con `--widget`, sin ventana principal. Deja en la bandeja contra qué servidor y base apunta el proyecto, y a mano lo más usado: restaurar secretos, elegir base, los tres comandos de migración del dominio elegido.
+
+No es un proyecto aparte: es una rama del arranque, así que comparte binario y código. Instancia única por `Mutex`. El estado se relee al abrir el menú y tras cada acción, **nunca por sondeo**.
+
+> **Al desarrollar, corré el widget desde el publish y no desde `bin\Debug`.** Un widget residente mantiene los DLL tomados y cualquier compilación falla con `MSB3027`. Por eso el menú tiene **Salir** a mano.
+
+## Publish
 
 ```xml
 <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -298,4 +264,6 @@ En `AlgoritmoDevTools.Shell.csproj`:
 <DebugType>embedded</DebugType>
 ```
 
-Más un target `AfterTargets="Publish"` que borra `.pdb`/`.xml` residuales dejando sólo el `.exe` en el folder de publish.
+`IncludeAllContentForSelfExtract` no es opcional: es lo que WebView2 necesita para convivir con el archivo único. Hay además un target que borra los `.pdb` y `.xml` residuales del publish.
+
+El proyecto del Shell usa **`Microsoft.NET.Sdk.Razor`** aunque sea una aplicación de escritorio. Con el SDK común no genera su manifiesto de recursos estáticos y la ventana abre en blanco, sin ningún error.
