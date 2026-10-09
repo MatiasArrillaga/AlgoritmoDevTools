@@ -11,6 +11,16 @@ public class SecretService
 
     private readonly string _projectPath;
     public Dictionary<string, string> Secrets { get; protected set; } = new();
+
+    /// <summary>
+    /// Las claves de user-secrets que esta herramienta no administra — hoy las diecisiete de
+    /// <c>SoftCerealCore.Seguridad.&lt;Dominio&gt;</c> que trae el archivo de restauración.
+    ///
+    /// Se guardan porque <see cref="ApplySecrets"/> hace <c>user-secrets clear</c> antes de
+    /// reescribir: sin esta copia, aplicar una conexión borraba todo lo que no fuera una de las
+    /// cinco cadenas y dejaba los microservicios sin sus secretos de seguridad.
+    /// </summary>
+    public Dictionary<string, string> SecretosNoAdministrados { get; } = new();
     public string LastRawOutput { get; private set; } = string.Empty;
 
     public SecretService()
@@ -45,15 +55,83 @@ public class SecretService
     private void ParseRawOutput(string result)
     {
         Secrets.Clear();
+        SecretosNoAdministrados.Clear();
         if (string.IsNullOrEmpty(result) || result.Contains(Constantes.NoHaySecretosMessage)) return;
 
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        foreach (var secretCS in lines)
+        foreach (var linea in lines)
         {
-            var secret = Constantes.SecretTypes.SingleOrDefault(s => secretCS.Contains(s));
-            if (secret is null) continue;
-            Secrets[secret.Trim()] = secretCS.Substring(secretCS.IndexOf('=') + 1).Trim();
+            // El primer '=' separa clave de valor; los que siguen son los de la propia cadena de
+            // conexion (Server=, Database=, ...).
+            var corte = linea.IndexOf('=');
+            if (corte < 0) continue;
+
+            var clave = linea.Substring(0, corte).Trim();
+            var valor = linea.Substring(corte + 1).Trim();
+
+            // Se compara contra la clave COMPLETA, no con Contains: desde que el archivo de
+            // secretos usa SoftCerealCore.Seguridad.<Dominio>, un Contains("Seguridad") matchea
+            // esas diecisiete claves y la ultima terminaba pisando la cadena de Seguridad.
+            var secret = Constantes.SecretTypes.FirstOrDefault(s => Constantes.GetSecretKey(s) == clave);
+
+            if (secret is null)
+                SecretosNoAdministrados[clave] = valor;
+            else
+                Secrets[secret] = valor;
         }
+    }
+
+    /// <summary>
+    /// La salida de <c>dotnet user-secrets list</c> reordenada para mostrar: primero las cadenas
+    /// que se modifican al aplicar una conexion, despues las que quedan fijas, y al final todo lo
+    /// que la herramienta no administra (las claves de seguridad por dominio).
+    ///
+    /// Se reordena el texto crudo en lugar de rearmarlo desde los diccionarios para no perder las
+    /// lineas que no son "clave = valor", como el aviso de que no hay ningun secreto cargado.
+    /// </summary>
+    public string SalidaParaMostrar => OrdenarParaMostrar(LastRawOutput);
+
+    internal static string OrdenarParaMostrar(string raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return raw;
+
+        var lineas = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+        // Rango por linea: 0 modificables, 1 fijas, 2 el resto. Las lineas que no son clave = valor
+        // van con las del grupo 2, pero antes: son avisos y arriba se leen.
+        int Rango(string linea)
+        {
+            var corte = linea.IndexOf('=');
+            if (corte < 0) return 2;
+
+            var clave = linea.Substring(0, corte).Trim();
+
+            if (Constantes.SecretTypesModificables.Any(t => Constantes.GetSecretKey(t) == clave)) return 0;
+            if (Constantes.SecretTypesFijos.Any(t => Constantes.GetSecretKey(t) == clave)) return 1;
+            return 2;
+        }
+
+        // Dentro de los grupos 0 y 1 manda el orden declarado en Constantes, no el alfabetico: es
+        // el mismo que usa SetSecrets, asi que lo que se ve arriba es lo que se reescribe.
+        int Posicion(string linea)
+        {
+            var corte = linea.IndexOf('=');
+            if (corte < 0) return int.MaxValue;
+
+            var clave = linea.Substring(0, corte).Trim();
+            for (var i = 0; i < Constantes.SecretTypes.Count; i++)
+                if (Constantes.GetSecretKey(Constantes.SecretTypes[i]) == clave) return i;
+
+            return int.MaxValue;
+        }
+
+        // OrderBy es estable, asi que dentro del grupo 2 se respeta el orden en que vino.
+        var ordenadas = lineas
+            .OrderBy(Rango)
+            .ThenBy(Posicion)
+            .ToArray();
+
+        return string.Join(Environment.NewLine, ordenadas);
     }
 
     public void RemoveSecret(string secrets)
@@ -81,8 +159,7 @@ public class SecretService
         var newSecrets = new Dictionary<string, string>();
         foreach (var secretType in Constantes.SecretTypes)
         {
-            if (secretType.Equals(Constantes.SecretKeys.Development) ||
-                secretType.Equals(Constantes.SecretKeys.DAPR))
+            if (Constantes.SecretTypesModificables.Contains(secretType))
             {
                 newSecrets.Add(Constantes.GetSecretKey(secretType), Constantes.GetConnectionString(connectionData, secretType));
             }
@@ -142,7 +219,7 @@ public class SecretService
         {
             throw new InvalidOperationException(
                 "No se pudieron leer los secretos actuales, así que no se modificó ninguno " +
-                "(modificar uno reescribe los cuatro). Salida de 'dotnet user-secrets list':" +
+                "(modificar uno reescribe las cinco cadenas). Salida de 'dotnet user-secrets list':" +
                 Environment.NewLine + Environment.NewLine +
                 LastRawOutput);
         }
@@ -150,7 +227,12 @@ public class SecretService
 
     private void ApplySecrets(Dictionary<string, string> newSecrets)
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(newSecrets);
+        // Las claves ajenas van primero y las administradas después, para que una colisión la gane
+        // siempre el valor recién calculado.
+        var aEscribir = new Dictionary<string, string>(SecretosNoAdministrados);
+        foreach (var par in newSecrets) aEscribir[par.Key] = par.Value;
+
+        var json = System.Text.Json.JsonSerializer.Serialize(aEscribir);
         RemoveAllSecrets();
         ProcessRunner.RunDotnet($"user-secrets set --project {Constantes.ServiceProyectName}", json, GetSolutionRoot());
         RefreshSecrets();

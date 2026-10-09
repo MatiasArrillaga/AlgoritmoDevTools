@@ -33,7 +33,7 @@ public partial class SecretsManagerView : UserControl
         tips.SetToolTip(EliminarConexionBtn, "Elimina la conexión seleccionada de la lista local.");
         tips.SetToolTip(ListarSecretosBtn, "Re-ejecuta 'dotnet user-secrets list' y muestra los secretos actuales del proyecto.");
         tips.SetToolTip(RestaurarSecretosBtn, $"Restaura los secretos desde secrets/{Constantes.DefaultConectionDataFile}.");
-        tips.SetToolTip(ModificarSecretoBtn, "Actualiza los user-secrets Development y DAPR con la conexión + base de datos seleccionadas.");
+        tips.SetToolTip(ModificarSecretoBtn, $"Actualiza los user-secrets {string.Join(", ", Constantes.SecretTypesModificables)} con la conexión + base de datos seleccionadas.");
         tips.SetToolTip(MenuAgregarBtn, "Agrega DevTools > Secrets Manager al clic derecho sobre el fondo de cualquier carpeta, con Restaurar secretos, una entrada por conexión guardada y Elegir base... Va en HKEY_CURRENT_USER: no necesita permisos de administrador.");
         tips.SetToolTip(MenuQuitarBtn, "Saca el grupo Secrets Manager del clic derecho. La raíz DevTools se borra sólo si no quedó ninguna otra tool colgando.");
         tips.SetToolTip(MenuEstadoLbl, "El menú es estático: cada conexión lleva clavada su última base. Se regenera solo cuando agregás, borrás o reapuntás una conexión.");
@@ -53,8 +53,8 @@ public partial class SecretsManagerView : UserControl
 
         try
         {
-            var raw = await Task.Run(() => _service.RefreshSecrets());
-            SetVisorWithHighlight(raw);
+            await Task.Run(() => _service.RefreshSecrets());
+            SetVisorWithHighlight(_service.SalidaParaMostrar);
         }
         catch (Exception ex)
         {
@@ -214,8 +214,8 @@ public partial class SecretsManagerView : UserControl
         SetBusy(true);
         try
         {
-            var raw = await Task.Run(() => _service.RefreshSecrets());
-            SetVisorWithHighlight(raw);
+            await Task.Run(() => _service.RefreshSecrets());
+            SetVisorWithHighlight(_service.SalidaParaMostrar);
         }
         catch (Exception ex)
         {
@@ -233,7 +233,7 @@ public partial class SecretsManagerView : UserControl
         try
         {
             await Task.Run(() => _service.RestoreSecretsFromFile());
-            SetVisorWithHighlight(_service.LastRawOutput);
+            SetVisorWithHighlight(_service.SalidaParaMostrar);
             MessageBox.Show("Secretos Restaurados", "Secret Manager");
         }
         catch (Exception ex)
@@ -267,7 +267,7 @@ public partial class SecretsManagerView : UserControl
         try
         {
             await Task.Run(() => AplicadorDeSecretos.Aplicar(sc, selectedDb, _savedConnections));
-            SetVisorWithHighlight(_service.LastRawOutput);
+            SetVisorWithHighlight(_service.SalidaParaMostrar);
             ActualizarEstadoDelMenu();
             MessageBox.Show("Secretos Modificados", "Secret Manager");
         }

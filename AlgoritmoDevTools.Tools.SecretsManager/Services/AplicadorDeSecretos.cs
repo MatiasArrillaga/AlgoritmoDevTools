@@ -13,7 +13,8 @@ namespace AlgoritmoDevTools.Tools.SecretsManager.Services;
 public static class AplicadorDeSecretos
 {
     /// <summary>
-    /// Reescribe los secretos Development y DAPR apuntando a <paramref name="baseDatos"/>, recuerda
+    /// Reescribe las cadenas modificables (Development, DAPR y Seguridad) apuntando a
+    /// <paramref name="baseDatos"/>, recuerda
     /// esa base como la última de la conexión y resincroniza el menú contextual si está instalado.
     /// </summary>
     public static void Aplicar(SavedConnection conexion, string baseDatos, SavedConnectionsRepository repositorio)
