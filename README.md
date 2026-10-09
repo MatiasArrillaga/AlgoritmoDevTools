@@ -5,7 +5,7 @@ Suite de utilidades para el desarrollo diario sobre **SoftCerealCore** / **Algor
 ## Requisitos
 
 - Windows 10/11.
-- .NET 8 SDK (para compilar) — no hace falta runtime instalado para ejecutar el exe final, va todo bundleado.
+- .NET 10 SDK (para compilar) — no hace falta runtime instalado para ejecutar el exe final, va todo bundleado.
 - `git` en PATH (lo usa el Schema Change Detector).
 - Repo `AlgoritmoCore` clonado en `~/source/repos/AlgoritmoCore`. Las tools asumen esa ruta hardcodeada.
 - `pandoc` (sólo para el Convertidor a Markdown): `winget install --id JohnMacFarlane.Pandoc -e`. Sin él, el resto de las tools funciona igual.
@@ -24,7 +24,7 @@ dotnet run --project AlgoritmoDevTools.Shell
 dotnet publish AlgoritmoDevTools.Shell -c Release
 ```
 
-Salida: `AlgoritmoDevTools.Shell/bin/Release/net8.0-windows/win-x64/publish/AlgoritmoDevTools.Shell.exe` (~75 MB, self-contained, incluye runtime .NET 8).
+Salida: `AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/publish/AlgoritmoDevTools.Shell.exe` (~56 MB, self-contained, incluye runtime .NET 10).
 
 ## Estructura de la solución
 
@@ -257,8 +257,8 @@ Resuelve a `%LOCALAPPDATA%/AlgoritmoDevTools/{toolId}/data.db`. Cada tool (o ár
 
 ## Agregar una tool nueva
 
-1. `dotnet new classlib -n AlgoritmoDevTools.Tools.MiTool -f net8.0`
-2. Editar el `.csproj`: `<TargetFramework>net8.0-windows</TargetFramework>` + `<UseWindowsForms>true</UseWindowsForms>`.
+1. `dotnet new classlib -n AlgoritmoDevTools.Tools.MiTool -f net10.0`
+2. Editar el `.csproj`: `<TargetFramework>net10.0-windows</TargetFramework>` + `<UseWindowsForms>true</UseWindowsForms>`.
 3. Referenciar `AlgoritmoDevTools.Core` (y `Integrations.SoftCerealCore` si necesita secrets/conexiones).
 4. Implementar `ITool`:
    ```csharp

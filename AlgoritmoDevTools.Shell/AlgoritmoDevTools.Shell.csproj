@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,9 +11,9 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
 
     <!--
-      Publish: un solo .exe autocontenido con el runtime de .NET 8 y todos los DLLs embebidos.
+      Publish: un solo .exe autocontenido con el runtime de .NET 10 y todos los DLLs embebidos.
       Para generar el exe:   dotnet publish -c Release
-      Salida en:             bin\Release\net8.0-windows\win-x64\publish\AlgoritmoDevTools.Shell.exe
+      Salida en:             bin\Release\net10.0-windows\win-x64\publish\AlgoritmoDevTools.Shell.exe
     -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
