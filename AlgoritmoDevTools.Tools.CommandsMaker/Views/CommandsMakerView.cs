@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.UI;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
@@ -113,7 +114,7 @@ public partial class CommandsMakerView : UserControl
         if (!instalado)
         {
             MenuEstadoLbl.Text = "Menú contextual: no instalado.";
-            MenuEstadoLbl.ForeColor = Color.Gray;
+            MenuEstadoLbl.ForeColor = ColoresDeEstado.Neutro;
             return;
         }
 
@@ -124,7 +125,7 @@ public partial class CommandsMakerView : UserControl
         var cual = string.IsNullOrWhiteSpace(destacado) ? string.Empty : $" — destaca {destacado}";
 
         MenuEstadoLbl.Text = $"Menú contextual: {usados}/{MenuContextualDevTools.LimiteDeItems} ítems{cual}.";
-        MenuEstadoLbl.ForeColor = usados >= MenuContextualDevTools.LimiteDeItems ? Color.Firebrick : Color.ForestGreen;
+        MenuEstadoLbl.ForeColor = usados >= MenuContextualDevTools.LimiteDeItems ? ColoresDeEstado.Error : ColoresDeEstado.Exito;
     }
 
     private void bAdd_Click(object? sender, EventArgs e)

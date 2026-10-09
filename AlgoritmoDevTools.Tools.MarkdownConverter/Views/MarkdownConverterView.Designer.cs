@@ -39,6 +39,7 @@ partial class MarkdownConverterView
         PandocLbl.AutoSize = false;
         PandocLbl.Location = new System.Drawing.Point(12, 12);
         PandocLbl.Name = "PandocLbl";
+        PandocLbl.Tag = "sutil";
         PandocLbl.Size = new System.Drawing.Size(1200, 20);
         PandocLbl.TabIndex = 0;
         PandocLbl.Text = "pandoc: ...";
@@ -49,6 +50,7 @@ partial class MarkdownConverterView
         FormatosLbl.AutoSize = false;
         FormatosLbl.Location = new System.Drawing.Point(12, 36);
         FormatosLbl.Name = "FormatosLbl";
+        FormatosLbl.Tag = "sutil";
         FormatosLbl.Size = new System.Drawing.Size(1200, 20);
         FormatosLbl.TabIndex = 1;
         FormatosLbl.Text = "Formatos: —";
@@ -70,6 +72,7 @@ partial class MarkdownConverterView
         DropLbl.AllowDrop = true;
         DropLbl.Dock = System.Windows.Forms.DockStyle.Fill;
         DropLbl.Name = "DropLbl";
+        DropLbl.Tag = "sutil";
         DropLbl.TabIndex = 0;
         DropLbl.Text = "Arrastrá acá los documentos a convertir";
         DropLbl.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -79,6 +82,7 @@ partial class MarkdownConverterView
         //
         ElegirBtn.Location = new System.Drawing.Point(12, 168);
         ElegirBtn.Name = "ElegirBtn";
+        ElegirBtn.Tag = "primario";
         ElegirBtn.Size = new System.Drawing.Size(160, 32);
         ElegirBtn.TabIndex = 3;
         ElegirBtn.Text = "Elegir archivos...";
@@ -184,6 +188,7 @@ partial class MarkdownConverterView
         StatusLbl.AutoSize = false;
         StatusLbl.Location = new System.Drawing.Point(12, 252);
         StatusLbl.Name = "StatusLbl";
+        StatusLbl.Tag = "sutil";
         StatusLbl.Size = new System.Drawing.Size(1200, 24);
         StatusLbl.TabIndex = 12;
         StatusLbl.Text = "Listo.";

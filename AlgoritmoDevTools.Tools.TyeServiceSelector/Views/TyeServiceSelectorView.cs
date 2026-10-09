@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Core.UI;
 using AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
 using System.Drawing;
@@ -64,7 +65,7 @@ public partial class TyeServiceSelectorView : UserControl
         if (!File.Exists(TyeServiceToggler.MasterYamlPath))
         {
             RenderServices(Array.Empty<TyeService>());
-            SetStatus($"No se encontró el master en {TyeServiceToggler.MasterYamlPath}.", Color.Firebrick);
+            SetStatus($"No se encontró el master en {TyeServiceToggler.MasterYamlPath}.", ColoresDeEstado.Error);
             return;
         }
 
@@ -73,7 +74,7 @@ public partial class TyeServiceSelectorView : UserControl
 
         if (services.Count == 0)
         {
-            SetStatus("No se encontraron servicios en la lista 'services:' del tye.yaml.", Color.DarkOrange);
+            SetStatus("No se encontraron servicios en la lista 'services:' del tye.yaml.", ColoresDeEstado.Advertencia);
             return;
         }
 
@@ -83,7 +84,7 @@ public partial class TyeServiceSelectorView : UserControl
             hayGenerado
                 ? $"{services.Count} servicios — {activos} activos (según {TyeServiceToggler.GeneratedFileName})."
                 : $"{services.Count} servicios — todos activos (todavía no generaste {TyeServiceToggler.GeneratedFileName}).",
-            Color.Gray);
+            ColoresDeEstado.Neutro);
     }
 
     /// <summary>
@@ -206,7 +207,7 @@ public partial class TyeServiceSelectorView : UserControl
         var enabled = _profiles.GetProfileServices(name);
         if (enabled is null)
         {
-            SetStatus($"El perfil '{name}' ya no existe.", Color.DarkOrange);
+            SetStatus($"El perfil '{name}' ya no existe.", ColoresDeEstado.Advertencia);
             return;
         }
 
@@ -217,7 +218,7 @@ public partial class TyeServiceSelectorView : UserControl
         }
 
         int activos = _serviceChecks.Count(c => c.Checked);
-        SetStatus($"Perfil '{name}' aplicado — {activos} servicio(s) tildado(s). Tocá 'Generar y guardar' para escribir el archivo.", Color.RoyalBlue);
+        SetStatus($"Perfil '{name}' aplicado — {activos} servicio(s) tildado(s). Tocá 'Generar y guardar' para escribir el archivo.", ColoresDeEstado.Informacion);
     }
 
     private void GuardarPerfilBtn_Click(object? sender, EventArgs e)
@@ -243,7 +244,7 @@ public partial class TyeServiceSelectorView : UserControl
 
         _profiles.SaveProfile(name, enabled);
         LoadProfiles(name);
-        SetStatus($"Perfil '{name}' guardado con {enabled.Count} servicio(s).", Color.ForestGreen);
+        SetStatus($"Perfil '{name}' guardado con {enabled.Count} servicio(s).", ColoresDeEstado.Exito);
     }
 
     private void EliminarPerfilBtn_Click(object? sender, EventArgs e)
@@ -262,7 +263,7 @@ public partial class TyeServiceSelectorView : UserControl
 
         _profiles.DeleteProfile(name);
         LoadProfiles();
-        SetStatus($"Perfil '{name}' eliminado.", Color.Gray);
+        SetStatus($"Perfil '{name}' eliminado.", ColoresDeEstado.Neutro);
     }
 
     /// <summary>Nombre del perfil seleccionado, o null si está en "(sin perfil)".</summary>
@@ -290,18 +291,18 @@ public partial class TyeServiceSelectorView : UserControl
         }
 
         SetBusy(true);
-        SetStatus("Generando archivo...", Color.Gray);
+        SetStatus("Generando archivo...", ColoresDeEstado.Neutro);
         try
         {
             await Task.Run(() => TyeServiceToggler.GenerateSelection(selection));
             int activos = selection.Values.Count(v => v);
             SetStatus(
                 $"✅ {TyeServiceToggler.GeneratedFileName} generado — {activos} servicio(s) activo(s). Corré: {TyeServiceToggler.RunCommand}",
-                Color.ForestGreen);
+                ColoresDeEstado.Exito);
         }
         catch (Exception ex)
         {
-            SetStatus($"Error al generar: {ex.Message}", Color.Firebrick);
+            SetStatus($"Error al generar: {ex.Message}", ColoresDeEstado.Error);
             MessageBox.Show(ex.Message, "Selector de Servicios (Tye)",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -314,7 +315,7 @@ public partial class TyeServiceSelectorView : UserControl
     private void CopiarComandoBtn_Click(object? sender, EventArgs e)
     {
         Clipboard.SetText(TyeServiceToggler.RunCommand);
-        SetStatus($"Comando copiado: {TyeServiceToggler.RunCommand}", Color.SeaGreen);
+        SetStatus($"Comando copiado: {TyeServiceToggler.RunCommand}", ColoresDeEstado.Exito);
     }
 
     private void SetStatus(string text, Color color)

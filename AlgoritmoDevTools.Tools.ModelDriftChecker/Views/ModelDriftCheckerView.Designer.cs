@@ -30,6 +30,7 @@ partial class ModelDriftCheckerView
         RepoLbl.AutoSize = false;
         RepoLbl.Location = new System.Drawing.Point(12, 12);
         RepoLbl.Name = "RepoLbl";
+        RepoLbl.Tag = "sutil";
         RepoLbl.Size = new System.Drawing.Size(1200, 20);
         RepoLbl.TabIndex = 0;
         RepoLbl.Text = "Repo: ...";
@@ -40,6 +41,7 @@ partial class ModelDriftCheckerView
         BaselineLbl.AutoSize = false;
         BaselineLbl.Location = new System.Drawing.Point(12, 36);
         BaselineLbl.Name = "BaselineLbl";
+        BaselineLbl.Tag = "sutil";
         BaselineLbl.Size = new System.Drawing.Size(1200, 20);
         BaselineLbl.TabIndex = 1;
         BaselineLbl.Text = "Baseline: —";
@@ -50,6 +52,7 @@ partial class ModelDriftCheckerView
         HeadLbl.AutoSize = false;
         HeadLbl.Location = new System.Drawing.Point(12, 60);
         HeadLbl.Name = "HeadLbl";
+        HeadLbl.Tag = "sutil";
         HeadLbl.Size = new System.Drawing.Size(1200, 20);
         HeadLbl.TabIndex = 2;
         HeadLbl.Text = "HEAD: —";
@@ -59,6 +62,7 @@ partial class ModelDriftCheckerView
         //
         VerificarBtn.Location = new System.Drawing.Point(12, 95);
         VerificarBtn.Name = "VerificarBtn";
+        VerificarBtn.Tag = "primario";
         VerificarBtn.Size = new System.Drawing.Size(160, 32);
         VerificarBtn.TabIndex = 3;
         VerificarBtn.Text = "Verificar";
@@ -90,6 +94,7 @@ partial class ModelDriftCheckerView
         StatusLbl.AutoSize = false;
         StatusLbl.Location = new System.Drawing.Point(12, 140);
         StatusLbl.Name = "StatusLbl";
+        StatusLbl.Tag = "sutil";
         StatusLbl.Size = new System.Drawing.Size(1200, 24);
         StatusLbl.TabIndex = 6;
         StatusLbl.Text = "Listo.";

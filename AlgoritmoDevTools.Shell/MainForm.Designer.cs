@@ -16,7 +16,9 @@ partial class MainForm
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
+        sidePanel = new Panel();
         toolsList = new ListView();
+        settingsButton = new Button();
         toolsImages = new ImageList(components);
         contentPanel = new Panel();
         splitter = new Splitter();
@@ -25,23 +27,53 @@ partial class MainForm
         statusServerLabel = new ToolStripStatusLabel();
         statusDatabaseLabel = new ToolStripStatusLabel();
         statusMessageLabel = new ToolStripStatusLabel();
+        sidePanel.SuspendLayout();
         statusStrip.SuspendLayout();
         SuspendLayout();
-        // 
+        //
+        // sidePanel
+        //
+        sidePanel.Controls.Add(toolsList);
+        sidePanel.Controls.Add(settingsButton);
+        sidePanel.Dock = DockStyle.Left;
+        sidePanel.Location = new Point(0, 0);
+        sidePanel.Name = "sidePanel";
+        sidePanel.Padding = new Padding(0, 12, 0, 0);
+        sidePanel.Size = new Size(230, 281);
+        sidePanel.TabIndex = 0;
+        sidePanel.Tag = "lateral";
+        //
         // toolsList
-        // 
-        toolsList.Dock = DockStyle.Left;
+        //
+        toolsList.BorderStyle = BorderStyle.None;
+        toolsList.Dock = DockStyle.Fill;
         toolsList.FullRowSelect = true;
         toolsList.HeaderStyle = ColumnHeaderStyle.None;
-        toolsList.Location = new Point(0, 0);
+        toolsList.Location = new Point(0, 12);
         toolsList.MultiSelect = false;
         toolsList.Name = "toolsList";
-        toolsList.Size = new Size(220, 281);
+        toolsList.Size = new Size(230, 225);
         toolsList.SmallImageList = toolsImages;
         toolsList.TabIndex = 0;
+        toolsList.Tag = "lateral";
         toolsList.UseCompatibleStateImageBehavior = false;
         toolsList.View = View.Details;
         toolsList.SelectedIndexChanged += toolsList_SelectedIndexChanged;
+        //
+        // settingsButton
+        //
+        // Va al pie del panel, separado de la lista de herramientas: no es una herramienta más.
+        settingsButton.Dock = DockStyle.Bottom;
+        settingsButton.FlatStyle = FlatStyle.Flat;
+        settingsButton.Location = new Point(0, 237);
+        settingsButton.Name = "settingsButton";
+        settingsButton.Padding = new Padding(14, 0, 0, 0);
+        settingsButton.Size = new Size(230, 44);
+        settingsButton.TabIndex = 1;
+        settingsButton.Text = "Configuraciones";
+        settingsButton.TextAlign = ContentAlignment.MiddleLeft;
+        settingsButton.UseVisualStyleBackColor = false;
+        settingsButton.Click += settingsButton_Click;
         // 
         // toolsImages
         // 
@@ -52,30 +84,34 @@ partial class MainForm
         // contentPanel
         // 
         contentPanel.Dock = DockStyle.Fill;
-        contentPanel.Location = new Point(224, 40);
+        contentPanel.Location = new Point(231, 44);
         contentPanel.Name = "contentPanel";
         contentPanel.Size = new Size(1158, 241);
-        contentPanel.TabIndex = 3;
+        contentPanel.Padding = new Padding(24, 20, 24, 20);
+        contentPanel.TabIndex = 4;
         // 
         // splitter
-        // 
-        splitter.Location = new Point(220, 0);
+        //
+        // Un solo pixel: es la linea que separa secciones, y alcanza para seguir arrastrando el panel.
+        splitter.Location = new Point(230, 0);
+        splitter.MinExtra = 180;
+        splitter.MinSize = 190;
         splitter.Name = "splitter";
-        splitter.Size = new Size(4, 281);
-        splitter.TabIndex = 1;
+        splitter.Size = new Size(1, 281);
+        splitter.TabIndex = 2;
         splitter.TabStop = false;
-        // 
+        splitter.Tag = "separador";
+        //
         // descriptionLabel
-        // 
+        //
         descriptionLabel.Dock = DockStyle.Top;
         descriptionLabel.Font = new Font("Segoe UI", 10F);
-        descriptionLabel.Location = new Point(224, 0);
+        descriptionLabel.Location = new Point(231, 0);
         descriptionLabel.Name = "descriptionLabel";
-        descriptionLabel.Padding = new Padding(12, 10, 12, 10);
-        descriptionLabel.Size = new Size(1158, 40);
-        descriptionLabel.TabIndex = 2;
-        descriptionLabel.Padding = new System.Windows.Forms.Padding(12, 10, 12, 10);
-        descriptionLabel.Font = new System.Drawing.Font("Segoe UI", 10F);
+        descriptionLabel.Padding = new Padding(24, 10, 24, 10);
+        descriptionLabel.Size = new Size(1151, 44);
+        descriptionLabel.TabIndex = 3;
+        descriptionLabel.Tag = "sutil";
         // 
         // statusStrip
         // 
@@ -88,8 +124,7 @@ partial class MainForm
         // 
         // statusServerLabel
         // 
-        statusServerLabel.BorderSides = ToolStripStatusLabelBorderSides.Right;
-        statusServerLabel.BorderStyle = Border3DStyle.Etched;
+        statusServerLabel.BorderSides = ToolStripStatusLabelBorderSides.None;
         statusServerLabel.Name = "statusServerLabel";
         statusServerLabel.Padding = new Padding(6, 0, 6, 0);
         statusServerLabel.Size = new Size(79, 24);
@@ -98,8 +133,7 @@ partial class MainForm
         // 
         // statusDatabaseLabel
         // 
-        statusDatabaseLabel.BorderSides = ToolStripStatusLabelBorderSides.Right;
-        statusDatabaseLabel.BorderStyle = Border3DStyle.Etched;
+        statusDatabaseLabel.BorderSides = ToolStripStatusLabelBorderSides.None;
         statusDatabaseLabel.Name = "statusDatabaseLabel";
         statusDatabaseLabel.Padding = new Padding(6, 0, 6, 0);
         statusDatabaseLabel.Size = new Size(69, 24);
@@ -127,19 +161,22 @@ partial class MainForm
         Controls.Add(contentPanel);
         Controls.Add(descriptionLabel);
         Controls.Add(splitter);
-        Controls.Add(toolsList);
+        Controls.Add(sidePanel);
         Controls.Add(statusStrip);
         Name = "MainForm";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Algoritmo DevTools";
         Load += MainForm_Load;
+        sidePanel.ResumeLayout(false);
         statusStrip.ResumeLayout(false);
         statusStrip.PerformLayout();
         ResumeLayout(false);
         PerformLayout();
     }
 
+    private System.Windows.Forms.Panel sidePanel;
     private System.Windows.Forms.ListView toolsList;
+    private System.Windows.Forms.Button settingsButton;
     private System.Windows.Forms.ImageList toolsImages;
     private System.Windows.Forms.Panel contentPanel;
     private System.Windows.Forms.Splitter splitter;

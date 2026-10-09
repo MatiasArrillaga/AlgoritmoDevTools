@@ -36,6 +36,7 @@ partial class TyeServiceSelectorView
         PathLbl.AutoSize = false;
         PathLbl.Location = new System.Drawing.Point(12, 12);
         PathLbl.Name = "PathLbl";
+        PathLbl.Tag = "sutil";
         PathLbl.Size = new System.Drawing.Size(1156, 36);
         PathLbl.TabIndex = 0;
         PathLbl.Text = "Master: ...";
@@ -130,6 +131,7 @@ partial class TyeServiceSelectorView
         GenerarBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
         GenerarBtn.Location = new System.Drawing.Point(12, 384);
         GenerarBtn.Name = "GenerarBtn";
+        GenerarBtn.Tag = "primario";
         GenerarBtn.Size = new System.Drawing.Size(200, 34);
         GenerarBtn.TabIndex = 9;
         GenerarBtn.Text = "Generar y guardar";
@@ -153,6 +155,7 @@ partial class TyeServiceSelectorView
         StatusLbl.AutoSize = false;
         StatusLbl.Location = new System.Drawing.Point(12, 424);
         StatusLbl.Name = "StatusLbl";
+        StatusLbl.Tag = "sutil";
         StatusLbl.Size = new System.Drawing.Size(1156, 24);
         StatusLbl.TabIndex = 11;
         StatusLbl.Text = "Listo.";

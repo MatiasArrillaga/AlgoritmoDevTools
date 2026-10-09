@@ -1,4 +1,5 @@
 ﻿using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Core.Theming;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -26,6 +27,7 @@ public partial class ElegirBaseDialog : Form
     {
         _savedConnections = savedConnections;
         InitializeComponent();
+        ServicioDeTemas.Instancia.AplicarA(this);
     }
 
     private void ElegirBaseDialog_Load(object? sender, EventArgs e)
@@ -33,7 +35,7 @@ public partial class ElegirBaseDialog : Form
         var conexiones = _savedConnections.GetAll();
         if (conexiones.Count == 0)
         {
-            SetEstado("No hay conexiones guardadas. Creá una desde el Secrets Manager.", Color.Firebrick);
+            SetEstado("No hay conexiones guardadas. Creá una desde el Secrets Manager.", ColoresDeEstado.Error);
             ConexionesCmb.Enabled = false;
             BasesCmb.Enabled = false;
             AplicarBtn.Enabled = false;
@@ -50,7 +52,7 @@ public partial class ElegirBaseDialog : Form
         BasesCmb.Enabled = false;
         AplicarBtn.Enabled = false;
         BasesCmb.DataSource = new List<string> { "Cargando..." };
-        SetEstado($"Consultando las bases de {conexion.Server}...", Color.Gray);
+        SetEstado($"Consultando las bases de {conexion.Server}...", ColoresDeEstado.Neutro);
 
         var resultado = await Task.Run(() => SQLService.TryGetDatabases(
             new SQLService.ConnectionData(conexion.Server, conexion.User, conexion.Password, conexion.UseIntegratedSecurity)));
@@ -66,7 +68,7 @@ public partial class ElegirBaseDialog : Form
                 resultado.IsSuccess
                     ? "El servidor no devolvió bases de datos."
                     : $"No se pudo listar las bases: {resultado.Error}",
-                Color.DarkOrange);
+                ColoresDeEstado.Advertencia);
             return;
         }
 
@@ -76,7 +78,7 @@ public partial class ElegirBaseDialog : Form
 
         BasesCmb.Enabled = true;
         AplicarBtn.Enabled = true;
-        SetEstado($"{resultado.Databases.Count} base(s) disponibles.", Color.Gray);
+        SetEstado($"{resultado.Databases.Count} base(s) disponibles.", ColoresDeEstado.Neutro);
     }
 
     private void AplicarBtn_Click(object? sender, EventArgs e)

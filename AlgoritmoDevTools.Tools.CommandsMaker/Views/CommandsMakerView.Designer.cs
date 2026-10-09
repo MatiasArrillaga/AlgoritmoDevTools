@@ -47,6 +47,7 @@ partial class CommandsMakerView
         bAdd.Location = new Point(492, 50);
         bAdd.Margin = new Padding(3, 4, 3, 4);
         bAdd.Name = "bAdd";
+        bAdd.Tag = "primario";
         bAdd.Size = new Size(80, 31);
         bAdd.TabIndex = 5;
         bAdd.Text = "Add";
@@ -161,6 +162,7 @@ partial class CommandsMakerView
         MenuEstadoLbl.AutoSize = false;
         MenuEstadoLbl.Location = new Point(760, 18);
         MenuEstadoLbl.Name = "MenuEstadoLbl";
+        MenuEstadoLbl.Tag = "sutil";
         MenuEstadoLbl.Size = new Size(346, 24);
         MenuEstadoLbl.TabIndex = 12;
         MenuEstadoLbl.Text = "";

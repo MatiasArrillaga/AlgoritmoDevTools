@@ -35,6 +35,7 @@ partial class SecretsManagerView
         // 
         ListarSecretosBtn.Location = new Point(110, 84);
         ListarSecretosBtn.Name = "ListarSecretosBtn";
+        ListarSecretosBtn.Tag = "primario";
         ListarSecretosBtn.Size = new Size(139, 32);
         ListarSecretosBtn.TabIndex = 6;
         ListarSecretosBtn.Text = "Listar Secretos";
@@ -164,6 +165,7 @@ partial class SecretsManagerView
         // 
         MenuEstadoLbl.Location = new Point(836, 86);
         MenuEstadoLbl.Name = "MenuEstadoLbl";
+        MenuEstadoLbl.Tag = "sutil";
         MenuEstadoLbl.Size = new Size(345, 22);
         MenuEstadoLbl.TabIndex = 12;
         // 

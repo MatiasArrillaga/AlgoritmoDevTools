@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.SecretsManager.Dialogs;
 using AlgoritmoDevTools.Tools.SecretsManager.Services;
@@ -337,13 +338,13 @@ public partial class SecretsManagerView : UserControl
         if (!instalado)
         {
             MenuEstadoLbl.Text = "Menú contextual: no instalado.";
-            MenuEstadoLbl.ForeColor = Color.Gray;
+            MenuEstadoLbl.ForeColor = ColoresDeEstado.Neutro;
             return;
         }
 
         var listables = _savedConnections.GetAll().Count(c => !string.IsNullOrWhiteSpace(c.BaseEfectiva));
         MenuEstadoLbl.Text = $"Menú contextual: instalado ({listables} conexión(es) listada(s)).";
-        MenuEstadoLbl.ForeColor = Color.ForestGreen;
+        MenuEstadoLbl.ForeColor = ColoresDeEstado.Exito;
     }
 
     private void SetBusy(bool busy)

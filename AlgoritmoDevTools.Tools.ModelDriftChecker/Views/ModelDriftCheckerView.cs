@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 using System.Drawing;
 using System.Text;
@@ -38,7 +39,7 @@ public partial class ModelDriftCheckerView : UserControl
         if (_baselines.GetBaseline(_repoPath) is not null)
             await RunCheck();
         else
-            SetStatus("Sin baseline. Usá 'Usar HEAD como baseline' para arrancar.", Color.Gray);
+            SetStatus("Sin baseline. Usá 'Usar HEAD como baseline' para arrancar.", ColoresDeEstado.Neutro);
     }
 
     private void RefreshBaselineLabel()
@@ -77,13 +78,13 @@ public partial class ModelDriftCheckerView : UserControl
         var baseline = _baselines.GetBaseline(_repoPath);
         if (baseline is null)
         {
-            SetStatus("Sin baseline configurado.", Color.Gray);
+            SetStatus("Sin baseline configurado.", ColoresDeEstado.Neutro);
             OutputTxt.Clear();
             return;
         }
 
         SetBusy(true);
-        SetStatus("Analizando diff...", Color.Gray);
+        SetStatus("Analizando diff...", ColoresDeEstado.Neutro);
 
         var result = await Task.Run(() => SchemaChangeDetector.Check(_repoPath, baseline));
         RenderResult(result);
@@ -94,24 +95,24 @@ public partial class ModelDriftCheckerView : UserControl
     {
         if (!result.Success)
         {
-            SetStatus($"Error: {result.Error}", Color.Firebrick);
+            SetStatus($"Error: {result.Error}", ColoresDeEstado.Error);
             OutputTxt.Text = result.Error ?? string.Empty;
             return;
         }
 
         if (result.RelevantFiles.Count == 0)
         {
-            SetStatus($"✅ Sin cambios relevantes ({result.CommitsBetween} commit(s) desde el baseline).", Color.ForestGreen);
+            SetStatus($"✅ Sin cambios relevantes ({result.CommitsBetween} commit(s) desde el baseline).", ColoresDeEstado.Exito);
             OutputTxt.Text = "No hay archivos de Domain/Infrastructure modificados.";
             return;
         }
 
         var (color, icon, text) = result.HighestSeverity switch
         {
-            ChangeSeverity.Definite => (Color.Firebrick, "🔴", "Requiere migración"),
-            ChangeSeverity.Likely => (Color.Firebrick, "🔴", "Probable migración"),
-            ChangeSeverity.Possible => (Color.DarkOrange, "⚠️", "Posible migración"),
-            _ => (Color.Gray, "—", "Sin cambios")
+            ChangeSeverity.Definite => (ColoresDeEstado.Error, "🔴", "Requiere migración"),
+            ChangeSeverity.Likely => (ColoresDeEstado.Error, "🔴", "Probable migración"),
+            ChangeSeverity.Possible => (ColoresDeEstado.Advertencia, "⚠️", "Posible migración"),
+            _ => (ColoresDeEstado.Neutro, "—", "Sin cambios")
         };
 
         SetStatus($"{icon} {text} — {result.RelevantFiles.Count} archivo(s) relevante(s) en {result.CommitsBetween} commit(s).", color);
@@ -153,7 +154,7 @@ public partial class ModelDriftCheckerView : UserControl
 
         _baselines.SetBaseline(_repoPath, head);
         RefreshBaselineLabel();
-        SetStatus($"Baseline seteado a {Short(head)}.", Color.ForestGreen);
+        SetStatus($"Baseline seteado a {Short(head)}.", ColoresDeEstado.Exito);
         OutputTxt.Text = "Baseline guardado. Próxima vez que traigas commits de master, tocá 'Verificar'.";
     }
 

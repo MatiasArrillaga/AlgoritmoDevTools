@@ -1,5 +1,7 @@
-using AlgoritmoDevTools.Core.Abstractions;
+﻿using AlgoritmoDevTools.Core.Abstractions;
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Shell.Views;
 
 namespace AlgoritmoDevTools.Shell;
 
@@ -8,7 +10,12 @@ public partial class MainForm : Form
     private readonly IReadOnlyList<ITool> _tools;
     private readonly Dictionary<string, UserControl> _viewCache = new();
     private readonly SecretService _secrets = SecretService.Shared;
+    private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
     private UserControl? _currentView;
+    private ConfiguracionesView? _configuracionesView;
+
+    /// <summary>Índice de la fila que tiene el mouse encima, para dibujarle el resaltado.</summary>
+    private int _indiceBajoElMouse = -1;
 
     public MainForm(IEnumerable<ITool> tools)
     {
@@ -36,10 +43,35 @@ public partial class MainForm : Form
             toolsList.Items.Add(item);
         }
 
-        _secrets.SecretsChanged += OnSecretsChanged;
+        PrepararListaDeHerramientas();
 
-        if (_tools.Count > 0)
-            toolsList.Items[0].Selected = true;
+        _secrets.SecretsChanged += OnSecretsChanged;
+        _temas.TemaCambiado += OnTemaCambiado;
+        _temas.AplicarA(this);
+
+        SeleccionarHerramientaInicial();
+    }
+
+    /// <summary>
+    /// El resaltado de la fila elegida lo dibujamos nosotros: el ListView, librado a Windows, la
+    /// pinta del azul del sistema, que no tiene nada que ver con el tema elegido.
+    /// </summary>
+    private void PrepararListaDeHerramientas()
+    {
+        toolsList.OwnerDraw = true;
+        toolsList.DrawColumnHeader += (_, e) => e.DrawDefault = false;
+        toolsList.DrawSubItem += (_, e) => e.DrawDefault = false;
+        toolsList.DrawItem += toolsList_DrawItem;
+        toolsList.MouseMove += toolsList_MouseMove;
+        toolsList.MouseLeave += toolsList_MouseLeave;
+    }
+
+    /// <summary>Abre la primera herramienta de la lista.</summary>
+    private void SeleccionarHerramientaInicial()
+    {
+        if (_tools.Count == 0) return;
+
+        toolsList.Items[0].Selected = true;
     }
 
     private async void MainForm_Load(object? sender, EventArgs e)
@@ -87,6 +119,8 @@ public partial class MainForm : Form
 
         var tool = _tools[index];
 
+        MarcarConfiguracionesActivo(false);
+
         descriptionLabel.Text = tool.Description;
         descriptionLabel.Update();
 
@@ -121,13 +155,134 @@ public partial class MainForm : Form
         }
 
         view.Dock = DockStyle.Fill;
+        _temas.AplicarA(view);
         contentPanel.Controls.Add(view);
         _currentView = view;
+    }
+
+    private void settingsButton_Click(object? sender, EventArgs e) => MostrarConfiguraciones();
+
+    /// <summary>
+    /// Trae la pantalla de Configuraciones al panel central. La lista de herramientas se deselecciona
+    /// porque ninguna está abierta: el resaltado tiene que estar en el botón del pie.
+    /// </summary>
+    private void MostrarConfiguraciones()
+    {
+        _configuracionesView ??= new ConfiguracionesView();
+
+        toolsList.SelectedIndices.Clear();
+        descriptionLabel.Text = "Ajusta la apariencia y el comportamiento de Algoritmo DevTools.";
+
+        if (_currentView != null)
+        {
+            contentPanel.Controls.Remove(_currentView);
+            _currentView = null;
+        }
+
+        _temas.AplicarA(_configuracionesView);
+        contentPanel.Controls.Add(_configuracionesView);
+        _currentView = _configuracionesView;
+        MarcarConfiguracionesActivo(true);
+    }
+
+    /// <summary>Pinta el botón del pie como la fila activa del lateral cuando Configuraciones está abierta.</summary>
+    private void MarcarConfiguracionesActivo(bool activo)
+    {
+        var tema = _temas.Actual;
+        settingsButton.BackColor = activo ? tema.Acento : tema.FondoLateral;
+        settingsButton.ForeColor = activo ? tema.TextoSobreAcento : tema.Texto;
+        settingsButton.FlatAppearance.BorderSize = 0;
+        settingsButton.FlatAppearance.MouseOverBackColor = activo ? tema.AcentoHover : tema.BotonSecundarioHover;
+        settingsButton.FlatAppearance.MouseDownBackColor = activo ? tema.AcentoPresionado : tema.BordeCampo;
+    }
+
+    /// <summary>
+    /// Repinta todo con el tema nuevo: la ventana, la vista abierta y las que quedaron en caché, que
+    /// están fuera del árbol de controles y por eso no las alcanza el repintado del formulario.
+    /// </summary>
+    private void OnTemaCambiado(object? sender, EventArgs e)
+    {
+        _temas.AplicarA(this);
+
+        foreach (var vista in _viewCache.Values)
+        {
+            _temas.AplicarA(vista);
+        }
+
+        if (_configuracionesView is not null) _temas.AplicarA(_configuracionesView);
+
+        MarcarConfiguracionesActivo(_currentView is ConfiguracionesView);
+        toolsList.Invalidate();
+    }
+
+    private void toolsList_DrawItem(object? sender, DrawListViewItemEventArgs e)
+    {
+        var tema = _temas.Actual;
+        var seleccionado = e.Item is not null && e.Item.Selected;
+        var resaltado = !seleccionado && e.ItemIndex == _indiceBajoElMouse;
+
+        var fondo = seleccionado ? tema.Acento
+            : resaltado ? tema.BotonSecundarioHover
+            : tema.FondoLateral;
+
+        using (var pincel = new SolidBrush(fondo))
+        {
+            e.Graphics.FillRectangle(pincel, e.Bounds);
+        }
+
+        if (e.Item is null) return;
+
+        var izquierda = e.Bounds.Left + 14;
+
+        if (!string.IsNullOrEmpty(e.Item.ImageKey) && toolsImages.Images.ContainsKey(e.Item.ImageKey))
+        {
+            var icono = toolsImages.Images[e.Item.ImageKey];
+            if (icono is not null)
+            {
+                var alto = Math.Min(20, e.Bounds.Height - 4);
+                var y = e.Bounds.Top + (e.Bounds.Height - alto) / 2;
+                e.Graphics.DrawImage(icono, izquierda, y, alto, alto);
+                izquierda += alto + 10;
+            }
+        }
+
+        var rectanguloTexto = new Rectangle(
+            izquierda,
+            e.Bounds.Top,
+            Math.Max(0, e.Bounds.Right - izquierda - 8),
+            e.Bounds.Height);
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            e.Item.Text,
+            toolsList.Font,
+            rectanguloTexto,
+            seleccionado ? tema.TextoSobreAcento : tema.Texto,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+    }
+
+    private void toolsList_MouseMove(object? sender, MouseEventArgs e)
+    {
+        var item = toolsList.GetItemAt(e.X, e.Y);
+        var indice = item?.Index ?? -1;
+        if (indice == _indiceBajoElMouse) return;
+
+        _indiceBajoElMouse = indice;
+        toolsList.Invalidate();
+    }
+
+    private void toolsList_MouseLeave(object? sender, EventArgs e)
+    {
+        if (_indiceBajoElMouse == -1) return;
+
+        _indiceBajoElMouse = -1;
+        toolsList.Invalidate();
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _secrets.SecretsChanged -= OnSecretsChanged;
+        _temas.TemaCambiado -= OnTemaCambiado;
         base.OnFormClosed(e);
     }
 }

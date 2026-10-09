@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using System.Windows.Forms;
 
@@ -24,6 +25,8 @@ public partial class ElegirDominioDialog : Form
         DominiosCmb.DataSource = dominios.ToList();
         if (!string.IsNullOrWhiteSpace(dominioActual) && dominios.Contains(dominioActual))
             DominiosCmb.SelectedItem = dominioActual;
+
+        ServicioDeTemas.Instancia.AplicarA(this);
     }
 
     private void AceptarBtn_Click(object? sender, EventArgs e)

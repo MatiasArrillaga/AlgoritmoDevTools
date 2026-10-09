@@ -106,16 +106,17 @@ partial class ConnectionEditorDialog
         StatusLbl.AutoSize = false;
         StatusLbl.Location = new System.Drawing.Point(180, 189);
         StatusLbl.Name = "StatusLbl";
+        StatusLbl.Tag = "sutil";
         StatusLbl.Size = new System.Drawing.Size(260, 22);
         StatusLbl.TabIndex = 8;
         StatusLbl.Text = "";
-        StatusLbl.ForeColor = System.Drawing.Color.Gray;
         StatusLbl.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Italic);
         //
         // OkBtn
         //
         OkBtn.Location = new System.Drawing.Point(224, 230);
         OkBtn.Name = "OkBtn";
+        OkBtn.Tag = "primario";
         OkBtn.Size = new System.Drawing.Size(100, 32);
         OkBtn.TabIndex = 9;
         OkBtn.Text = "Aceptar";

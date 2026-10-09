@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -30,6 +31,9 @@ public static class InputDialog
         form.Controls.AddRange(new Control[] { label, textBox, okButton, cancelButton });
         form.AcceptButton = okButton;
         form.CancelButton = cancelButton;
+
+        okButton.Tag = AplicadorDeTema.RolPrimario;
+        ServicioDeTemas.Instancia.AplicarA(form);
 
         return form.ShowDialog(owner) == DialogResult.OK ? textBox.Text : null;
     }

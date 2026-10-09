@@ -69,6 +69,7 @@ partial class ElegirBaseDialog
         EstadoLbl.AutoSize = false;
         EstadoLbl.Location = new System.Drawing.Point(14, 92);
         EstadoLbl.Name = "EstadoLbl";
+        EstadoLbl.Tag = "sutil";
         EstadoLbl.Size = new System.Drawing.Size(506, 36);
         EstadoLbl.TabIndex = 4;
         EstadoLbl.Text = "";
@@ -78,6 +79,7 @@ partial class ElegirBaseDialog
         //
         AplicarBtn.Location = new System.Drawing.Point(290, 136);
         AplicarBtn.Name = "AplicarBtn";
+        AplicarBtn.Tag = "primario";
         AplicarBtn.Size = new System.Drawing.Size(110, 32);
         AplicarBtn.TabIndex = 5;
         AplicarBtn.Text = "Aplicar";

@@ -47,16 +47,17 @@ partial class ElegirDominioDialog
         AyudaLbl.AutoSize = false;
         AyudaLbl.Location = new System.Drawing.Point(14, 50);
         AyudaLbl.Name = "AyudaLbl";
+        AyudaLbl.Tag = "sutil";
         AyudaLbl.Size = new System.Drawing.Size(376, 40);
         AyudaLbl.TabIndex = 2;
         AyudaLbl.Text = "Los comandos del menú pasan a ser los de este dominio.";
-        AyudaLbl.ForeColor = System.Drawing.Color.Gray;
         AyudaLbl.Font = new System.Drawing.Font("Segoe UI", 9F);
         //
         // AceptarBtn
         //
         AceptarBtn.Location = new System.Drawing.Point(160, 96);
         AceptarBtn.Name = "AceptarBtn";
+        AceptarBtn.Tag = "primario";
         AceptarBtn.Size = new System.Drawing.Size(110, 32);
         AceptarBtn.TabIndex = 3;
         AceptarBtn.Text = "Aceptar";

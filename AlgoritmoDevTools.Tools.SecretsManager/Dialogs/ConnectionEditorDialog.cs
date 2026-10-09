@@ -1,3 +1,4 @@
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using System.Drawing;
 using System.Windows.Forms;
@@ -34,6 +35,8 @@ public partial class ConnectionEditorDialog : Form
                 PasswordTxt.Enabled = false;
             }
         }
+
+        ServicioDeTemas.Instancia.AplicarA(this);
     }
 
     private void SetupTooltips()
@@ -70,7 +73,7 @@ public partial class ConnectionEditorDialog : Form
     private void ResetStatus()
     {
         StatusLbl.Text = string.Empty;
-        StatusLbl.ForeColor = Color.Gray;
+        StatusLbl.ForeColor = ColoresDeEstado.Neutro;
     }
 
     private async void TestBtn_Click(object? sender, EventArgs e)
@@ -88,11 +91,11 @@ public partial class ConnectionEditorDialog : Form
             SetStatus(IntegratedSecurityChk.Checked
                 ? "Completá el Server."
                 : "Completá Server, User Id y Password.",
-                Color.Firebrick);
+                ColoresDeEstado.Error);
             return false;
         }
 
-        SetStatus("Probando conexión...", Color.Gray);
+        SetStatus("Probando conexión...", ColoresDeEstado.Neutro);
         TestBtn.Enabled = false;
         OkBtn.Enabled = false;
         try
@@ -101,10 +104,10 @@ public partial class ConnectionEditorDialog : Form
             var error = await Task.Run(() => SQLService.TryTestConnection(args));
             if (error is null)
             {
-                SetStatus("✓ Conexión establecida correctamente.", Color.ForestGreen);
+                SetStatus("✓ Conexión establecida correctamente.", ColoresDeEstado.Exito);
                 return true;
             }
-            SetStatus($"✗ {error}", Color.Firebrick);
+            SetStatus($"✗ {error}", ColoresDeEstado.Error);
             return false;
         }
         finally
