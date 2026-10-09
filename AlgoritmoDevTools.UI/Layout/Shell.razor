@@ -1,0 +1,78 @@
+@using AlgoritmoDevTools.Integrations.SoftCerealCore
+@using AlgoritmoDevTools.UI.Servicios
+
+@*
+    Armazón de la aplicación: la franja de descripción, el panel lateral, el contenido y la barra de
+    estado. Es el equivalente en Blazor del MainForm de Windows Forms.
+
+    El tema se aplica con data-tema en el nodo raíz: todas las variables de color cuelgan de ahí, así
+    que cambiar ese atributo repinta la aplicación entera sin tocar ningún componente.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md
+*@
+
+<div class="shell" data-tema="@_temas.Actual.Id">
+
+    <div class="cuerpo">
+        <nav class="lateral" aria-label="Herramientas">
+            <button type="button"
+                    class="nav-item @(_vista == Vista.Home ? "activo" : "")"
+                    data-tooltip="Inicio"
+                    aria-label="Inicio"
+                    @onclick="AbrirHome">
+                @((MarkupString)IconosSvg.Home)
+            </button>
+
+            <div class="separador-lateral" aria-hidden="true"></div>
+
+            @foreach (var herramienta in CatalogoDeHerramientas.Todas)
+            {
+                var actual = herramienta;
+                <button type="button"
+                        class="nav-item @(EsSeleccionada(actual.Id) ? "activo" : "")"
+                        data-tooltip="@actual.Nombre"
+                        aria-label="@actual.Nombre"
+                        aria-current="@(EsSeleccionada(actual.Id) ? "page" : null)"
+                        @onclick="() => Abrir(actual)">
+                    @((MarkupString)actual.IconoSvg)
+                </button>
+            }
+
+            <button type="button"
+                    class="nav-item pie @(_vista == Vista.Configuraciones ? "activo" : "")"
+                    data-tooltip="Configuraciones"
+                    aria-label="Configuraciones"
+                    @onclick="AbrirConfiguraciones">
+                @((MarkupString)IconosSvg.Configuraciones)
+            </button>
+        </nav>
+
+        <main class="contenido">
+            <CascadingValue Value="_descripcion" Name="AyudaDeLaHerramienta">
+                @if (_vista == Vista.Home)
+                {
+                    <Home />
+                }
+                else if (_vista == Vista.Configuraciones)
+                {
+                    <Configuraciones />
+                }
+                else if (_seleccionada?.Componente is not null)
+                {
+                    <DynamicComponent Type="_seleccionada.Componente" @key="_seleccionada.Id" />
+                }
+                else if (_seleccionada is not null)
+                {
+                    <HerramientaPendiente Herramienta="_seleccionada" />
+                }
+            </CascadingValue>
+        </main>
+    </div>
+
+    <div class="barra-estado">
+        <span>@_servidor</span>
+        <span>@_base</span>
+        <span class="@(Estado.Mensaje is null ? "" : Estado.Clase)">@(Estado.Mensaje ?? _mensaje)</span>
+    </div>
+</div>

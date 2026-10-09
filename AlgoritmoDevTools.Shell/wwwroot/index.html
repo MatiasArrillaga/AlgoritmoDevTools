@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Algoritmo DevTools</title>
+    <base href="/" />
+    <link rel="stylesheet" href="_content/AlgoritmoDevTools.UI/app.css" />
+</head>
+<body>
+    <div id="app">Cargando...</div>
+    <div id="blazor-error-ui" style="display:none">
+        Se produjo un error inesperado.
+        <a href="" class="reload">Recargar</a>
+    </div>
+    <!--
+      Sin autostart="false": ese atributo es del patron de MAUI, donde el host llama a Blazor.start()
+      por su cuenta. Aca nadie lo llama, asi que el framework no arranca y la pagina se queda con el
+      texto de abajo sin dar ningun error.
+    -->
+    <script src="_framework/blazor.webview.js"></script>
+
+    <!--
+      El navegador no entrega la ruta de lo que se arrastra, pero si avisa que hay un arrastre en
+      curso. Con eso alcanza: la ventana hace aparecer su franja, que esta fuera del navegador y si
+      recibe las rutas al soltar.
+
+      El preventDefault evita que Edge abra el archivo soltado como si fuera una pagina.
+    -->
+    <script>
+        (function () {
+            var avisado = false;
+            var apagar;
+
+            // El alto va en pixeles de pantalla, no en los del CSS: con el escalado de Windows no
+            // son lo mismo, y la franja se posiciona del lado de Windows Forms.
+            function altoDeLaBarraDeEstado() {
+                var barra = document.querySelector('.barra-estado');
+                if (!barra) return 0;
+                return Math.round(barra.getBoundingClientRect().height * (window.devicePixelRatio || 1));
+            }
+
+            function avisar(enCurso) {
+                if (avisado === enCurso) return;
+                avisado = enCurso;
+                if (window.chrome && window.chrome.webview) {
+                    var verbo = enCurso ? 'entra' : 'sale';
+                    window.chrome.webview.postMessage('arrastre:' + verbo + ':' + altoDeLaBarraDeEstado());
+                }
+            }
+
+            function hayArchivos(e) {
+                var t = e.dataTransfer;
+                if (!t || !t.types) return false;
+                for (var i = 0; i < t.types.length; i++) {
+                    if (t.types[i] === 'Files') return true;
+                }
+                return false;
+            }
+
+            // dragleave llega tambien al pasar de un elemento a otro, asi que en vez de apagar al
+            // toque se espera: si llega otro dragover, se cancela el apagado.
+            document.addEventListener('dragover', function (e) {
+                if (!hayArchivos(e)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'none';
+                clearTimeout(apagar);
+                avisar(true);
+                apagar = setTimeout(function () { avisar(false); }, 200);
+            }, true);
+
+            document.addEventListener('drop', function (e) {
+                e.preventDefault();
+                clearTimeout(apagar);
+                avisar(false);
+            }, true);
+
+            document.addEventListener('dragleave', function () {
+                clearTimeout(apagar);
+                apagar = setTimeout(function () { avisar(false); }, 200);
+            }, true);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+/*
+  Estética de Algoritmo DevTools. Los cuatro temas de Configuraciones viven acá: cada uno redefine
+  las mismas variables y el resto de las reglas sale de ellas. Un color escrito directo en una regla
+  queda igual en los cuatro temas, así que no va ninguno.
+
+  Referencia funcional y técnica:
+  AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md
+*/
+
+:root,
+[data-tema="verde-esperanza"] {
+  --acento: #00a05e;
+  --acento-hover: #0fb46d;
+  --acento-pressed: #008049;
+  --fondo-lateral: #f4f7f5;
+  --fondo-principal: #ffffff;
+  --fondo-campo: #ffffff;
+  --separador: #dfe6e1;
+  --texto: #28302c;
+  --texto-2: #6b7a72;
+  --boton-2: #eff3f0;
+  --boton-2-hover: #e3eae5;
+  --borde-campo: #d6ded9;
+  --tooltip-fondo: #0a3528;
+  --exito: #1e7e34;
+  --error: #b3261e;
+  --advertencia: #a64d08;
+  color-scheme: light;
+}
+
+[data-tema="azul-ilusion"] {
+  --acento: #0e8ee9;
+  --acento-hover: #2a9df4;
+  --acento-pressed: #0b72ba;
+  --fondo-lateral: #f5f6f8;
+  --fondo-principal: #ffffff;
+  --fondo-campo: #ffffff;
+  --separador: #e1e4e8;
+  --texto: #2b3137;
+  --texto-2: #6e7b85;
+  --boton-2: #f0f2f5;
+  --boton-2-hover: #e4e8ec;
+  --borde-campo: #d8dde3;
+  --tooltip-fondo: #0a2a44;
+  --exito: #1e7e34;
+  --error: #b3261e;
+  --advertencia: #a64d08;
+  color-scheme: light;
+}
+
+[data-tema="verde-esperanza-oscuro"] {
+  --acento: #0e9c8f;
+  --acento-hover: #19b2a3;
+  --acento-pressed: #097a70;
+  --fondo-lateral: #161c1b;
+  --fondo-principal: #1d2423;
+  --fondo-campo: #252d2c;
+  --separador: #2b3432;
+  --texto: #e5edeb;
+  --texto-2: #96a8a5;
+  --boton-2: #252d2c;
+  --boton-2-hover: #303a38;
+  --borde-campo: #394442;
+  --tooltip-fondo: #07302c;
+  --exito: #5cc98d;
+  --error: #f0756b;
+  --advertencia: #e0a152;
+  color-scheme: dark;
+}
+
+[data-tema="azul-ilusion-oscuro"] {
+  --acento: #4a93be;
+  --acento-hover: #5ca3cc;
+  --acento-pressed: #3c7ca2;
+  --fondo-lateral: #161a1f;
+  --fondo-principal: #1d2228;
+  --fondo-campo: #252b33;
+  --separador: #2b323a;
+  --texto: #e5ebf2;
+  --texto-2: #96a3b0;
+  --boton-2: #252b33;
+  --boton-2-hover: #303841;
+  --borde-campo: #38414c;
+  --tooltip-fondo: #0d2436;
+  --exito: #5cc98d;
+  --error: #f0756b;
+  --advertencia: #e0a152;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  background: var(--fondo-principal);
+  color: var(--texto);
+  user-select: none;
+}
+
+#app { height: 100%; }
+
+/* ---------- Armazón ---------- */
+.shell { display: flex; flex-direction: column; height: 100%; }
+
+
+.cuerpo { flex: 1; display: flex; min-height: 0; }
+
+/*
+  Barra de íconos. El fondo es el mismo gris del resto de la aplicación: el acento queda reservado
+  para el ítem elegido, que es lo único que tiene que saltar a la vista.
+
+  No scrollea ni recorta a propósito: el tooltip de cada ícono se dibuja por fuera de la franja.
+*/
+.lateral {
+  width: 60px;
+  flex: none;
+  background: var(--fondo-lateral);
+  border-right: 1px solid var(--separador);
+  padding: 10px 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+  z-index: 10;
+}
+
+
+.nav-item {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color .12s ease;
+}
+.nav-item svg {
+  width: 21px;
+  height: 21px;
+  stroke: var(--texto-2);
+  stroke-width: 1.6;
+  fill: none;
+  transition: stroke .12s ease;
+}
+.nav-item:hover { background: var(--boton-2-hover); }
+.nav-item:hover svg { stroke: var(--texto); }
+
+/* El acento se usa sólo acá: es lo único de la franja que tiene que saltar a la vista. */
+.nav-item.activo { background: var(--acento); }
+.nav-item.activo svg,
+.nav-item.activo:hover svg { stroke: #fff; }
+.nav-item.activo:hover { background: var(--acento-hover); }
+
+.nav-item.pie { margin-top: auto; }
+
+/* Separa el inicio de la lista de herramientas: no es una herramienta más. */
+.separador-lateral {
+  width: 26px;
+  height: 1px;
+  flex: none;
+  background: var(--separador);
+  margin: 2px 0 4px;
+}
+.nav-item:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+
+/*
+  Tooltip propio. El del sistema sale del `title` con su demora y su aspecto de Windows, que en esta
+  pantalla desentona; este sale al instante y sigue el tema.
+*/
+.nav-item::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 9px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 7px 12px;
+  border-radius: 7px;
+  background: var(--tooltip-fondo);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .1s ease;
+  z-index: 30;
+}
+.nav-item:hover::after,
+.nav-item:focus-visible::after { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, .nav-item svg, .nav-item::after { transition: none; }
+}
+
+.contenido {
+  flex: 1;
+  min-width: 0;
+  background: var(--fondo-principal);
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.barra-estado {
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  background: var(--fondo-lateral);
+  border-top: 1px solid var(--separador);
+  color: var(--texto-2);
+  font-size: 12px;
+}
+.barra-estado span { padding: 0 14px; }
+.barra-estado span + span { border-left: 1px solid var(--separador); }
+
+/* ---------- Tipografía de contenido ---------- */
+h2 { margin: 0; font-size: 17px; font-weight: 600; }
+
+/* El título con el signo de pregunta que explica para qué sirve la herramienta. */
+.titulo { display: flex; align-items: center; gap: 8px; }
+
+/* Separa el encabezado del contenido con la misma línea de 1px que el resto de la aplicación. */
+.hr-titulo {
+  border: 0;
+  border-top: 1px solid var(--separador);
+  margin: 13px 0 0;
+}
+
+.ayuda {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--borde-campo);
+  color: var(--texto-2);
+  font-size: 9.5px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: help;
+  user-select: none;
+}
+.ayuda:hover, .ayuda:focus-visible { border-color: var(--acento); color: var(--acento); }
+.ayuda:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* Cuelga del título hacia abajo, no al costado: arriba no hay lugar y el texto es una frase. */
+.ayuda::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -6px;
+  width: max-content;
+  max-width: 320px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: var(--tooltip-fondo);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .1s ease;
+  z-index: 30;
+}
+.ayuda:hover::after, .ayuda:focus-visible::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ayuda::after { transition: none; } }
+.sub { margin: 4px 0 0; font-size: 12px; color: var(--texto-2); }
+
+.grupo {
+  margin: 18px 0 9px;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+/* ---------- Inicio ---------- */
+.saludo { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.saludo-sub { margin: 5px 0 0; font-size: 13px; color: var(--texto-2); }
+
+.tarjetas {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  max-width: 1000px;
+}
+
+.tarjeta {
+  border: 1px solid var(--separador);
+  background: var(--fondo-campo);
+  padding: 14px 16px 16px;
+  min-width: 0;
+}
+
+.tarjeta-titulo {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+/*
+  El dato va grande porque es lo único que se viene a mirar acá: contra qué base se trabaja, cuántos
+  servicios levantan. El resto de la tarjeta lo acompaña.
+*/
+.tarjeta-valor {
+  margin: 9px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--acento);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.tarjeta-valor.sin-dato { color: var(--texto-2); font-weight: 500; }
+.tarjeta-valor .de { font-size: 14px; font-weight: 400; color: var(--texto-2); }
+
+.tarjeta-detalle {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--texto-2);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Rueda de espera, para lo que tarda lo suficiente como para que parezca que no pasa nada. */
+.girando {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  vertical-align: -1px;
+  border: 2px solid var(--borde-campo);
+  border-top-color: var(--acento);
+  border-radius: 50%;
+  animation: girar .7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girando { animation-duration: 2.4s; } }
+
+/* ---------- Controles ---------- */
+.btn {
+  height: 34px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .12s ease;
+}
+.btn:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.btn-primario { background: var(--acento); color: #fff; font-weight: 600; }
+.btn-primario:hover { background: var(--acento-hover); }
+.btn-primario:active { background: var(--acento-pressed); }
+
+.btn-secundario { background: var(--boton-2); color: var(--texto); border: 1px solid var(--borde-campo); }
+.btn-secundario:hover { background: var(--boton-2-hover); }
+.btn-secundario:active { background: var(--borde-campo); }
+
+.campo {
+  height: 34px;
+  padding: 0 10px;
+  background: var(--fondo-campo);
+  color: var(--texto);
+  border: 1px solid var(--borde-campo);
+  border-radius: 0;
+  font: inherit;
+  width: 100%;
+}
+.campo:focus { outline: 0; border-color: var(--acento); }
+
+.acciones { margin-top: 18px; display: flex; gap: 10px; }
+
+.chk { display: flex; align-items: center; gap: 9px; cursor: pointer; margin: 9px 0; }
+.chk input { accent-color: var(--acento); width: 15px; height: 15px; }
+
+/* ---------- Tarjetas de tema ---------- */
+.temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 10px; max-width: 700px; }
+
+.tema-card {
+  border: 1px solid var(--borde-campo);
+  padding: 8px;
+  cursor: pointer;
+  background: var(--fondo-principal);
+  text-align: left;
+  font: inherit;
+  color: var(--texto);
+}
+.tema-card.elegido { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.tema-card:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.tema-mini { height: 38px; display: flex; border: 1px solid rgba(128,128,128,.22); }
+.tema-mini .mini-lateral { width: 30%; }
+.tema-mini .mini-cuerpo { flex: 1; display: flex; align-items: flex-end; padding: 5px; }
+.tema-mini .mini-boton { width: 58%; height: 9px; }
+
+.tema-nombre { display: flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 11.5px; }
+.tema-radio {
+  width: 12px; height: 12px; border-radius: 50%; flex: none;
+  border: 1px solid var(--borde-campo); display: grid; place-items: center;
+}
+.tema-card.elegido .tema-radio { border-color: var(--acento); }
+.tema-card.elegido .tema-radio::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--acento); }
+
+/* ---------- Piezas de las herramientas ---------- */
+
+/* Datos de contexto de la pantalla: rutas, commits, conteos. */
+.metadatos { display: flex; flex-direction: column; gap: 5px; margin-top: 14px; font-size: 12px; color: var(--texto-2); }
+.metadatos b { color: var(--texto); font-weight: 500; }
+.mono { font-family: Consolas, "Cascadia Mono", ui-monospace, monospace; }
+
+/* Salida de texto largo: el equivalente del cuadro de resultados de la ventana clásica. */
+.salida {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--fondo-campo);
+  border: 1px solid var(--borde-campo);
+  color: var(--texto);
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 46vh;
+  user-select: text;
+}
+
+.linea-estado { margin: 14px 0 0; font-size: 12.5px; }
+
+input.campo[readonly] { color: var(--texto-2); }
+
+/* El visor no muestra confirm() del navegador, asi que la confirmacion vive en la pagina. */
+.confirmacion {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--borde-campo);
+  border-left: 3px solid var(--advertencia);
+  background: var(--fondo-campo);
+}
+.confirmacion p { margin: 0; font-size: 13px; }
+.confirmacion .acciones { margin-top: 12px; }
+
+.btn:disabled { opacity: .5; cursor: default; }
+
+/* Lista de casillas con scroll, para cuando son muchas (servicios, dominios). */
+.lista-chk {
+  margin-top: 10px;
+  border: 1px solid var(--borde-campo);
+  background: var(--fondo-campo);
+  max-height: 38vh;
+  overflow-y: auto;
+  padding: 6px 10px;
+}
+.lista-chk .chk { margin: 5px 0; }
+
+/*
+  Tres columnas, llenadas de arriba hacia abajo: el tye.yaml se lee en orden, y repartir por filas
+  rompería esa lectura.
+*/
+.lista-chk.columnas { columns: 3; column-gap: 24px; }
+.lista-chk.columnas .chk { break-inside: avoid; }
+@media (max-width: 900px) { .lista-chk.columnas { columns: 2; } }
+@media (max-width: 560px) { .lista-chk.columnas { columns: 1; } }
+
+select.campo { padding: 0 8px; }
+
+.fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.fila .campo { flex: 1; min-width: 180px; }
+
+
+/* ---------- Estado ---------- */
+.estado-exito { color: var(--exito); }
+.estado-error { color: var(--error); }
+.estado-advertencia { color: var(--advertencia); }
+.estado-neutro { color: var(--texto-2); }
+
+/* La barra de arrastre sigue al tema: en oscuro, la de Windows se ve como un parche claro. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--borde-campo); border: 2px solid var(--fondo-principal); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--texto-2); }

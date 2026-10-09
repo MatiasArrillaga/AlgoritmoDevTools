@@ -1,4 +1,4 @@
-using AlgoritmoDevTools.Core.Abstractions;
+﻿using AlgoritmoDevTools.Core.Abstractions;
 using AlgoritmoDevTools.Tools.CommandsMaker;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.Tools.MarkdownConverter;
@@ -21,17 +21,20 @@ static class Program
         // pesado y molesto.
         if (EjecutarAccionDirecta(args)) return;
 
-        var tools = new ITool[]
-        {
-            new CommandsMakerTool(),
-            new SecretsManagerTool(),
-            new ModelDriftCheckerTool(),
-            new TyeServiceSelectorTool(),
-            new MarkdownConverterTool()
-        };
-
-        Application.Run(new MainForm(tools));
+        // La ventana HTML es la de siempre a partir de ahora. La clasica sigue disponible con
+        // --clasico mientras las herramientas terminan de migrar, porque todavia viven ahi.
+        Application.Run(new MainFormBlazor());
     }
+
+    /// <summary>Arma las herramientas que se alojan en la ventana clasica.</summary>
+    private static ITool[] CrearHerramientas() =>
+    [
+        new CommandsMakerTool(),
+        new SecretsManagerTool(),
+        new ModelDriftCheckerTool(),
+        new TyeServiceSelectorTool(),
+        new MarkdownConverterTool()
+    ];
 
     /// <summary>
     /// Resuelve los argumentos del menu contextual. Devuelve true si se ejecuto una accion y el
@@ -43,6 +46,18 @@ static class Program
     /// </summary>
     /// <summary>Levanta el widget de bandeja en vez de la ventana principal.</summary>
     public const string VerboWidget = "--widget";
+
+    /// <summary>
+    /// Abre la ventana clasica de Windows Forms. Sigue siendo la unica que tiene las herramientas
+    /// completas mientras cada una no tenga su pantalla en HTML.
+    /// </summary>
+    public const string VerboClasico = "--clasico";
+
+    /// <summary>
+    /// Abre la ventana HTML. Es lo que hace el arranque sin argumentos; queda como verbo explicito
+    /// para los accesos directos que ya lo usan.
+    /// </summary>
+    public const string VerboHtml = "--html";
 
     /// <summary>
     /// Nombre del mutex que mantiene una sola instancia del widget. Es global al usuario, no a la
@@ -58,6 +73,14 @@ static class Program
         {
             case VerboWidget:
                 EjecutarWidget();
+                return true;
+
+            case VerboHtml:
+                Application.Run(new MainFormBlazor());
+                return true;
+
+            case VerboClasico:
+                Application.Run(new MainForm(CrearHerramientas()));
                 return true;
 
             case MenuContextualSecretos.VerboRestaurar:

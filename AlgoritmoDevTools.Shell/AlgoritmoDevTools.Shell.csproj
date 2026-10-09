@@ -1,4 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<!--
+  Sdk.Razor y no Sdk a secas: el host de un BlazorWebView necesita que el proyecto genere su propio
+  manifiesto de recursos estaticos. Sin eso no se sirve _framework/blazor.webview.js, la pagina se
+  queda en "Cargando..." y no hay ningun error que lo explique.
+-->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -33,12 +38,18 @@
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.SecretsManager\AlgoritmoDevTools.Tools.SecretsManager.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.TyeServiceSelector\AlgoritmoDevTools.Tools.TyeServiceSelector.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.UI\AlgoritmoDevTools.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\app.ico">
       <LogicalName>app.ico</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.110" />
   </ItemGroup>
 
   <!-- Deja sólo el .exe en el folder de publish — elimina PDBs/XML de proyectos referenciados. -->

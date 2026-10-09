@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.Tools.Tye
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.Tools.MarkdownConverter", "AlgoritmoDevTools.Tools.MarkdownConverter\AlgoritmoDevTools.Tools.MarkdownConverter.csproj", "{130B4D31-CA75-4E16-969F-F322459255E5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoritmoDevTools.UI", "AlgoritmoDevTools.UI\AlgoritmoDevTools.UI.csproj", "{E745F218-0BED-4C60-BD6F-91187D57D457}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{130B4D31-CA75-4E16-969F-F322459255E5}.Release|x64.Build.0 = Release|Any CPU
 		{130B4D31-CA75-4E16-969F-F322459255E5}.Release|x86.ActiveCfg = Release|Any CPU
 		{130B4D31-CA75-4E16-969F-F322459255E5}.Release|x86.Build.0 = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|x64.Build.0 = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Debug|x86.Build.0 = Debug|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|x64.ActiveCfg = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|x64.Build.0 = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|x86.ActiveCfg = Release|Any CPU
+		{E745F218-0BED-4C60-BD6F-91187D57D457}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

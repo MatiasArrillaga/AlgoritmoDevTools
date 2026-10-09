@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <!--
+      net10.0-windows y no net10.0 a secas: los componentes consumen los servicios de Core, que es
+      un proyecto de Windows Forms. Un proyecto sin la plataforma no puede referenciarlo.
+    -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AlgoritmoDevTools.UI</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.CommandsMaker\AlgoritmoDevTools.Tools.CommandsMaker.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.MarkdownConverter\AlgoritmoDevTools.Tools.MarkdownConverter.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.SecretsManager\AlgoritmoDevTools.Tools.SecretsManager.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.TyeServiceSelector\AlgoritmoDevTools.Tools.TyeServiceSelector.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj" />
+  </ItemGroup>
+
+</Project>

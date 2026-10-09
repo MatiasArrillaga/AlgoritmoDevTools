@@ -1,0 +1,19 @@
+@*
+    Marcador de posición de una herramienta que todavía no tiene su componente.
+
+    El armazón ya está en HTML; cada herramienta se migra después, una por una, reusando sus
+    servicios de siempre. Mientras tanto se sigue usando desde la ventana de Windows Forms.
+*@
+
+<TituloDePagina Texto="@Herramienta.Nombre" />
+
+<p class="grupo">Estado de la migración</p>
+
+<p class="estado-neutro" style="max-width:62ch;line-height:1.55">
+    Esta herramienta todavía no tiene su pantalla en HTML. Su lógica no cambió y se sigue usando
+    desde la ventana clásica; lo que falta es la pantalla.
+</p>
+
+<div class="acciones">
+    <button type="button" class="btn btn-primario" disabled>Pendiente de migrar</button>
+</div>

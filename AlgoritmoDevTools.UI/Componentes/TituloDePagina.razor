@@ -1,0 +1,22 @@
+@*
+    Título de una herramienta, con el signo de pregunta que explica para qué sirve.
+
+    La explicación llega sola desde el armazón, que sabe qué herramienta está abierta: así el texto
+    vive en un solo lugar —el catálogo— y no repetido en cada pantalla. Una página puede igual pasar
+    el suyo con el parámetro Ayuda si necesita decir otra cosa.
+*@
+
+<div class="titulo">
+    <h2>@Texto</h2>
+
+    @if (!string.IsNullOrWhiteSpace(TextoDeAyuda))
+    {
+        <span class="ayuda"
+              data-tooltip="@TextoDeAyuda"
+              tabindex="0"
+              role="note"
+              aria-label="@TextoDeAyuda">?</span>
+    }
+</div>
+
+<hr class="hr-titulo" />
