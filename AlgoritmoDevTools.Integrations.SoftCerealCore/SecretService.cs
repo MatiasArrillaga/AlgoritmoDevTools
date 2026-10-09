@@ -1,4 +1,4 @@
-using AlgoritmoDevTools.Core.Infrastructure;
+﻿using AlgoritmoDevTools.Core.Infrastructure;
 
 namespace AlgoritmoDevTools.Integrations.SoftCerealCore;
 
@@ -9,7 +9,12 @@ public class SecretService
 
     public event EventHandler? SecretsChanged;
 
-    private readonly string _projectPath;
+    /// <summary>
+    /// Raíz de AlgoritmoCore, según la carpeta elegida en Configuraciones. Se resuelve en cada
+    /// consulta y no en el constructor: este servicio es único para todo el proceso, así que
+    /// calcularlo una vez dejaría la ruta vieja hasta reiniciar.
+    /// </summary>
+    private static string ProjectPath => RutasDeTrabajo.AlgoritmoCore;
     public Dictionary<string, string> Secrets { get; protected set; } = new();
 
     /// <summary>
@@ -23,24 +28,18 @@ public class SecretService
     public Dictionary<string, string> SecretosNoAdministrados { get; } = new();
     public string LastRawOutput { get; private set; } = string.Empty;
 
-    public SecretService()
-    {
-        _projectPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "source",
-            "repos",
-            "AlgoritmoCore"
-        );
-    }
-
     /// <summary>
     /// Ejecuta 'dotnet user-secrets list' y actualiza Secrets + LastRawOutput en una sola invocación.
+    ///
+    /// Llama a dotnet directo y no a través de PowerShell: envuelto, el mismo comando levantaba dos
+    /// procesos en vez de uno y tardaba unos 700 ms más. Es la lectura que corre al abrir la
+    /// aplicación, así que ese tiempo se siente.
     /// </summary>
     public string RefreshSecrets()
     {
-        LastRawOutput = ProcessRunner.RunPowerShell(
-            $"dotnet user-secrets list --project {Constantes.ServiceProyectName}",
-            GetSolutionRoot());
+        LastRawOutput = ProcessRunner.RunDotnet(
+            $"user-secrets list --project {Constantes.ServiceProyectName}",
+            workingDirectory: GetSolutionRoot());
         ParseRawOutput(LastRawOutput);
         SecretsChanged?.Invoke(this, EventArgs.Empty);
         return LastRawOutput;
@@ -247,10 +246,5 @@ public class SecretService
         RefreshSecrets();
     }
 
-    private string GetSolutionRoot()
-    {
-        if (_projectPath is null)
-            throw new InvalidOperationException("No se encontró la raíz del proyecto AlgoritmoCore.");
-        return _projectPath;
-    }
+    private static string GetSolutionRoot() => ProjectPath;
 }

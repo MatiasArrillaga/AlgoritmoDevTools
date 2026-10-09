@@ -1,6 +1,8 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+
+using AlgoritmoDevTools.Core.Infrastructure;
 
 namespace AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 
@@ -10,9 +12,8 @@ namespace AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 /// </summary>
 public static class SchemaChangeDetector
 {
-    public static string AlgoritmoCoreRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        "source", "repos", "AlgoritmoCore");
+    /// <summary>Raíz de AlgoritmoCore, según la carpeta elegida en Configuraciones.</summary>
+    public static string AlgoritmoCoreRoot => RutasDeTrabajo.AlgoritmoCore;
 
     private static readonly Regex DbContextRegex =
         new(@"Microservicios[\\/][^\\/]+[\\/]Algoritmo\.[^\\/]+\.Infrastructure[\\/].*DbContext[^\\/]*\.cs$",

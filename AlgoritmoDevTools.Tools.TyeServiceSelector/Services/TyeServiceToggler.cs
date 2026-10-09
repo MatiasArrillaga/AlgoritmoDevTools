@@ -1,4 +1,6 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+
+using AlgoritmoDevTools.Core.Infrastructure;
 
 namespace AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
 
@@ -37,9 +39,8 @@ public static class TyeServiceToggler
     /// <summary>Sufijo que identifica al sidecar Dapr de otro servicio de la misma lista.</summary>
     public const string DaprSuffix = "-dapr";
 
-    public static string AlgoritmoCoreRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        "source", "repos", "AlgoritmoCore");
+    /// <summary>Raíz de AlgoritmoCore, según la carpeta elegida en Configuraciones.</summary>
+    public static string AlgoritmoCoreRoot => RutasDeTrabajo.AlgoritmoCore;
 
     public static string MasterYamlPath => Path.Combine(AlgoritmoCoreRoot, "tye.yaml");
     public static string GeneratedYamlPath => Path.Combine(AlgoritmoCoreRoot, GeneratedFileName);
