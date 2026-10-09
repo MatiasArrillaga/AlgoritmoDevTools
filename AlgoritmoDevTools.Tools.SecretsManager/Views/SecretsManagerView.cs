@@ -32,7 +32,7 @@ public partial class SecretsManagerView : UserControl
         tips.SetToolTip(ModificarConexionBtn, "Edita la conexión seleccionada. Re-valida el login antes de guardar.");
         tips.SetToolTip(EliminarConexionBtn, "Elimina la conexión seleccionada de la lista local.");
         tips.SetToolTip(ListarSecretosBtn, "Re-ejecuta 'dotnet user-secrets list' y muestra los secretos actuales del proyecto.");
-        tips.SetToolTip(RestaurarSecretosBtn, "Restaura los secretos desde secrets/SoftCerealCore.ConnectionString.json.");
+        tips.SetToolTip(RestaurarSecretosBtn, $"Restaura los secretos desde secrets/{Constantes.DefaultConectionDataFile}.");
         tips.SetToolTip(ModificarSecretoBtn, "Actualiza los user-secrets Development y DAPR con la conexión + base de datos seleccionadas.");
         tips.SetToolTip(MenuAgregarBtn, "Agrega DevTools > Secrets Manager al clic derecho sobre el fondo de cualquier carpeta, con Restaurar secretos, una entrada por conexión guardada y Elegir base... Va en HKEY_CURRENT_USER: no necesita permisos de administrador.");
         tips.SetToolTip(MenuQuitarBtn, "Saca el grupo Secrets Manager del clic derecho. La raíz DevTools se borra sólo si no quedó ninguna otra tool colgando.");

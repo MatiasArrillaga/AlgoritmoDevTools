@@ -3,7 +3,7 @@ namespace AlgoritmoDevTools.Integrations.SoftCerealCore;
 public static class Constantes
 {
     public const string ServiceProyectName = "Algoritmo.Microservices.Shared.API";
-    public const string DefaultConectionDataFile = "SoftCerealCore.ConnectionString.json";
+    public const string DefaultConectionDataFile = "SoftCerealCore.Secrets.json";
     public const string DefaultConectionString = $"Server={ConstKeyWords.ServerKey};Database={ConstKeyWords.DataBaseKey};User Id={ConstKeyWords.UserKey};Password={ConstKeyWords.PasswordKey}";
     public const string SecretConectionStringName = $"SoftCerealCore.{ConstKeyWords.SecretName}.ConnectionString";
     public const string NoHaySecretosMessage = "No secrets configured for this application";
