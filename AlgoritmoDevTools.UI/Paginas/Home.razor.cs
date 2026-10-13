@@ -25,7 +25,7 @@ public partial class Home : IDisposable
     /// Nombre de pila. Las cuentas del dominio vienen como "Nombre.Apellido" y saludar con el
     /// apellido pegado suena a sistema, no a persona.
     /// </summary>
-    private string _usuario = Environment.UserName.Split('.')[0];
+    private string _usuario = ConMayuscula(Environment.UserName.Split('.')[0]);
     private string _servidor = string.Empty;
     private string _baseDeDatos = string.Empty;
     private string _nombresActivos = string.Empty;
@@ -125,7 +125,7 @@ public partial class Home : IDisposable
         _totalDeServicios = servicios.Count;
         _hayYamlGenerado = File.Exists(TyeServiceToggler.GeneratedYamlPath);
 
-        var activos = servicios.Where(s => s.Enabled).Select(s => s.Name).ToList();
+        var activos = servicios.Where(s => s.Enabled).Select(s => ConMayuscula(s.Name)).ToList();
         _serviciosActivos = _hayYamlGenerado ? activos.Count : servicios.Count;
 
         if (!_hayYamlGenerado) return;
@@ -135,6 +135,19 @@ public partial class Home : IDisposable
             ? string.Join(", ", activos)
             : string.Join(", ", activos.Take(ServiciosQueSeListan)) + $" y {activos.Count - ServiciosQueSeListan} más";
     }
+
+    /// <summary>
+    /// Primera letra en mayúscula.
+    ///
+    /// Los nombres que se muestran acá los escribió otro —la cuenta de Windows, el yaml de Tye— y
+    /// ahí viven en minúscula porque son identificadores. En la pantalla son nombres, y un "hola
+    /// matias" o un "van a levantar: ui, cereales" se leen como un error de la aplicación.
+    ///
+    /// Sólo la primera letra: separar "operacionescomerciales" en palabras sería adivinar, y lo que
+    /// el yaml trae pegado no hay forma de desarmarlo sin equivocarse en algún caso.
+    /// </summary>
+    private static string ConMayuscula(string texto) =>
+        string.IsNullOrEmpty(texto) ? texto : char.ToUpper(texto[0]) + texto[1..];
 
     private void LeerBaseline()
     {
