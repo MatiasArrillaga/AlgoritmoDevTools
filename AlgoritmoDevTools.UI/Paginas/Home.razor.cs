@@ -17,6 +17,16 @@ public partial class Home : IDisposable
     [Inject]
     private BaselineRepository Baselines { get; set; } = default!;
 
+    [Inject]
+    private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
+
+    /// <summary>
+    /// El paso a Configuraciones, que es donde se instala. Lo baja el armazón: esta pantalla no sabe
+    /// navegar, sólo avisa.
+    /// </summary>
+    [CascadingParameter(Name = "IrAConfiguraciones")]
+    private EventCallback IrAConfiguraciones { get; set; }
+
     private const int ServiciosQueSeListan = 6;
 
     private readonly SecretService _secretos = SecretService.Shared;

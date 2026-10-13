@@ -5,6 +5,7 @@ using AlgoritmoDevTools.Tools.MarkdownConverter;
 using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
 using AlgoritmoDevTools.Tools.SecretsManager.Services;
+using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Tools.TyeServiceSelector;
 using AlgoritmoDevTools.UI.Servicios;
 
@@ -16,6 +17,10 @@ static class Program
     static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+
+        // El ejecutable que se corrió de nombre en la última actualización. Recién ahora se puede
+        // borrar: mientras corría lo estaba usando este mismo proceso.
+        Actualizador.LimpiarAnterior();
 
         // El menu contextual del explorador invoca este mismo exe con argumentos. Se resuelve la
         // accion y se sale sin abrir la ventana: levantar el Shell entero para una accion suelta es

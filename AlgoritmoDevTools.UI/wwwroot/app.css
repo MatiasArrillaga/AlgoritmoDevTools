@@ -320,6 +320,25 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 }
 
 /* ---------- Inicio ---------- */
+
+/*
+  Aviso de versión nueva, arriba de las tarjetas del inicio. Lleva el acento porque es lo único de
+  esa pantalla sobre lo que hay algo que hacer; el resto es estado y se mira nomás.
+*/
+.aviso-version {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--acento);
+  border-left-width: 3px;
+  background: var(--fondo-campo);
+  font-size: 13px;
+}
+
+.aviso-version .btn { height: 30px; padding: 0 14px; }
 .saludo { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
 .saludo-sub { margin: 5px 0 0; font-size: 13px; color: var(--texto-2); }
 

@@ -1,0 +1,58 @@
+# Publica el ejecutable como release al etiquetar una versión.
+#
+# Para sacar una versión:
+#
+#     1. Subir el <Version> de AlgoritmoDevTools.Shell.csproj
+#     2. git commit && git push
+#     3. git tag v1.2.0 && git push origin v1.2.0
+#
+# La etiqueta tiene que coincidir con el <Version> del csproj: es el número que queda adentro del
+# ejecutable, y con el que cada instalación decide si la de GitHub es más nueva que la suya. Si no
+# coinciden, el workflow falla antes de publicar nada en lugar de dejar un release que nadie va a
+# poder usar para actualizar.
+
+name: Publicar
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    # Windows y no Linux: el ejecutable es WinExe con Windows Forms adentro, así que no compila en
+    # otro lado.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verificar que la etiqueta coincida con la versión del proyecto
+        shell: pwsh
+        run: |
+          $csproj = [xml](Get-Content AlgoritmoDevTools.Shell/AlgoritmoDevTools.Shell.csproj)
+          $version = $csproj.Project.PropertyGroup.Version | Where-Object { $_ }
+          $etiqueta = '${{ github.ref_name }}'.TrimStart('v')
+
+          if ($version -ne $etiqueta) {
+            Write-Error "La etiqueta dice $etiqueta y el csproj dice $version. El ejecutable saldria con un numero que no es el del release."
+            exit 1
+          }
+
+          Write-Host "Version $version"
+
+      - name: Publicar
+        run: dotnet publish AlgoritmoDevTools.Shell -c Release -o salida
+
+      - name: Crear el release con el ejecutable
+        uses: softprops/action-gh-release@v2
+        with:
+          files: salida/DevTools.exe
+          generate_release_notes: true

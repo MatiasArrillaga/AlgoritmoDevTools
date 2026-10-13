@@ -50,6 +50,7 @@
 
         <main class="contenido">
             <CascadingValue Value="_descripcion" Name="AyudaDeLaHerramienta">
+            <CascadingValue Value="_irAConfiguraciones" Name="IrAConfiguraciones">
                 @if (_vista == Vista.Home)
                 {
                     <Home />
@@ -66,6 +67,7 @@
                 {
                     <HerramientaPendiente Herramienta="_seleccionada" />
                 }
+            </CascadingValue>
             </CascadingValue>
         </main>
     </div>

@@ -139,6 +139,50 @@
             </p>
         }
 
+        else if (_seccion is Seccion.Actualizaciones)
+        {
+            <TituloDeGrupo Texto="Actualizaciones"
+                           Ayuda="La aplicación se baja sola la última versión publicada en GitHub y se reemplaza. Mira al abrir, y acá se puede forzar la revisión. El widget no hace falta cerrarlo: el ejecutable viejo se corre de nombre y sigue andando hasta que lo cierres." />
+
+            <p class="sub" style="margin-top:4px">Versión instalada: <b>@ServicioDeActualizaciones.VersionActual.ToString(3)</b></p>
+
+            @if (Actualizaciones.Disponible is { } nueva)
+            {
+                <div class="confirmacion">
+                    <p><b>Hay una versión nueva: @nueva.Etiqueta</b></p>
+
+                    @if (!string.IsNullOrWhiteSpace(nueva.Notas))
+                    {
+                        <pre class="salida" style="max-height:28vh">@nueva.Notas</pre>
+                    }
+
+                    <p class="sub">
+                        Se baja y se deja puesta. Para empezar a usarla hay que reiniciar la aplicación, y el
+                        widget sigue corriendo con la anterior hasta que lo cierres.
+                    </p>
+
+                    <div class="acciones">
+                        <button type="button" class="btn btn-primario" disabled="@_instalando" @onclick="Instalar">
+                            @(_instalando ? "Bajando..." : "Actualizar ahora")
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="fila" style="margin-top:12px">
+                    <button type="button" class="btn btn-secundario" disabled="@Actualizaciones.Buscando" @onclick="Buscar">
+                        @(Actualizaciones.Buscando ? "Buscando..." : "Buscar actualizaciones")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Actualizaciones.UltimoResultado))
+                {
+                    <p class="sub">@Actualizaciones.UltimoResultado</p>
+                }
+            }
+        }
+
         else if (_seccion is Seccion.ExportarEImportar)
         {
             <TituloDeGrupo Texto="Exportar e importar configuración"

@@ -14,6 +14,9 @@ public partial class Shell : IDisposable
     [Inject]
     private BarraDeEstado Estado { get; set; } = default!;
 
+    [Inject]
+    private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
+
     /// <summary>Qué está mostrando el panel central.</summary>
     private enum Vista { Home, Herramienta, Configuraciones }
 
@@ -27,11 +30,20 @@ public partial class Shell : IDisposable
     private string _base = "Base: -";
     private string _mensaje = string.Empty;
 
+    /// <summary>
+    /// El paso a Configuraciones, para las pantallas que ofrecen algo que se resuelve ahí. Lo baja
+    /// el armazón porque es el único que sabe qué se está mostrando.
+    /// </summary>
+    private EventCallback _irAConfiguraciones;
+
     protected override void OnInitialized()
     {
         _temas.TemaCambiado += OnTemaCambiado;
         _secretos.SecretsChanged += OnSecretosCambiaron;
         Estado.Cambio += OnEstadoCambio;
+        Actualizaciones.Cambio += OnEstadoCambio;
+
+        _irAConfiguraciones = EventCallback.Factory.Create(this, AbrirConfiguraciones);
 
         // Siempre arranca en el inicio: es el resumen de cómo quedó el entorno, que es justo lo
         // que se quiere ver al abrir.
@@ -57,6 +69,10 @@ public partial class Shell : IDisposable
             _base = "Base: -";
             _mensaje = $"No se pudieron leer los secretos: {ex.Message}";
         }
+
+        // Después de los secretos y sin esperarla: si GitHub no contesta, la aplicación ya está
+        // andando y nadie se entera. El resultado lo muestra el inicio cuando llega.
+        await Actualizaciones.BuscarAsync();
     }
 
     private void ActualizarBarraDeEstado()
@@ -118,5 +134,6 @@ public partial class Shell : IDisposable
         _temas.TemaCambiado -= OnTemaCambiado;
         _secretos.SecretsChanged -= OnSecretosCambiaron;
         Estado.Cambio -= OnEstadoCambio;
+        Actualizaciones.Cambio -= OnEstadoCambio;
     }
 }

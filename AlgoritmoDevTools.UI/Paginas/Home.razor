@@ -2,6 +2,7 @@
 @using AlgoritmoDevTools.Integrations.SoftCerealCore
 @using AlgoritmoDevTools.Tools.ModelDriftChecker.Services
 @using AlgoritmoDevTools.Tools.TyeServiceSelector.Services
+@using AlgoritmoDevTools.UI.Servicios
 
 @*
     Inicio: en qué estado quedó configurado el entorno, sin tener que entrar a cada herramienta.
@@ -13,6 +14,14 @@
 
 <h1 class="saludo">Hola @_usuario!</h1>
 <p class="saludo-sub">Así quedó configurado tu entorno.</p>
+
+@if (Actualizaciones.Disponible is { } nueva)
+{
+    <div class="aviso-version">
+        <span>Hay una versión nueva: <b>@nueva.Etiqueta</b>. Tenés la @ServicioDeActualizaciones.VersionActual.ToString(3).</span>
+        <button type="button" class="btn btn-primario" @onclick="IrAConfiguraciones">Actualizar</button>
+    </div>
+}
 
 <div class="tarjetas">
 

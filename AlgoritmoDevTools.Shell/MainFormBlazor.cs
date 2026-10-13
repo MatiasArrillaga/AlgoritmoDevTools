@@ -141,5 +141,6 @@ public sealed class MainFormBlazor : Form
 
         // El verbo lo pone el Shell, que es el que conoce su propia línea de comandos.
         servicios.AddSingleton(new ArranqueDelWidget(Program.VerboWidget));
+        servicios.AddSingleton<ServicioDeActualizaciones>();
     }
 }

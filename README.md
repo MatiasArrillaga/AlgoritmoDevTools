@@ -314,6 +314,24 @@ No es un proyecto aparte: es una rama del arranque, así que comparte binario y 
 
 > **Al desarrollar, corré el widget desde el publish y no desde `bin\Debug`.** Un widget residente mantiene los DLL tomados y cualquier compilación falla con `MSB3027`. Por eso el menú tiene **Salir** a mano.
 
+## Actualizaciones
+
+La aplicación se actualiza sola desde los releases de GitHub. El repositorio es público, así que la consulta no lleva credenciales: nada que embeber en el ejecutable ni que repartirle al equipo.
+
+**Sacar una versión** son tres pasos:
+
+1. Subir el `<Version>` de `AlgoritmoDevTools.Shell.csproj`.
+2. Commitear y pushear.
+3. `git tag v1.2.0 && git push origin v1.2.0`
+
+El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea el release. **La etiqueta tiene que coincidir con el `<Version>`**: es el número que queda adentro del ejecutable y con el que cada instalación decide si la de GitHub es más nueva que la suya. Si no coinciden, el workflow falla antes de publicar nada, en vez de dejar un release que nadie va a poder usar para actualizar.
+
+**Del lado de la aplicación**, el armazón pregunta al arrancar —después de los secretos y sin esperar la respuesta— y el inicio lo avisa si hay algo nuevo. En Configuraciones está la versión instalada y el botón para forzar la revisión y para instalar. Mientras no haya nada más nuevo no se muestra nada: no hay por qué anunciar que uno está al día.
+
+**Cómo se reemplaza a sí mismo.** Un ejecutable en uso no se puede sobrescribir, pero Windows sí deja **renombrarlo**, y esa es toda la maniobra: el actual se corre a `DevTools.exe.anterior` y el nuevo ocupa su lugar. Por eso no hace falta cerrar el widget, que corre del mismo archivo y sigue andando desde el renombrado hasta que alguien lo cierre. El `.anterior` se borra en el siguiente arranque, que es cuando ya nadie lo está ejecutando.
+
+El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba.
+
 ## Publish
 
 ```xml

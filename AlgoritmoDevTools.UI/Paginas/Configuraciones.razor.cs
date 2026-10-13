@@ -16,7 +16,8 @@ public enum Seccion
     Repositorios,
     Inicio,
     MenuContextual,
-    ExportarEImportar
+    ExportarEImportar,
+    Actualizaciones
 }
 
 /// <summary>Una entrada del menú de Configuraciones.</summary>
@@ -38,7 +39,8 @@ public partial class Configuraciones : IDisposable
         new(Seccion.Repositorios, "General", "Repositorios"),
         new(Seccion.Inicio, "Integración con Windows", "Inicio con Windows"),
         new(Seccion.MenuContextual, "Integración con Windows", "Menú contextual"),
-        new(Seccion.ExportarEImportar, "Configuración", "Exportar e importar")
+        new(Seccion.ExportarEImportar, "Configuración", "Exportar e importar"),
+        new(Seccion.Actualizaciones, "Configuración", "Actualizaciones")
     ];
 
     private Seccion _seccion = Seccion.Apariencia;
@@ -57,6 +59,9 @@ public partial class Configuraciones : IDisposable
 
     [Inject]
     private ArranqueDelWidget Arranque { get; set; } = default!;
+
+    [Inject]
+    private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
 
     [Inject]
     private IJSRuntime JS { get; set; } = default!;
@@ -83,6 +88,7 @@ public partial class Configuraciones : IDisposable
 
     private bool _arrancaConWindows;
     private bool _widgetCorriendo;
+    private bool _instalando;
 
     protected override void OnInitialized()
     {
@@ -303,6 +309,35 @@ public partial class Configuraciones : IDisposable
         finally
         {
             _aImportar = null;
+        }
+    }
+
+    // --- Actualizaciones --------------------------------------------------------
+
+    private Task Buscar() => Actualizaciones.BuscarAsync();
+
+    /// <summary>
+    /// Baja la versión nueva y la deja puesta. No reinicia sola: puede haber algo a medio hacer en
+    /// otra pantalla, y perderlo por una actualización que podía esperar sería peor que la demora.
+    /// </summary>
+    private async Task Instalar()
+    {
+        _instalando = true;
+        Barra.Informar("Bajando la versión nueva...", "estado-neutro");
+
+        try
+        {
+            var error = await Actualizaciones.InstalarAsync();
+
+            Barra.Informar(
+                error is null
+                    ? "Listo. Cerrá y volvé a abrir para usar la versión nueva."
+                    : $"No se pudo actualizar: {error}",
+                error is null ? "estado-exito" : "estado-error");
+        }
+        finally
+        {
+            _instalando = false;
         }
     }
 
