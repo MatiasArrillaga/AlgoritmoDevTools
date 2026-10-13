@@ -13,6 +13,7 @@
   --acento-hover: #0fb46d;
   --acento-pressed: #008049;
   --fondo-lateral: #f4f7f5;
+  --fondo-barra: #ffffff;
   --fondo-principal: #ffffff;
   --fondo-campo: #ffffff;
   --separador: #dfe6e1;
@@ -33,6 +34,7 @@
   --acento-hover: #2a9df4;
   --acento-pressed: #0b72ba;
   --fondo-lateral: #f5f6f8;
+  --fondo-barra: #ffffff;
   --fondo-principal: #ffffff;
   --fondo-campo: #ffffff;
   --separador: #e1e4e8;
@@ -53,6 +55,7 @@
   --acento-hover: #19b2a3;
   --acento-pressed: #097a70;
   --fondo-lateral: #161c1b;
+  --fondo-barra: #000000;
   --fondo-principal: #1d2423;
   --fondo-campo: #252d2c;
   --separador: #2b3432;
@@ -73,6 +76,7 @@
   --acento-hover: #5ca3cc;
   --acento-pressed: #3c7ca2;
   --fondo-lateral: #161a1f;
+  --fondo-barra: #000000;
   --fondo-principal: #1d2228;
   --fondo-campo: #252b33;
   --separador: #2b323a;
@@ -103,6 +107,14 @@ html, body {
 
 #app { height: 100%; }
 
+/*
+  Hasta dónde baja el degradado: la línea que hay debajo del botón de inicio. El número sale
+  de sumar lo que queda por encima de ella —el relleno de arriba del panel, el alto del
+  botón, el hueco entre ítems y su propio margen—, así que si cambia alguno de esos hay que
+  recalcularlo. No es un color y por eso no vive en las paletas.
+*/
+:root { --alto-del-degradado: 58px; }
+
 /* ---------- Armazón ---------- */
 
 /*
@@ -120,7 +132,17 @@ html, body {
 }
 
 
-.cuerpo { flex: 1; display: flex; min-height: 0; }
+/*
+  Lleva el mismo degradado que el panel de íconos porque es lo que se ve por debajo de la
+  curva con la que arranca el contenido: ahí el fondo tiene que seguir siendo el del panel,
+  no el de la pantalla.
+*/
+.cuerpo {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  background: linear-gradient(to bottom, var(--fondo-barra) 0, var(--fondo-lateral) var(--alto-del-degradado));
+}
 
 /*
   Barra de íconos. El fondo es el mismo gris del resto de la aplicación: el acento queda reservado
@@ -131,8 +153,12 @@ html, body {
 .lateral {
   width: 60px;
   flex: none;
-  background: var(--fondo-lateral);
-  border-right: 1px solid var(--separador);
+  /*
+    Arriba arranca del color de la barra de título y recién después toma el suyo: el panel
+    queda colgando de la barra en vez de empezar con un corte. Son dos superficies pegadas
+    que no son la misma, y el salto se ve.
+  */
+  background: linear-gradient(to bottom, var(--fondo-barra) 0, var(--fondo-lateral) var(--alto-del-degradado));
   padding: 10px 0 12px;
   display: flex;
   flex-direction: column;
@@ -215,10 +241,23 @@ html, body {
   .nav-item, .nav-item svg, .nav-item::after { transition: none; }
 }
 
+/*
+  La esquina de arriba va redondeada: donde se juntan la barra de título, el panel y el
+  contenido quedaba una punta en ángulo recto, y es justo el lugar donde se ven las tres
+  superficies a la vez. Redondeada, el contenido se lee como una hoja apoyada sobre el
+  panel en lugar de otro rectángulo pegado al lado.
+*/
 .contenido {
   flex: 1;
   min-width: 0;
   background: var(--fondo-principal);
+  border-top-left-radius: 20px;
+  /*
+    El separador va de este lado y no como borde derecho del panel: ahí era una recta que
+    subía hasta la barra de título y cruzaba la curva por delante. Puesto en el elemento
+    redondeado, dobla con ella.
+  */
+  border-left: 1px solid var(--separador);
   padding: 20px 24px;
   overflow-y: auto;
 }
