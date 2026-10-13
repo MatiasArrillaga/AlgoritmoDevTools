@@ -126,4 +126,30 @@ public static class Temas
     /// </summary>
     public static Tema Resolver(string? id) =>
         Todos.FirstOrDefault(t => string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase)) ?? PorDefecto;
+
+    /// <summary>Sufijo con el que se nombra la variante oscura de cada familia.</summary>
+    private const string SufijoOscuro = "-oscuro";
+
+    /// <summary>
+    /// El mismo tema en la variante clara u oscura: Verde Esperanza y Verde Esperanza Oscuro son la
+    /// misma familia, con el mismo acento, cambiando los fondos.
+    ///
+    /// Lo necesita lo que se dibuja adentro de Windows y no de la ventana —el menú del widget—,
+    /// donde el claro u oscuro lo manda el sistema pero el color de la casa sigue siendo el elegido.
+    ///
+    /// La familia sale del Id, por convención: el oscuro es el claro con el sufijo. Un tema nuevo
+    /// que no la siga se devuelve tal cual, que es preferible a devolver uno de otra familia.
+    /// </summary>
+    public static Tema EnVariante(Tema tema, bool oscuro)
+    {
+        if (tema.EsOscuro == oscuro) return tema;
+
+        var familia = tema.Id.EndsWith(SufijoOscuro, StringComparison.OrdinalIgnoreCase)
+            ? tema.Id[..^SufijoOscuro.Length]
+            : tema.Id;
+
+        var buscado = oscuro ? familia + SufijoOscuro : familia;
+
+        return Todos.FirstOrDefault(t => string.Equals(t.Id, buscado, StringComparison.OrdinalIgnoreCase)) ?? tema;
+    }
 }

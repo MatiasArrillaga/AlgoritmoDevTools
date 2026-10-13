@@ -140,6 +140,8 @@ Nada más: la pantalla de Configuraciones arma las tarjetas recorriendo el catá
 
 `MenuDelTema.Aplicar(menu)`, después de cargarle los ítems. Vale para cualquier `ToolStripDropDown`; hoy lo usa el menú del widget de bandeja.
 
+**El claro u oscuro lo manda Windows, no la aplicación.** Un menú de bandeja sale sobre el escritorio y no adentro de la ventana: lo que tiene alrededor es el sistema. La familia de color sí es la elegida —el acento es el mismo—, y de eso se encarga `Temas.EnVariante`, que cruza de Verde Esperanza a Verde Esperanza Oscuro sin cambiar de familia. Es el mismo criterio que decide cuál de los dos íconos de bandeja se usa.
+
 Hay que llamarlo **cada vez que se arma el menú**, no una sola vez al crearlo: mide los ítems ya cargados, y el tema puede haber cambiado desde la ventana mientras tanto.
 
 Tres cosas de los menús no se pueden pedir de otra forma, y por eso hay una clase entera en vez de un par de propiedades:
@@ -150,6 +152,7 @@ Tres cosas de los menús no se pueden pedir de otra forma, y por eso hay una cla
 | Las esquinas redondeadas | Un menú no tiene borde configurable. Se recorta la ventana con una región, y el borde se redibuja con suavizado porque el recorte sale dentado |
 | El alto de cada ítem | De fábrica sale apretado contra el texto; se fija ítem por ítem con `AutoSize = false` |
 | La columna donde arranca el texto | La decide el margen del tilde, que `ToolStripDropDownMenu` muestra siempre. En un menú donde no hay nada que tildar deja los renglones empezando en el aire, así que se enciende sólo si algún ítem lo usa |
+| El texto al medio del renglón | El menú arma su propio rectángulo de texto —reserva lugar para el tilde y el atajo— e **ignora el padding de arriba y abajo que se le pida al ítem**: con `AutoSize` o con el alto fijado a mano, el renglón sale igual de pegado al borde superior. Se centra al dibujar, dándole todo el alto del ítem y `TextFormatFlags.VerticalCenter` |
 
 El renderizador se registra en `ToolStripManager`, que es de toda la aplicación: cada submenú es una ventana aparte y pedírselo uno por uno obligaría a acordarse de los que todavía no existen. Los submenús sí necesitan su propia preparación —región y altos—, y eso se engancha a `DropDownOpening`, porque un submenú recién existe cuando se lo abre.
 

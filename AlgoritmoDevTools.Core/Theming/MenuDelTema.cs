@@ -1,4 +1,5 @@
 ﻿using System.Drawing.Drawing2D;
+using AlgoritmoDevTools.Core.Infrastructure;
 
 namespace AlgoritmoDevTools.Core.Theming;
 
@@ -25,8 +26,8 @@ public static class MenuDelTema
     /// <summary>Radio de las esquinas. El mismo que usan los bloques redondeados de la interfaz.</summary>
     private const int Radio = 8;
 
-    /// <summary>Lo que se le suma al alto de fábrica de cada ítem para que respire.</summary>
-    private const int AlturaExtraDelItem = 12;
+    /// <summary>Aire arriba y abajo del texto. Va igual de los dos lados: así queda centrado solo.</summary>
+    private const int MargenVerticalDelTexto = 7;
 
     /// <summary>Aire a los costados del texto, el mismo para todos los ítems del menú.</summary>
     private const int MargenDelTexto = 12;
@@ -39,7 +40,7 @@ public static class MenuDelTema
     /// </summary>
     public static void Aplicar(ToolStripDropDown menu)
     {
-        var tema = ServicioDeTemas.Instancia.Actual;
+        var tema = TemaDelMenu();
 
         // El renderizador es de toda la aplicación: cada submenú es una ventana aparte, y pedírselo
         // uno por uno obligaría a acordarse de los que todavía no existen.
@@ -72,14 +73,12 @@ public static class MenuDelTema
         {
             if (item is ToolStripSeparator) continue;
 
-            item.AutoSize = false;
-            item.Height = item.GetPreferredSize(Size.Empty).Height + AlturaExtraDelItem;
-            item.Width = menu.Width - menu.Padding.Horizontal;
-
-            // Todos los renglones arrancan en la misma columna y con el texto al medio del alto,
-            // incluidos los que sólo muestran un dato: alineados de a uno, saltan a la vista.
+            // El alto sale del padding y no se fija a mano: puesto a mano, el ítem crece para abajo
+            // y el texto queda pegado al borde de arriba. Con el mismo margen de los dos lados, el
+            // renglón lo centra solo.
+            item.AutoSize = true;
             item.TextAlign = ContentAlignment.MiddleLeft;
-            item.Padding = new Padding(MargenDelTexto, 0, MargenDelTexto, 0);
+            item.Padding = new Padding(MargenDelTexto, MargenVerticalDelTexto, MargenDelTexto, MargenVerticalDelTexto);
 
             // Un submenú recién existe cuando se lo abre, así que se lo prepara en ese momento.
             if (item is ToolStripMenuItem conHijos && conHijos.HasDropDownItems)
@@ -94,9 +93,20 @@ public static class MenuDelTema
     {
         if (sender is ToolStripMenuItem item)
         {
-            Preparar(item.DropDown, ServicioDeTemas.Instancia.Actual);
+            Preparar(item.DropDown, TemaDelMenu());
         }
     }
+
+    /// <summary>
+    /// El tema elegido, pero en la variante que esté usando Windows.
+    ///
+    /// Un menú de bandeja sale sobre el escritorio y no adentro de la ventana: lo que tiene alrededor
+    /// es el sistema, así que el claro u oscuro lo manda el sistema. La familia de color sigue siendo
+    /// la de la aplicación —el acento es el mismo—, que es lo único que lo hace reconocible como
+    /// nuestro.
+    /// </summary>
+    private static Tema TemaDelMenu() =>
+        Temas.EnVariante(ServicioDeTemas.Instancia.Actual, TemaDeWindows.BarraDeTareasOscura());
 
     /// <summary>
     /// Recorta la ventana del menú con las esquinas redondeadas. Hay que rehacerlo cada vez que
@@ -191,6 +201,14 @@ internal sealed class RenderizadorDeMenu : ToolStripProfessionalRenderer
     protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
     {
         e.TextColor = e.Item.Enabled ? _tema.Texto : _tema.TextoSecundario;
+
+        // El texto se centra acá y no con el padding del ítem: el menú arma su propio rectángulo
+        // —reserva lugar para el tilde y el atajo de teclado— e ignora lo que se le pida de arriba y
+        // abajo, así que el renglón sale pegado al borde superior. Dándole todo el alto del ítem y
+        // pidiéndole que centre, queda al medio sin importar cuánto haya crecido.
+        e.TextRectangle = e.TextRectangle with { Y = 0, Height = e.Item.Height };
+        e.TextFormat |= TextFormatFlags.VerticalCenter;
+
         base.OnRenderItemText(e);
     }
 
