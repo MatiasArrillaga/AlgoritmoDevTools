@@ -26,6 +26,16 @@ public interface IDialogosDelSistema
     /// <returns>La carpeta elegida, o null si se canceló.</returns>
     string? ElegirCarpeta(string titulo, string? carpetaInicial = null);
 
+    /// <summary>
+    /// Abre el diálogo de Windows para elegir dónde guardar un archivo. Avisa si se va a pisar uno
+    /// que ya existe, que es la única parte del diálogo que no se puede dar por descontada.
+    /// </summary>
+    /// <param name="titulo">Título de la ventana.</param>
+    /// <param name="filtro">Filtro en el formato de Windows, por ejemplo "Configuración|*.json".</param>
+    /// <param name="nombreSugerido">Con qué nombre aparece propuesto.</param>
+    /// <returns>La ruta elegida, o null si se canceló.</returns>
+    string? ElegirDondeGuardar(string titulo, string filtro, string nombreSugerido);
+
     /// <summary>Abre una carpeta en el explorador de Windows.</summary>
     void AbrirCarpeta(string ruta);
 }

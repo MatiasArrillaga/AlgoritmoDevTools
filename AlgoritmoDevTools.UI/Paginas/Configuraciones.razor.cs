@@ -14,10 +14,23 @@ public partial class Configuraciones : IDisposable
     [Inject]
     private IDialogosDelSistema Dialogos { get; set; } = default!;
 
+    [Inject]
+    private TransferenciaDeConfiguracion Transferencia { get; set; } = default!;
+
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
 
     private bool _carpetaExiste = true;
     private bool _hayAlgoritmoCore = true;
+
+    /// <summary>Apagado de entrada: el archivo sólo lleva credenciales si alguien lo pide.</summary>
+    private bool _conContrasenas;
+
+    /// <summary>Lo que trajo el archivo elegido, mientras espera que lo confirmen.</summary>
+    private PaqueteDeConfiguracion? _aImportar;
+
+    private string? _nombreDelArchivo;
+    private string? _mensaje;
+    private string _claseDelMensaje = "estado-neutro";
 
     protected override void OnInitialized()
     {
@@ -71,6 +84,119 @@ public partial class Configuraciones : IDisposable
     /// </summary>
     private static string Hex(System.Drawing.Color color) =>
         $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+    private void Exportar()
+    {
+        var ruta = Dialogos.ElegirDondeGuardar(
+            "Elegí dónde guardar la configuración",
+            "Configuración de DevTools|*.json",
+            $"devtools-{Environment.UserName}-{DateTime.Now:yyyy-MM-dd}.json");
+
+        if (string.IsNullOrWhiteSpace(ruta)) return;
+
+        try
+        {
+            var paquete = Transferencia.Armar(_conContrasenas);
+            Transferencia.Escribir(ruta, paquete);
+            Informar($"Exportado: {Contenido(paquete)}.", "estado-exito");
+        }
+        catch (Exception ex)
+        {
+            Informar($"No se pudo exportar: {ex.Message}", "estado-error");
+        }
+    }
+
+    /// <summary>
+    /// Lee el archivo y lo deja a la vista, pero no toca nada todavía: primero hay que poder ver qué
+    /// trae y de quién es. Recién ahí se confirma.
+    /// </summary>
+    private void ElegirQueImportar()
+    {
+        var elegidos = Dialogos.ElegirArchivos(
+            "Elegí el archivo de configuración",
+            "Configuración de DevTools|*.json");
+
+        if (elegidos.Count == 0) return;
+
+        _mensaje = null;
+
+        try
+        {
+            _aImportar = Transferencia.Leer(elegidos[0]);
+            _nombreDelArchivo = Path.GetFileName(elegidos[0]);
+        }
+        catch (Exception ex)
+        {
+            _aImportar = null;
+            Informar($"No se pudo leer el archivo: {ex.Message}", "estado-error");
+        }
+    }
+
+    private void Importar()
+    {
+        if (_aImportar is null) return;
+
+        try
+        {
+            Informar(Resumen(Transferencia.Importar(_aImportar)), "estado-exito");
+        }
+        catch (Exception ex)
+        {
+            Informar($"No se pudo importar: {ex.Message}", "estado-error");
+        }
+        finally
+        {
+            _aImportar = null;
+        }
+    }
+
+    /// <summary>Qué trae el paquete, en palabras: "5 conexiones, 13 dominios y 3 perfiles de Tye".</summary>
+    private static string Contenido(PaqueteDeConfiguracion paquete) => Enumerar(
+        (paquete.Conexiones.Count, "conexión", "conexiones"),
+        (paquete.Dominios.Count, "dominio", "dominios"),
+        (paquete.PerfilesDeTye.Count, "perfil de Tye", "perfiles de Tye")) ?? "nada";
+
+    private static string Resumen(ResultadoDeImportacion resultado)
+    {
+        var agregado = Enumerar(
+            (resultado.ConexionesNuevas, "conexión", "conexiones"),
+            (resultado.DominiosNuevos, "dominio", "dominios"),
+            (resultado.PerfilesNuevos, "perfil de Tye", "perfiles de Tye"));
+
+        if (agregado is null)
+        {
+            return "No había nada nuevo: todo lo del archivo ya lo tenías.";
+        }
+
+        return resultado.TotalRepetido == 0
+            ? $"Se agregó: {agregado}."
+            : $"Se agregó: {agregado}. Otras {resultado.TotalRepetido} ya las tenías y quedaron como estaban.";
+    }
+
+    /// <summary>
+    /// Arma "5 conexiones, 13 dominios y 3 perfiles" salteando lo que está en cero, o null si no
+    /// quedó nada que enumerar.
+    /// </summary>
+    private static string? Enumerar(params (int Cantidad, string Singular, string Plural)[] partes)
+    {
+        var textos = partes
+            .Where(parte => parte.Cantidad > 0)
+            .Select(parte => $"{parte.Cantidad} {(parte.Cantidad == 1 ? parte.Singular : parte.Plural)}")
+            .ToList();
+
+        return textos.Count switch
+        {
+            0 => null,
+            1 => textos[0],
+            _ => $"{string.Join(", ", textos.Take(textos.Count - 1))} y {textos[^1]}"
+        };
+    }
+
+    private void Informar(string mensaje, string clase)
+    {
+        _mensaje = mensaje;
+        _claseDelMensaje = clase;
+    }
 
     private void OnTemaCambiado(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 

@@ -56,3 +56,63 @@ else if (!_hayAlgoritmoCore)
 {
     <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
 }
+
+<p class="grupo">Importar y exportar</p>
+
+<p class="sub">
+    Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a
+    alguien que recién arranca y los tiene todos sin cargar nada.
+</p>
+
+<label class="chk" style="margin-top:12px">
+    <input type="checkbox" checked="@_conContrasenas" @onchange="e => _conContrasenas = e.Value is true" />
+    <span>Incluir las contraseñas de las conexiones</span>
+</label>
+
+@if (_conContrasenas)
+{
+    <p class="linea-estado estado-advertencia">
+        El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
+    </p>
+}
+
+<div class="fila" style="margin-top:12px">
+    <button type="button" class="btn btn-secundario" @onclick="Exportar">Exportar...</button>
+    <button type="button" class="btn btn-secundario" @onclick="ElegirQueImportar">Importar...</button>
+</div>
+
+@if (_aImportar is { } paquete)
+{
+    <div class="confirmacion">
+        <p><b>@_nombreDelArchivo</b></p>
+        <p class="sub">Exportado por @(paquete.Origen ?? "alguien") el @paquete.Exportado.ToLocalTime().ToString("dd/MM/yyyy").</p>
+
+        @if (paquete.EstaVacio)
+        {
+            <p class="linea-estado estado-advertencia">No trae nada adentro.</p>
+        }
+        else
+        {
+            <p style="margin-top:10px">Trae @Contenido(paquete).</p>
+
+            @if (paquete.Conexiones.Count > 0 && !paquete.IncluyeContrasenas)
+            {
+                <p class="linea-estado estado-advertencia">
+                    Las conexiones vienen sin contraseña: vas a tener que completarlas en Secrets Manager.
+                </p>
+            }
+
+            <p class="sub">Se agrega lo que te falta. Lo que ya tengas queda como está.</p>
+        }
+
+        <div class="acciones">
+            <button type="button" class="btn btn-primario" disabled="@paquete.EstaVacio" @onclick="Importar">Importar</button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _aImportar = null">Cancelar</button>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <p class="linea-estado @_claseDelMensaje">@_mensaje</p>
+}

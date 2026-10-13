@@ -64,6 +64,25 @@ public sealed class DialogosDelSistema : IDialogosDelSistema
         return dialogo.ShowDialog(_ventana) == DialogResult.OK ? dialogo.SelectedPath : null;
     }
 
+    public string? ElegirDondeGuardar(string titulo, string filtro, string nombreSugerido)
+    {
+        if (_ventana.InvokeRequired)
+        {
+            return (string?)_ventana.Invoke(() => ElegirDondeGuardar(titulo, filtro, nombreSugerido));
+        }
+
+        using var dialogo = new SaveFileDialog
+        {
+            Title = titulo,
+            Filter = filtro,
+            FileName = nombreSugerido,
+            OverwritePrompt = true,
+            AddExtension = true
+        };
+
+        return dialogo.ShowDialog(_ventana) == DialogResult.OK ? dialogo.FileName : null;
+    }
+
     public void AbrirCarpeta(string ruta)
     {
         if (string.IsNullOrWhiteSpace(ruta) || !Directory.Exists(ruta)) return;

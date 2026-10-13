@@ -133,5 +133,8 @@ public sealed class MainFormBlazor : Form
         servicios.AddSingleton(new SavedConnectionsRepository(new ToolStorage("Shared")));
         servicios.AddSingleton(new ProfileRepository(new ToolStorage("TyeServiceSelector")));
         servicios.AddSingleton(new DocumentConverter());
+
+        // Toma los tres repositorios de arriba: es lo que viaja en el archivo que se exporta.
+        servicios.AddSingleton<TransferenciaDeConfiguracion>();
     }
 }

@@ -121,6 +121,26 @@ Se resuelve en cada consulta y no se guarda en un campo, para que al cambiarla l
 
 Las preferencias que valen para toda la aplicación. Una sola instancia: dos leyendo el mismo archivo se pisarían al guardar.
 
+### `TransferenciaDeConfiguracion`
+
+Arma y lee el archivo con el que un usuario le pasa su configuración a otro. Está en Configuraciones, y existe porque alguien que recién entra arranca con todo vacío: los trece dominios, las conexiones a cada servidor y los perfiles de servicios, todo a mano.
+
+**Qué viaja y qué no.** Van las tres cosas que sirven igual en cualquier máquina:
+
+| Va | De dónde sale |
+|---|---|
+| Conexiones guardadas | `Shared` → `SavedConnections` |
+| Dominios | `CommandsMaker` → `DOMINIOS` |
+| Perfiles del selector de servicios | `TyeServiceSelector` → `Profiles` |
+
+Queda afuera, a propósito, todo lo que es de la máquina o del avance personal de cada uno: los dominios usados recientemente, el baseline de migraciones —dice hasta qué commit migró uno—, el tema y la carpeta de repositorios. Importar cualquiera de esos le cambiaría al que recibe algo que no es suyo.
+
+**Las contraseñas sólo van si se piden.** Están guardadas en texto plano, así que un archivo con contraseñas adentro es una credencial y hay que tratarlo como tal. El tilde de Configuraciones arranca apagado y la pantalla avisa cuando se enciende. Las conexiones con autenticación de Windows nunca la llevan, aunque tengan una guardada: cada uno entra con su cuenta.
+
+**Importar agrega, nunca pisa.** El que importa puede tener la misma conexión con otra contraseña, dominios propios o un perfil con el mismo nombre y otros servicios adentro; sobrescribirlos sería romperle lo que ya tenía andando. Lo repetido se cuenta y se informa, así el número que ve no tiene por qué dar con el del archivo. Importar dos veces el mismo archivo no duplica nada.
+
+El archivo es un JSON con un número de `Formato`: uno más nuevo que el que entiende la aplicación se rechaza con un mensaje en vez de leerse a medias.
+
 ### `BarraDeEstado`
 
 El canal por el que una pantalla escribe en la barra de abajo. **Los avisos van ahí, no a un renglón dentro de la vista**: son estado de la aplicación, no contenido.
