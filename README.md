@@ -198,11 +198,12 @@ public partial class MiToolPagina : IDisposable
 Estándares de la pantalla:
 
 - **Título con `<TituloDePagina>`**, que trae el signo de pregunta con la explicación. Sin subtítulo debajo: lo que haya que aclarar va en ese tooltip.
-- **Los avisos van a `BarraDeEstado`**, no a un renglón propio. Limpiala en `Dispose`.
+- **Cada sección se encabeza con `<TituloDeGrupo>`**, que trae el mismo signo de pregunta. Ninguna sección lleva arriba un párrafo que la explique: ese texto ocupa lugar todas las veces para algo que se lee una sola, así que va adentro del signo, donde aparece sólo cuando alguien lo busca.
+- **Los avisos van a `BarraDeEstado`**, no a un renglón propio. Limpiala en `Dispose`. Vale para los dos finales de una operación: "exportado" y "no se pudo exportar" van los dos a la barra.
 - **Las confirmaciones son bloques dentro de la página.** El visor no muestra `alert`, `confirm` ni `prompt`: devuelven falso o nulo al instante.
 - **El botón que despliega un bloque también lo cierra**, y abrir uno cierra el otro.
 - **Ningún color escrito a mano.** Todo sale de las variables del tema; un literal queda igual en las cuatro paletas.
-- **Clases ya disponibles**: `btn btn-primario`, `btn btn-secundario`, `campo`, `grupo`, `fila`, `chk`, `lista-chk`, `salida`, `confirmacion`, `metadatos`, `tarjeta`, `estado-exito` / `estado-error` / `estado-advertencia` / `estado-neutro`.
+- **Clases ya disponibles**: `btn btn-primario`, `btn btn-secundario`, `campo`, `fila`, `chk`, `lista-chk`, `salida`, `confirmacion`, `metadatos`, `tarjeta`, `sub`, `estado-exito` / `estado-error` / `estado-advertencia` / `estado-neutro`. La clase `grupo` la pone `<TituloDeGrupo>`: no se escribe a mano.
 - **Una sola acción primaria por pantalla.** Si todo es primario, nada lo es.
 
 ## 4. Registrarla
