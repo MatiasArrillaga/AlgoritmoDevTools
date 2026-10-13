@@ -1,4 +1,5 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.UI.Servicios;
@@ -94,6 +95,10 @@ internal sealed class WidgetContext : ApplicationContext
 
         menu.Items.Add("Abrir DevTools", null, (_, _) => AbrirShell());
         menu.Items.Add("Salir", null, (_, _) => Salir());
+
+        // Al final de todo: hay que medir los ítems ya cargados, y el tema puede haber cambiado
+        // desde la ventana desde la última vez que se abrió el menú.
+        MenuDelTema.Aplicar(menu);
     }
 
     private ToolStripMenuItem ItemSecretos()

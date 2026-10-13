@@ -136,6 +136,22 @@ Nada más: la pantalla de Configuraciones arma las tarjetas recorriendo el catá
 
 **Al elegir el acento**, mirar el contraste con el blanco: los cuatro actuales rondan 3,4:1 y por eso pesan igual en pantalla. Un acento más claro (un verde lima, un celeste) deja la etiqueta del botón primario ilegible aunque esté en negrita.
 
+### Temar un menú de Windows Forms
+
+`MenuDelTema.Aplicar(menu)`, después de cargarle los ítems. Vale para cualquier `ToolStripDropDown`; hoy lo usa el menú del widget de bandeja.
+
+Hay que llamarlo **cada vez que se arma el menú**, no una sola vez al crearlo: mide los ítems ya cargados, y el tema puede haber cambiado desde la ventana mientras tanto.
+
+Tres cosas de los menús no se pueden pedir de otra forma, y por eso hay una clase entera en vez de un par de propiedades:
+
+| Qué | Por qué |
+|---|---|
+| El pintado | `ContextMenuStrip` no tiene colores propios más allá del fondo: el resaltado, los separadores, el tilde y las flechas los dibuja el renderizador, y hay que reemplazarlo entero |
+| Las esquinas redondeadas | Un menú no tiene borde configurable. Se recorta la ventana con una región, y el borde se redibuja con suavizado porque el recorte sale dentado |
+| El alto de cada ítem | De fábrica sale apretado contra el texto; se fija ítem por ítem con `AutoSize = false` |
+
+El renderizador se registra en `ToolStripManager`, que es de toda la aplicación: cada submenú es una ventana aparte y pedírselo uno por uno obligaría a acordarse de los que todavía no existen. Los submenús sí necesitan su propia preparación —región y altos—, y eso se engancha a `DropDownOpening`, porque un submenú recién existe cuando se lo abre.
+
 ### Dar de alta un control que el aplicador no conoce
 
 Agregar su `case` en `AplicadorDeTema.AplicarSegunTipo`, **antes** que el de su clase base. Hoy el aplicador cubre lo que usan las vistas: `Button`, `CheckBox`, `RadioButton`, `LinkLabel`, `Label`, `RichTextBox`, `TextBox`, `ComboBox`, `ListBox`, `ListView`, `TreeView`, `Splitter`, `StatusStrip`, `GroupBox` y los contenedores. Un control sin `case` cae en el `default`, que sólo le ajusta el `ForeColor`.
