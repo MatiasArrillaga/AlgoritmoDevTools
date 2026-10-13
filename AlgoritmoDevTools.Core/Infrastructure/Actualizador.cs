@@ -31,6 +31,9 @@ public static class Actualizador
     /// <summary>
     /// Sufijo del ejecutable que se corrió de nombre para dejarle el lugar al nuevo. Queda en disco
     /// hasta el próximo arranque: todavía lo están ejecutando los procesos abiertos.
+    ///
+    /// Puede llevar un número atrás —<c>.anterior2</c>— cuando el nombre a secas sigue tomado. Lo
+    /// explica <see cref="NombreLibreParaElViejo"/>.
     /// </summary>
     private const string SufijoAnterior = ".anterior";
 
@@ -132,7 +135,6 @@ public static class Actualizador
         if (destino is null) return "no se pudo determinar la ruta del ejecutable.";
 
         var temporal = destino + ".descarga";
-        var anterior = destino + SufijoAnterior;
         var carpeta = Path.GetDirectoryName(destino) ?? destino;
 
         // En cuál de los dos pasos que tocan el disco se estaba, para poder decirlo si Windows lo
@@ -156,8 +158,7 @@ public static class Actualizador
 
             paso = "reemplazar el ejecutable";
 
-            // De una actualización anterior, si el arranque no llegó a limpiarlo.
-            if (File.Exists(anterior)) File.Delete(anterior);
+            var anterior = NombreLibreParaElViejo(destino);
 
             File.Move(destino, anterior);
 
@@ -250,8 +251,63 @@ public static class Actualizador
     }
 
     /// <summary>
-    /// Borra el ejecutable que quedó de la actualización anterior. Se llama al arrancar, que es
-    /// cuando ya nadie lo está ejecutando; mientras corría no se podía.
+    /// Elige con qué nombre se corre el ejecutable que se está reemplazando.
+    ///
+    /// Lo normal es <see cref="SufijoAnterior"/> a secas, y si quedó uno de la actualización pasada
+    /// se borra y se usa ese mismo nombre. Lo que no se puede dar por hecho es que se deje borrar:
+    /// **Windows no permite tocar un ejecutable que alguien está ejecutando**, y el candidato
+    /// natural es justamente el widget, que corre del archivo que dejó la actualización anterior y
+    /// se queda abierto durante semanas.
+    ///
+    /// Ese intento fallaba con un acceso denegado —no con un error de archivo en uso, que es lo que
+    /// uno esperaría—, así que la actualización entera se caía diciendo que no había permiso para
+    /// escribir en la carpeta. La carpeta estaba perfecta. Por eso acá se busca un nombre libre en
+    /// lugar de insistir con uno solo: el viejo no estorba, y la actualización sigue.
+    /// </summary>
+    private static string NombreLibreParaElViejo(string destino)
+    {
+        var fijo = destino + SufijoAnterior;
+
+        if (!File.Exists(fijo)) return fijo;
+
+        try
+        {
+            File.Delete(fijo);
+            return fijo;
+        }
+        catch (Exception)
+        {
+            // Lo está ejecutando alguien. Se le busca otro nombre en vez de fallar.
+        }
+
+        for (var numero = 2; numero < 100; numero++)
+        {
+            var otro = fijo + numero.ToString(CultureInfo.InvariantCulture);
+
+            if (!File.Exists(otro)) return otro;
+
+            try
+            {
+                File.Delete(otro);
+                return otro;
+            }
+            catch (Exception)
+            {
+                // Otro que sigue en uso. Al siguiente.
+            }
+        }
+
+        // Cien ejecutables viejos tomados a la vez no es un caso real: si se llegó hasta acá hay
+        // algo más raro pasando, y el error de Windows va a explicarlo mejor que uno inventado.
+        return fijo;
+    }
+
+    /// <summary>
+    /// Borra los ejecutables que quedaron de actualizaciones anteriores. Se llama al arrancar, que
+    /// es cuando ya nadie los está ejecutando; mientras corrían no se podía.
+    ///
+    /// Son varios y no uno: cada actualización hecha con el widget abierto deja el suyo, porque el
+    /// que estaba en uso no se pudo reutilizar. Se borran todos de una, que es cuando se puede.
     /// </summary>
     public static void LimpiarAnterior()
     {
@@ -260,15 +316,27 @@ public static class Actualizador
 
         try
         {
-            var anterior = exe + SufijoAnterior;
-            if (File.Exists(anterior)) File.Delete(anterior);
+            var carpeta = Path.GetDirectoryName(exe);
+            if (carpeta is null) return;
+
+            foreach (var viejo in Directory.EnumerateFiles(carpeta, Path.GetFileName(exe) + SufijoAnterior + "*"))
+            {
+                try
+                {
+                    File.Delete(viejo);
+                }
+                catch (Exception)
+                {
+                    // Sigue tomado por algún proceso que no cerró —el widget, casi siempre, que
+                    // corre del mismo archivo—: son 55 MB que se van en el próximo arranque, y no
+                    // hay nada que el usuario pueda hacer al respecto. Por eso queda oculto: para
+                    // que mientras tanto no parezca que hay dos DevTools instalados.
+                }
+            }
         }
         catch (Exception)
         {
-            // Sigue tomado por algún proceso que no cerró —el widget, casi siempre, que corre del
-            // mismo archivo—: son 55 MB que se van en el próximo arranque, y no hay nada que el
-            // usuario pueda hacer al respecto. Por eso queda oculto: para que mientras tanto no
-            // parezca que hay dos DevTools instalados.
+            // Ni siquiera se pudo mirar la carpeta. No es motivo para no abrir.
         }
     }
 

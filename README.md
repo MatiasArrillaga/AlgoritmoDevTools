@@ -370,6 +370,8 @@ El cierre no es inmediato sino diferido con `BeginInvoke`, por el mismo motivo q
 
 Mientras no se pueda borrar —el widget abierto, sin ir más lejos, que corre del mismo archivo— el `.anterior` queda con el atributo de oculto. Sigue funcionando igual para quien lo está ejecutando y desaparece de la carpeta, que es lo único que importaba: a la vista era un segundo ejecutable de 55 MB con el nombre casi igual al bueno.
 
+**Un ejecutable en uso tampoco se deja borrar, y Windows no lo avisa como tal.** Si el widget quedó abierto de una actualización anterior está corriendo del `.anterior`, y el intento de borrarlo para reutilizar el nombre falla con un **acceso denegado**, no con un error de archivo en uso, que es lo que uno esperaría. La actualización entera se caía ahí diciendo que no había permiso para escribir en la carpeta, con la carpeta perfecta. Por eso al viejo se le busca un nombre libre —`.anterior`, y si está tomado `.anterior2`— en vez de insistir con uno solo, y el arranque borra todos los que pueda.
+
 El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba. Cuando Windows rechaza la escritura, el mensaje dice **en cuál de los dos pasos** fue —crear el archivo de la descarga o reemplazar el ejecutable— y en qué carpeta: son permisos distintos, y saber cuál falló es la diferencia entre poder arreglarlo y volver a probar a ciegas.
 
 **Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Sin ella puesta, que es lo normal, se consulta GitHub.
@@ -394,6 +396,8 @@ dotnet publish AlgoritmoDevTools.Shell -c Release -o <carpeta-release>
 ```
 
 Así se verificó esta función: el ejecutable de la carpeta vieja termina con el mismo hash que el del release y, al tocar **Reiniciar ahora**, la ventana vuelve sola corriendo la versión nueva. La carpeta queda con un único ejecutable: el arranque esperó a que terminara el proceso anterior y recién entonces borró el `.anterior`.
+
+El caso del widget se prueba aparte, porque es el que fallaba: se abre el widget, se corre el ejecutable a `.anterior` con el widget andando —que es el estado en que lo deja una actualización— y recién entonces se actualiza. Tiene que completarse igual, usando `.anterior2`, y la carpeta queda con el ejecutable nuevo y el `.anterior` que el widget sigue ejecutando.
 
 ## Publish
 
