@@ -346,8 +346,15 @@ La aplicación se actualiza sola desde los releases de GitHub. El repositorio es
 ```bash
 # 1. subir el <Version> de AlgoritmoDevTools.Shell.csproj, commitear y pushear a master
 # 2. etiquetar con el mismo numero, con la v adelante
-git tag -a v1.2.0 -m "Lo que trae" && git push origin v1.2.0
+git tag -a v1.2.0 -m "Titulo corto de la version
+
+- Que cambio, contado para quien lo va a usar
+- Una linea por cosa" && git push origin v1.2.0
 ```
+
+**El mensaje de la etiqueta es lo que lee el usuario.** El workflow lo copia tal cual al cuerpo del release, y eso es lo que la pantalla de Actualizaciones muestra **antes** de bajar nada: es la única oportunidad de contarle qué va a cambiar. Tiene que entenderse sin el código al lado, y se lee en texto plano —la pantalla no interpreta markdown—, así que viñetas con guión y poco más. Anotada con `-a` y con mensaje: una etiqueta liviana deja el release en blanco.
+
+`generate_release_notes` por su cuenta no alcanzaba, y por eso las primeras versiones salieron mudas: arma la lista a partir de los pull requests, y acá se pushea derecho a master, así que dejaba el release con el enlace de comparación y nada más. Sigue puesto, debajo del mensaje, porque el enlace es útil.
 
 Y verificar que haya salido, porque si el workflow falla nadie se entera: no hay release y las instalaciones siguen viendo la anterior.
 

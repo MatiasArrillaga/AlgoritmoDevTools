@@ -4,12 +4,16 @@
 #
 #     1. Subir el <Version> de AlgoritmoDevTools.Shell.csproj
 #     2. git commit && git push
-#     3. git tag v1.2.0 && git push origin v1.2.0
+#     3. git tag -a v1.2.0 -m "Que cambio" && git push origin v1.2.0
 #
 # La etiqueta tiene que coincidir con el <Version> del csproj: es el número que queda adentro del
 # ejecutable, y con el que cada instalación decide si la de GitHub es más nueva que la suya. Si no
 # coinciden, el workflow falla antes de publicar nada en lugar de dejar un release que nadie va a
 # poder usar para actualizar.
+#
+# Anotada y con mensaje, no liviana: ese mensaje es el cuerpo del release, y es lo único que el
+# usuario lee en la pantalla de Actualizaciones antes de decidir si baja. Una etiqueta sin mensaje
+# deja el release sin una palabra sobre lo que trae.
 
 name: Publicar
 
@@ -29,6 +33,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # El mensaje de la etiqueta es lo que se muestra adentro de la aplicacion, y vive en el
+          # objeto de la etiqueta, no en el commit: sin el historial completo no se puede leer.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -51,8 +59,28 @@ jobs:
       - name: Publicar
         run: dotnet publish AlgoritmoDevTools.Shell -c Release -o salida
 
+      # Lo que se escribe al etiquetar es lo unico que cuenta que cambio en palabras del equipo.
+      # generate_release_notes solo no alcanza: arma la lista a partir de los pull requests, y aca
+      # se pushea derecho a master, asi que deja el release con el enlace de comparacion y nada mas.
+      # Eso es lo que leia el usuario al actualizar.
+      - name: Sacar las notas del mensaje de la etiqueta
+        shell: pwsh
+        run: |
+          $notas = (git tag -l --format='%(contents)' '${{ github.ref_name }}') -join "`n"
+
+          if ([string]::IsNullOrWhiteSpace($notas)) {
+            # Etiqueta sin mensaje: liviana, o anotada sin texto. El release sale igual, con lo
+            # unico que se sabe, en vez de salir en blanco.
+            $notas = "Version ${{ github.ref_name }}."
+            Write-Host "La etiqueta no trae mensaje: el release va a salir sin detalle de los cambios."
+          }
+
+          Set-Content -Path notas.md -Value $notas -Encoding utf8
+          Write-Host $notas
+
       - name: Crear el release con el ejecutable
         uses: softprops/action-gh-release@v2
         with:
           files: salida/DevTools.exe
+          body_path: notas.md
           generate_release_notes: true
