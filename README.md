@@ -360,9 +360,17 @@ El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea e
 
 **Del lado de la aplicación**, el armazón pregunta al arrancar —después de los secretos y sin esperar la respuesta— y el inicio lo avisa si hay algo nuevo. En Configuraciones está la versión instalada y el botón para forzar la revisión y para instalar. Mientras no haya nada más nuevo no se muestra nada: no hay por qué anunciar que uno está al día.
 
+Una vez bajada, el aviso cambia: ya no queda nada por descargar y lo único que falta es reiniciar, así que el botón pasa a ser **Reiniciar ahora**, en el inicio y en Configuraciones. Cierra la ventana y vuelve a abrir el ejecutable, sin que nadie tenga que hacerlo a mano. Quien tenga algo a medio hacer en otra pantalla simplemente no lo toca: la versión nueva ya está puesta y empieza a correr la próxima vez que se abra.
+
+El cierre no es inmediato sino diferido con `BeginInvoke`, por el mismo motivo que los diálogos de Windows: se llama desde un clic que el visor todavía está entregando, y destruir el navegador adentro de su propio aviso cierra el proceso de mala manera. Está contado en `DialogosDelSistema`, en el Shell.
+
 **Cómo se reemplaza a sí mismo.** Un ejecutable en uso no se puede sobrescribir, pero Windows sí deja **renombrarlo**, y esa es toda la maniobra: el actual se corre a `DevTools.exe.anterior` y el nuevo ocupa su lugar. Por eso no hace falta cerrar el widget, que corre del mismo archivo y sigue andando desde el renombrado hasta que alguien lo cierre. El `.anterior` se borra en el siguiente arranque, que es cuando ya nadie lo está ejecutando.
 
-El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba.
+**El reinicio espera al proceso que actualizó.** El ejecutable nuevo se arranca con `--reinicio <numero-de-proceso>` y lo primero que hace es esperar a que ése termine —hasta diez segundos— antes de tocar el `.anterior`. Sin esa espera los dos conviven un instante: el nuevo va a borrar el viejo cuando el viejo todavía se está ejecutando, no puede, y queda en la carpeta hasta el arranque siguiente. Eso es lo que hacía parecer que habían quedado dos DevTools instalados.
+
+Mientras no se pueda borrar —el widget abierto, sin ir más lejos, que corre del mismo archivo— el `.anterior` queda con el atributo de oculto. Sigue funcionando igual para quien lo está ejecutando y desaparece de la carpeta, que es lo único que importaba: a la vista era un segundo ejecutable de 55 MB con el nombre casi igual al bueno.
+
+El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba. Cuando Windows rechaza la escritura, el mensaje dice **en cuál de los dos pasos** fue —crear el archivo de la descarga o reemplazar el ejecutable— y en qué carpeta: son permisos distintos, y saber cuál falló es la diferencia entre poder arreglarlo y volver a probar a ciegas.
 
 **Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Sin ella puesta, que es lo normal, se consulta GitHub.
 
@@ -385,7 +393,7 @@ dotnet publish AlgoritmoDevTools.Shell -c Release -p:Version=0.9.0 -o <carpeta-v
 dotnet publish AlgoritmoDevTools.Shell -c Release -o <carpeta-release>
 ```
 
-Así se verificó esta función: el ejecutable de la carpeta vieja termina con el mismo hash que el del release, queda un `DevTools.exe.anterior` con el anterior y el siguiente arranque lo borra solo.
+Así se verificó esta función: el ejecutable de la carpeta vieja termina con el mismo hash que el del release y, al tocar **Reiniciar ahora**, la ventana vuelve sola corriendo la versión nueva. La carpeta queda con un único ejecutable: el arranque esperó a que terminara el proceso anterior y recién entonces borró el `.anterior`.
 
 ## Publish
 

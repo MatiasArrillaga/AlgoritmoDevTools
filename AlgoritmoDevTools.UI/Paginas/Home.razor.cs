@@ -20,6 +20,9 @@ public partial class Home : IDisposable
     [Inject]
     private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
 
+    [Inject]
+    private IReinicioDeLaAplicacion Reinicio { get; set; } = default!;
+
     /// <summary>
     /// El paso a Configuraciones, que es donde se instala. Lo baja el armazón: esta pantalla no sabe
     /// navegar, sólo avisa.
@@ -120,6 +123,9 @@ public partial class Home : IDisposable
     });
 
     private void AlCambiarLasActualizaciones(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    /// <summary>Cierra y vuelve a abrir, para que empiece a correr la versión ya instalada.</summary>
+    private void Reiniciar() => Reinicio.Reiniciar();
 
     public void Dispose()
     {

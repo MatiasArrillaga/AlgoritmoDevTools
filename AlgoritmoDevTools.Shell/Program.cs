@@ -18,6 +18,15 @@ static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        // Arranque después de actualizar: la versión anterior largó ésta y se está cerrando. Hay que
+        // dejarla terminar antes de seguir, porque hasta que no cierre sigue ejecutando el archivo
+        // que el paso siguiente va a borrar. Los argumentos se descartan: el verbo era para esto.
+        if (args.Length > 0 && args[0] == Actualizador.VerboReinicio)
+        {
+            Actualizador.EsperarAlQueActualizo(args.Length > 1 ? args[1] : null);
+            args = [];
+        }
+
         // El ejecutable que se corrió de nombre en la última actualización. Recién ahora se puede
         // borrar: mientras corría lo estaba usando este mismo proceso.
         Actualizador.LimpiarAnterior();

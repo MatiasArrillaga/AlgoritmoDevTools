@@ -45,6 +45,7 @@ public sealed class MainFormBlazor : Form
         servicios.AddWindowsFormsBlazorWebView();
         RegistrarServiciosDeHerramientas(servicios);
         servicios.AddSingleton<IDialogosDelSistema>(new DialogosDelSistema(this));
+        servicios.AddSingleton<IReinicioDeLaAplicacion>(new ReinicioDeLaAplicacion(this));
         servicios.AddSingleton<IArchivosArrastrados>(_arrastre);
         servicios.AddSingleton<IZonaDeArrastre>(_zonaDeArrastre);
         servicios.AddSingleton<BarraDeEstado>();

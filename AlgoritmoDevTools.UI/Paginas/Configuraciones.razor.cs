@@ -71,6 +71,9 @@ public partial class Configuraciones : IDisposable
     private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
 
     [Inject]
+    private IReinicioDeLaAplicacion Reinicio { get; set; } = default!;
+
+    [Inject]
     private IJSRuntime JS { get; set; } = default!;
 
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
@@ -339,7 +342,7 @@ public partial class Configuraciones : IDisposable
 
             Barra.Informar(
                 error is null
-                    ? "Listo. Cerrá y volvé a abrir para usar la versión nueva."
+                    ? "Listo: la versión nueva quedó puesta. Falta reiniciar para empezar a usarla."
                     : $"No se pudo actualizar: {error}",
                 error is null ? "estado-exito" : "estado-error");
         }
@@ -347,6 +350,17 @@ public partial class Configuraciones : IDisposable
         {
             _instalando = false;
         }
+    }
+
+    /// <summary>
+    /// Cierra y vuelve a abrir, que es todo lo que falta para que empiece a correr la versión que ya
+    /// quedó instalada. No pregunta: el botón está abajo del aviso que lo explica, y quien no quiera
+    /// reiniciar ahora simplemente no lo toca.
+    /// </summary>
+    private void Reiniciar()
+    {
+        Barra.Informar("Reiniciando...", "estado-neutro");
+        Reinicio.Reiniciar();
     }
 
     /// <summary>Qué trae el paquete, en palabras: "5 conexiones, 13 dominios y 3 perfiles de Tye".</summary>

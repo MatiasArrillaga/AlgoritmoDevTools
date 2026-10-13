@@ -146,7 +146,22 @@
 
             <p class="sub" style="margin-top:4px">Versión instalada: <b>@ServicioDeActualizaciones.VersionActual.ToString(3)</b></p>
 
-            @if (Actualizaciones.Disponible is { } nueva)
+            @if (Actualizaciones.EsperandoReinicio is { } instalada)
+            {
+                <div class="confirmacion">
+                    <p><b>Quedó instalada la @instalada.Etiqueta</b></p>
+
+                    <p class="sub">
+                        Empieza a correr cuando se reinicie. Si tenés algo a medio hacer en otra pantalla,
+                        reiniciá cuando te quede cómodo: ya está puesta y espera.
+                    </p>
+
+                    <div class="acciones">
+                        <button type="button" class="btn btn-primario" @onclick="Reiniciar">Reiniciar ahora</button>
+                    </div>
+                </div>
+            }
+            else if (Actualizaciones.Disponible is { } nueva)
             {
                 <div class="confirmacion">
                     <p><b>Hay una versión nueva: @nueva.Etiqueta</b></p>
@@ -157,8 +172,8 @@
                     }
 
                     <p class="sub">
-                        Se baja y se deja puesta. Para empezar a usarla hay que reiniciar la aplicación, y el
-                        widget sigue corriendo con la anterior hasta que lo cierres.
+                        Se baja, se deja puesta y después un botón reinicia la aplicación. El widget sigue
+                        corriendo con la anterior hasta que lo cierres.
                     </p>
 
                     <div class="acciones">

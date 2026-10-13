@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -37,6 +38,19 @@ public static class Actualizador
     /// GitHub rechaza las consultas sin User-Agent con un 403, así que no es opcional.
     /// </summary>
     private const string Agente = "AlgoritmoDevTools";
+
+    /// <summary>
+    /// Verbo con el que la versión nueva se arranca a sí misma al reiniciar, seguido del número de
+    /// proceso de la que la puso. Lo escribe <see cref="Relanzar"/> y lo lee el arranque.
+    /// </summary>
+    public const string VerboReinicio = "--reinicio";
+
+    /// <summary>
+    /// Cuánto espera la versión nueva a que termine la que la instaló. Es la espera a que un proceso
+    /// cierre su ventana, no a que haga nada: con más que esto, algo se trabó y conviene seguir
+    /// —abrir igual— antes que dejar al usuario mirando una aplicación que no vuelve.
+    /// </summary>
+    private static readonly TimeSpan EsperaDelReinicio = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// Variable de entorno que reemplaza la dirección a consultar.
@@ -119,15 +133,28 @@ public static class Actualizador
 
         var temporal = destino + ".descarga";
         var anterior = destino + SufijoAnterior;
+        var carpeta = Path.GetDirectoryName(destino) ?? destino;
+
+        // En cuál de los dos pasos que tocan el disco se estaba, para poder decirlo si Windows lo
+        // rechaza. Son permisos distintos —crear un archivo nuevo y renombrar el que está corriendo—
+        // y saber cuál falló es la diferencia entre poder arreglarlo y volver a probar a ciegas.
+        var paso = "crear el archivo de la descarga";
 
         try
         {
+            // Lo que haya quedado de un intento anterior se saca antes de empezar: crear encima de
+            // un archivo que quedó oculto o de sólo lectura falla por permisos, y ese error manda a
+            // buscar el problema en la carpeta, donde no está.
+            if (File.Exists(temporal)) File.Delete(temporal);
+
             using (var cliente = Cliente())
             await using (var remoto = await cliente.GetStreamAsync(version.UrlDelArchivo, cancelacion))
             await using (var local = File.Create(temporal))
             {
                 await remoto.CopyToAsync(local, cancelacion);
             }
+
+            paso = "reemplazar el ejecutable";
 
             // De una actualización anterior, si el arranque no llegó a limpiarlo.
             if (File.Exists(anterior)) File.Delete(anterior);
@@ -146,11 +173,14 @@ public static class Actualizador
                 throw;
             }
 
+            Esconder(anterior);
+
             return null;
         }
         catch (UnauthorizedAccessException)
         {
-            return "no hay permiso para escribir en la carpeta del ejecutable.";
+            return $"Windows no dejó {paso} en {carpeta}. Abrí DevTools como administrador y probá " +
+                   "de nuevo, o instalalo en una carpeta tuya.";
         }
         catch (Exception ex)
         {
@@ -166,7 +196,13 @@ public static class Actualizador
     }
 
     /// <summary>
-    /// Arranca el ejecutable de nuevo. Lo llama la ventana después de actualizar, antes de cerrarse.
+    /// Arranca la versión recién puesta. Lo llama la ventana después de actualizar, justo antes de
+    /// cerrarse.
+    ///
+    /// Le pasa su propio número de proceso para que la que arranca sepa a quién esperar. Sin eso las
+    /// dos conviven un instante, y la nueva llega a buscar el ejecutable viejo para borrarlo cuando
+    /// la vieja todavía lo está ejecutando: no se puede, y queda en la carpeta hasta el arranque
+    /// siguiente. Esperar a que termine de cerrar evita toda esa secuela.
     /// </summary>
     public static void Relanzar()
     {
@@ -175,12 +211,41 @@ public static class Actualizador
 
         try
         {
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            var inicio = new ProcessStartInfo(exe) { UseShellExecute = true };
+            inicio.ArgumentList.Add(VerboReinicio);
+            inicio.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+
+            Process.Start(inicio);
         }
         catch (Exception)
         {
             // No poder relanzar no es motivo para dejar la actualización por la mitad: ya está
             // puesta, y la próxima vez que alguien lo abra va a correr la nueva.
+        }
+    }
+
+    /// <summary>
+    /// Espera a que termine de cerrarse el proceso que largó el reinicio, para recién después tocar
+    /// su ejecutable. Lo llama el arranque cuando viene con <see cref="VerboReinicio"/>.
+    /// </summary>
+    /// <param name="numeroDeProceso">El que escribió <see cref="Relanzar"/> en la línea de comandos.</param>
+    public static void EsperarAlQueActualizo(string? numeroDeProceso)
+    {
+        if (!int.TryParse(numeroDeProceso, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numero)) return;
+
+        try
+        {
+            using var anterior = Process.GetProcessById(numero);
+            anterior.WaitForExit((int)EsperaDelReinicio.TotalMilliseconds);
+        }
+        catch (ArgumentException)
+        {
+            // Ya había terminado cuando se lo fue a buscar, que es lo que se estaba esperando.
+        }
+        catch (Exception)
+        {
+            // Cualquier otra cosa no justifica demorar el arranque: a lo sumo el ejecutable viejo
+            // queda un rato más en la carpeta.
         }
     }
 
@@ -200,8 +265,29 @@ public static class Actualizador
         }
         catch (Exception)
         {
-            // Sigue tomado por algún proceso que no cerró: son 55 MB que se van en el próximo
-            // arranque, y no hay nada que el usuario pueda hacer al respecto.
+            // Sigue tomado por algún proceso que no cerró —el widget, casi siempre, que corre del
+            // mismo archivo—: son 55 MB que se van en el próximo arranque, y no hay nada que el
+            // usuario pueda hacer al respecto. Por eso queda oculto: para que mientras tanto no
+            // parezca que hay dos DevTools instalados.
+        }
+    }
+
+    /// <summary>
+    /// Le pone el atributo de oculto al ejecutable que se corrió de nombre.
+    ///
+    /// No se puede borrar todavía —lo están ejecutando los procesos abiertos— y a la vista queda
+    /// como un segundo ejecutable de 55 MB al lado del bueno, con el nombre casi igual. Oculto sigue
+    /// funcionando igual para quien lo está corriendo, y desaparece de la carpeta.
+    /// </summary>
+    private static void Esconder(string archivo)
+    {
+        try
+        {
+            File.SetAttributes(archivo, File.GetAttributes(archivo) | FileAttributes.Hidden);
+        }
+        catch (Exception)
+        {
+            // Que se vea no rompe nada.
         }
     }
 
