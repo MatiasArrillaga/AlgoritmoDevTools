@@ -1,5 +1,6 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
+using Microsoft.Win32;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.UI.Servicios;
@@ -57,7 +58,7 @@ internal sealed class WidgetContext : ApplicationContext
     {
         _icono = new NotifyIcon
         {
-            Icon = IconoDeLaApp(),
+            Icon = IconoDeLaBandeja(),
             Text = TITULO,
             Visible = true,
             ContextMenuStrip = new ContextMenuStrip(),
@@ -68,6 +69,7 @@ internal sealed class WidgetContext : ApplicationContext
         _icono.ContextMenuStrip.Opening += (_, _) => ArmarMenu();
         _icono.ContextMenuStrip.Closing += CancelarCierreAlElegirDominio;
         _icono.DoubleClick += (_, _) => AbrirShell();
+        SystemEvents.UserPreferenceChanged += AlCambiarElTemaDeWindows;
 
         RefrescarEstado();
     }
@@ -306,15 +308,43 @@ internal sealed class WidgetContext : ApplicationContext
         ExitThread();
     }
 
-    private static Icon IconoDeLaApp()
+    /// <summary>
+    /// El ícono de la bandeja, en la versión que contrasta con la barra de tareas.
+    ///
+    /// Es el único lugar donde manda el tema de Windows y no el de DevTools: el ícono vive en SU
+    /// barra, al lado del reloj, así que lo que tiene que contrastar es ese fondo. El de la
+    /// aplicación a color no sirve acá —a 16 píxeles un engranaje con degradado es una mancha—, y
+    /// por eso hay dos versiones de un solo trazo.
+    /// </summary>
+    private static Icon IconoDeLaBandeja()
     {
-        using var stream = typeof(WidgetContext).Assembly.GetManifestResourceStream("app.ico");
+        var nombre = TemaDeWindows.BarraDeTareasOscura() ? "bandeja-oscura.ico" : "bandeja-clara.ico";
+
+        using var stream = typeof(WidgetContext).Assembly.GetManifestResourceStream(nombre);
         return stream is not null ? new Icon(stream) : SystemIcons.Application;
+    }
+
+    /// <summary>
+    /// Windows avisa cuando le cambian el tema. Sin esto el ícono se queda del color anterior hasta
+    /// que alguien reinicie el widget, y sobre la barra contraria eso es un ícono que no se ve.
+    /// </summary>
+    private void AlCambiarElTemaDeWindows(object? sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category is not (UserPreferenceCategory.General or UserPreferenceCategory.Color)) return;
+
+        var anterior = _icono.Icon;
+        _icono.Icon = IconoDeLaBandeja();
+        anterior?.Dispose();
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _icono.Dispose();
+        if (disposing)
+        {
+            SystemEvents.UserPreferenceChanged -= AlCambiarElTemaDeWindows;
+            _icono.Dispose();
+        }
+
         base.Dispose(disposing);
     }
 }

@@ -6,6 +6,7 @@ using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
 using AlgoritmoDevTools.Tools.SecretsManager.Services;
 using AlgoritmoDevTools.Tools.TyeServiceSelector;
+using AlgoritmoDevTools.UI.Servicios;
 
 namespace AlgoritmoDevTools.Shell;
 
@@ -58,12 +59,6 @@ static class Program
     /// para los accesos directos que ya lo usan.
     /// </summary>
     public const string VerboHtml = "--html";
-
-    /// <summary>
-    /// Nombre del mutex que mantiene una sola instancia del widget. Es global al usuario, no a la
-    /// sesion: dos widgets serian dos iconos haciendo lo mismo.
-    /// </summary>
-    private const string MUTEX_WIDGET = "AlgoritmoDevTools.Widget.InstanciaUnica";
 
     private static bool EjecutarAccionDirecta(string[] args)
     {
@@ -129,7 +124,7 @@ static class Program
     /// </summary>
     private static void EjecutarWidget()
     {
-        using var mutex = new Mutex(initiallyOwned: true, MUTEX_WIDGET, out var esElPrimero);
+        using var mutex = new Mutex(initiallyOwned: true, ArranqueDelWidget.MutexDeInstanciaUnica, out var esElPrimero);
         if (!esElPrimero)
         {
             MessageBox.Show("El widget ya esta corriendo: miralo en la bandeja, al lado del reloj.",

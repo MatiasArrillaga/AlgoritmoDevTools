@@ -95,6 +95,19 @@
                 <input type="checkbox" checked="@_arrancaConWindows" @onchange="e => CambiarArranque(e.Value is true)" />
                 <span>Dejar el widget en la bandeja al iniciar sesión</span>
             </label>
+
+            @if (_widgetCorriendo)
+            {
+                <p class="sub">El widget está corriendo: mirá el ícono al lado del reloj.</p>
+            }
+            else
+            {
+                <p class="sub">Ahora mismo no está corriendo.</p>
+
+                <div class="fila" style="margin-top:10px">
+                    <button type="button" class="btn btn-secundario" @onclick="LanzarWidget">Abrir el widget</button>
+                </div>
+            }
         }
 
         else if (_seccion is Seccion.MenuContextual)

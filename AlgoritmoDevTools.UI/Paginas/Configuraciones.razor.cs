@@ -82,6 +82,7 @@ public partial class Configuraciones : IDisposable
     private readonly HashSet<string> _instalados = [];
 
     private bool _arrancaConWindows;
+    private bool _widgetCorriendo;
 
     protected override void OnInitialized()
     {
@@ -89,6 +90,31 @@ public partial class Configuraciones : IDisposable
         RevisarCarpeta();
         RevisarMenus();
         _arrancaConWindows = Arranque.EstaActivado();
+        _widgetCorriendo = ArranqueDelWidget.EstaCorriendo();
+    }
+
+    /// <summary>
+    /// Levanta el widget sin esperar a reiniciar la sesión. El estado se vuelve a mirar después de
+    /// un momento: el proceso tarda en tomar el mutex, y preguntar en el acto diría que no arrancó.
+    /// </summary>
+    private async Task LanzarWidget()
+    {
+        var error = Arranque.Lanzar();
+
+        if (error is not null)
+        {
+            Barra.Informar($"No se pudo abrir el widget: {error}", "estado-error");
+            return;
+        }
+
+        await Task.Delay(1200);
+        _widgetCorriendo = ArranqueDelWidget.EstaCorriendo();
+
+        Barra.Informar(
+            _widgetCorriendo
+                ? "Widget abierto: está al lado del reloj."
+                : "El widget se lanzó, pero todavía no respondió. Fijate en la bandeja.",
+            _widgetCorriendo ? "estado-exito" : "estado-advertencia");
     }
 
     /// <summary>

@@ -129,6 +129,12 @@ Si el widget de bandeja arranca con la sesión de Windows. Se prende desde Confi
 
 El tilde aparece apagado cuando la entrada existe pero apunta a otro ejecutable —publicaste el exe en otra carpeta—, para que al prenderlo se regenere contra el que está corriendo.
 
+La sección también dice si hay un widget corriendo y lo levanta si no, para no tener que cerrar sesión y volver a entrar. Se pregunta por el **mutex** y no por los procesos: el mismo ejecutable corre la ventana y los verbos del menú contextual, así que encontrar un proceso con ese nombre no dice nada.
+
+**Los íconos.** El del ejecutable y la ventana es el engranaje a color. El de la bandeja no: a 16 píxeles un engranaje con degradado es una mancha, así que hay dos versiones de un solo trazo en `AlgoritmoDevTools.Shell/Assets/`. **El nombre dice sobre qué fondo van, no de qué color son**: `bandeja-clara.ico` lleva el trazo oscuro y `bandeja-oscura.ico` el blanco.
+
+Cuál se usa lo decide `TemaDeWindows.BarraDeTareasOscura()`, y es **el único lugar donde manda el tema de Windows y no el de DevTools**: el ícono vive en la barra de tareas, así que lo que tiene que contrastar es ese fondo. Un ícono blanco sobre una barra clara no se ve, aunque la ventana esté en modo oscuro. El widget escucha `SystemEvents.UserPreferenceChanged` y lo cambia en caliente; sin eso quedaría del color anterior hasta que alguien lo reinicie.
+
 ### `MenusContextuales`
 
 Qué herramientas dejan sus acciones en el clic derecho de Windows. Vive en Configuraciones, con una casilla por herramienta.

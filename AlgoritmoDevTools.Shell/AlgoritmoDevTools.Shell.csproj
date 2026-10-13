@@ -45,6 +45,17 @@
     <EmbeddedResource Include="Assets\app.ico">
       <LogicalName>app.ico</LogicalName>
     </EmbeddedResource>
+
+    <!--
+      Los dos del widget. El nombre dice sobre qué fondo van, no de qué color son: el de la
+      barra clara lleva el trazo oscuro, y al revés.
+    -->
+    <EmbeddedResource Include="Assets\bandeja-clara.ico">
+      <LogicalName>bandeja-clara.ico</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\bandeja-oscura.ico">
+      <LogicalName>bandeja-oscura.ico</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 
