@@ -1,4 +1,5 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
+using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
 using AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
@@ -72,6 +73,29 @@ public sealed class MainFormBlazor : Form
         Resize += (_, _) => _zonaDeArrastre.Reposicionar(ClientSize);
 
         PrepararArrastre(vista);
+
+        // La barra de título la dibuja Windows y no acompaña al tema por su cuenta: en modo oscuro
+        // se queda blanca, como un marco pegado a una ventana que no es suya.
+        _temas.TemaCambiado += AlCambiarElTema;
+    }
+
+    private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
+
+    /// <summary>
+    /// Al crearse la ventana, antes de que se vea: pintarla después deja ver el cambio de color.
+    /// </summary>
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        BarraDeTitulo.Pintar(Handle, _temas.Actual);
+    }
+
+    private void AlCambiarElTema(object? sender, EventArgs e) => BarraDeTitulo.Pintar(Handle, _temas.Actual);
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) _temas.TemaCambiado -= AlCambiarElTema;
+        base.Dispose(disposing);
     }
 
     /// <summary>

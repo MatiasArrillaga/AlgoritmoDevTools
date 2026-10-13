@@ -136,6 +136,28 @@ Nada más: la pantalla de Configuraciones arma las tarjetas recorriendo el catá
 
 **Al elegir el acento**, mirar el contraste con el blanco: los cuatro actuales rondan 3,4:1 y por eso pesan igual en pantalla. Un acento más claro (un verde lima, un celeste) deja la etiqueta del botón primario ilegible aunque esté en negrita.
 
+### La barra de título
+
+`BarraDeTitulo.Pintar(Handle, tema)`, al crearse la ventana y cada vez que cambia el tema. Lo hace solo `MainFormBlazor`.
+
+La barra no es parte de la ventana: la dibuja Windows, y una aplicación no puede pintarla con el pincel que quiera. Lo único que se puede es pedírselo al administrador de ventanas, y **lo que conteste depende de la versión**:
+
+| Windows | Qué se consigue |
+|---|---|
+| 10, antes de 1809 | Nada. Queda blanca |
+| 10, 1809 o posterior | Clara u oscura, con el gris del sistema |
+| 11 | Lo mismo. Deja además elegir el tono exacto, pero **no se usa a propósito** |
+
+En Windows 11 se podría pedir el color del panel y que la barra se funda con la ventana. No se hace: la barra es del sistema y se la deja parecerse a las de las demás aplicaciones, y además así se ve igual en todas las máquinas del equipo. Es lo que permite que el panel de íconos se funda con ella siempre del mismo modo —con un degradado hacia blanco o hacia negro— en lugar de tener un camino distinto por versión.
+
+El atributo del modo oscuro **cambió de número entre builds de Windows 10** —era 19, pasó a 20—, así que se prueba el nuevo y, si falla, el viejo: no hay forma de saber cuál anda más que intentando.
+
+**Pedir el color no alcanza: hay que forzar el redibujado.** El atributo se aplica en el momento, pero el marco sigue dibujado como estaba hasta que pasa algo que lo invalide, y lo primero que pasa es que la ventana cambie de foco. Hasta entonces la ventana se ve partida al medio: el contenido ya cambió de tema y la barra no. El síntoma es exactamente ese —"el color recién aparece cuando hago clic en otra ventana"—, y no se parece en nada a un problema de redibujado.
+
+`RefrescarElMarco` simula ese cambio de foco con dos `WM_NCACTIVATE` seguidos, el primero al revés de como está la ventana y el segundo como corresponde. Redimensionarla un píxel también funciona, pero se ve saltar.
+
+**Lo que no se hizo, y por qué.** Se puede sacar el marco (`FormBorderStyle.None`) y dibujar la barra en HTML, que daría el color exacto en cualquier Windows. Cuesta el redimensionado desde los bordes, el acople a los costados de la pantalla, el doble clic para maximizar y el menú del ícono: todo eso lo da el marco gratis y habría que reimplementarlo con `WM_NCHITTEST`. Es mucho a cambio de un tono de gris.
+
 ### Temar un menú de Windows Forms
 
 `MenuDelTema.Aplicar(menu)`, después de cargarle los ítems. Vale para cualquier `ToolStripDropDown`; hoy lo usa el menú del widget de bandeja.

@@ -20,7 +20,7 @@
       release: la etiqueta v1.2.0 publica el ejecutable que dice 1.2.0, y es con eso que cada
       instalación decide si la de GitHub es más nueva que la suya.
     -->
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
 
     <!--
       Publish: un solo .exe autocontenido con el runtime de .NET 10 y todos los DLLs embebidos.
