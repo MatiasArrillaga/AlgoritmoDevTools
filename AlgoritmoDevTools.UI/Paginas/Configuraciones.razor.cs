@@ -43,6 +43,13 @@ public partial class Configuraciones : IDisposable
         new(Seccion.Actualizaciones, "Configuración", "Actualizaciones")
     ];
 
+    /// <summary>
+    /// Con qué sección abrir. La manda el armazón cuando viene de un aviso que se resuelve en una en
+    /// particular; null es la primera, que es lo habitual.
+    /// </summary>
+    [Parameter]
+    public Seccion? Inicial { get; set; }
+
     private Seccion _seccion = Seccion.Apariencia;
 
     [Inject]
@@ -93,6 +100,7 @@ public partial class Configuraciones : IDisposable
     protected override void OnInitialized()
     {
         _temas.TemaCambiado += OnTemaCambiado;
+        if (Inicial is { } pedida) _seccion = pedida;
         RevisarCarpeta();
         RevisarMenus();
         _arrancaConWindows = Arranque.EstaActivado();

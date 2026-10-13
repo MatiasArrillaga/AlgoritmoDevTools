@@ -43,21 +43,21 @@
                     class="nav-item pie @(_vista == Vista.Configuraciones ? "activo" : "")"
                     data-tooltip="Configuraciones"
                     aria-label="Configuraciones"
-                    @onclick="AbrirConfiguraciones">
+                    @onclick="() => AbrirConfiguraciones()">
                 @((MarkupString)IconosSvg.Configuraciones)
             </button>
         </nav>
 
         <main class="contenido">
             <CascadingValue Value="_descripcion" Name="AyudaDeLaHerramienta">
-            <CascadingValue Value="_irAConfiguraciones" Name="IrAConfiguraciones">
+            <CascadingValue Value="_irAActualizaciones" Name="IrAActualizaciones">
                 @if (_vista == Vista.Home)
                 {
                     <Home />
                 }
                 else if (_vista == Vista.Configuraciones)
                 {
-                    <Configuraciones />
+                    <Configuraciones Inicial="_seccionDeConfiguraciones" />
                 }
                 else if (_seleccionada?.Componente is not null)
                 {

@@ -38,6 +38,20 @@ public static class Actualizador
     /// </summary>
     private const string Agente = "AlgoritmoDevTools";
 
+    /// <summary>
+    /// Variable de entorno que reemplaza la dirección a consultar.
+    ///
+    /// Existe para poder probar el camino completo —el aviso, la descarga y el reemplazo— contra un
+    /// servidor local, sin tener que publicar un release de verdad nada más que para ver si anda.
+    /// Sin ella puesta, que es lo normal, se consulta GitHub.
+    /// </summary>
+    private const string VariableDePrueba = "DEVTOOLS_RELEASES";
+
+    /// <summary>De dónde se pregunta cuál es la última versión.</summary>
+    private static string UrlDelUltimoRelease =>
+        Environment.GetEnvironmentVariable(VariableDePrueba)
+        ?? $"https://api.github.com/repos/{Repositorio}/releases/latest";
+
     /// <summary>La versión de este ejecutable. Sale del Version del csproj.</summary>
     public static Version VersionActual =>
         Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
@@ -53,8 +67,7 @@ public static class Actualizador
         {
             using var cliente = Cliente();
 
-            var respuesta = await cliente.GetAsync(
-                $"https://api.github.com/repos/{Repositorio}/releases/latest", cancelacion);
+            var respuesta = await cliente.GetAsync(UrlDelUltimoRelease, cancelacion);
 
             if (!respuesta.IsSuccessStatusCode) return null;
 

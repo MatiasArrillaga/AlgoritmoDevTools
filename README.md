@@ -332,6 +332,8 @@ El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea e
 
 El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba.
 
+**Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Apuntándola a un servidor local que devuelva el mismo JSON que GitHub —`tag_name`, `body` y un `assets` con `name` y `browser_download_url`— se recorre el camino entero: el aviso en el inicio, la descarga y el reemplazo. Sin la variable puesta, que es lo normal, se consulta GitHub.
+
 ## Publish
 
 ```xml

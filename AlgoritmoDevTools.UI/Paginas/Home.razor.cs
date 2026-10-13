@@ -24,8 +24,8 @@ public partial class Home : IDisposable
     /// El paso a Configuraciones, que es donde se instala. Lo baja el armazón: esta pantalla no sabe
     /// navegar, sólo avisa.
     /// </summary>
-    [CascadingParameter(Name = "IrAConfiguraciones")]
-    private EventCallback IrAConfiguraciones { get; set; }
+    [CascadingParameter(Name = "IrAActualizaciones")]
+    private EventCallback IrAActualizaciones { get; set; }
 
     private const int ServiciosQueSeListan = 6;
 
@@ -60,6 +60,11 @@ public partial class Home : IDisposable
         // Los secretos los lee el armazón una sola vez al arrancar, y puede no haber terminado
         // cuando esta pantalla se dibuja: por eso además de leerlos ahora se escucha el aviso.
         _secretos.SecretsChanged += AlLlegarLosSecretos;
+
+        // La consulta a GitHub la larga el armazón y termina después de que esta pantalla se dibujó.
+        // Sin escucharla, el aviso no aparece hasta que uno entra y sale: Blazor no vuelve a dibujar
+        // un componente sin parámetros sólo porque el padre se dibujó de nuevo.
+        Actualizaciones.Cambio += AlCambiarLasActualizaciones;
 
         LeerSecretos();
         _leyendoSecretos = !_haySecreto;
@@ -114,7 +119,13 @@ public partial class Home : IDisposable
         StateHasChanged();
     });
 
-    public void Dispose() => _secretos.SecretsChanged -= AlLlegarLosSecretos;
+    private void AlCambiarLasActualizaciones(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _secretos.SecretsChanged -= AlLlegarLosSecretos;
+        Actualizaciones.Cambio -= AlCambiarLasActualizaciones;
+    }
 
     private void LeerSecretos()
     {

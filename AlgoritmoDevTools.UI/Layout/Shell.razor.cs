@@ -31,10 +31,14 @@ public partial class Shell : IDisposable
     private string _mensaje = string.Empty;
 
     /// <summary>
-    /// El paso a Configuraciones, para las pantallas que ofrecen algo que se resuelve ahí. Lo baja
-    /// el armazón porque es el único que sabe qué se está mostrando.
+    /// El paso a la sección de actualizaciones, para el aviso del inicio. Lo baja el armazón porque
+    /// es el único que sabe qué se está mostrando; dejar al usuario en Configuraciones a secas lo
+    /// obligaría a buscar dónde estaba eso que le acababan de ofrecer.
     /// </summary>
-    private EventCallback _irAConfiguraciones;
+    private EventCallback _irAActualizaciones;
+
+    /// <summary>Con qué sección abre Configuraciones. Null es la primera, que es lo habitual.</summary>
+    private Paginas.Seccion? _seccionDeConfiguraciones;
 
     protected override void OnInitialized()
     {
@@ -43,7 +47,8 @@ public partial class Shell : IDisposable
         Estado.Cambio += OnEstadoCambio;
         Actualizaciones.Cambio += OnEstadoCambio;
 
-        _irAConfiguraciones = EventCallback.Factory.Create(this, AbrirConfiguraciones);
+        _irAActualizaciones = EventCallback.Factory.Create(
+            this, () => AbrirConfiguraciones(Paginas.Seccion.Actualizaciones));
 
         // Siempre arranca en el inicio: es el resumen de cómo quedó el entorno, que es justo lo
         // que se quiere ver al abrir.
@@ -119,8 +124,9 @@ public partial class Shell : IDisposable
         _descripcion = "Resumen de lo que hay configurado en este equipo.";
     }
 
-    private void AbrirConfiguraciones()
+    private void AbrirConfiguraciones(Paginas.Seccion? seccion = null)
     {
+        _seccionDeConfiguraciones = seccion;
         _vista = Vista.Configuraciones;
         _descripcion = "Ajusta la apariencia y el comportamiento de Algoritmo DevTools.";
     }
