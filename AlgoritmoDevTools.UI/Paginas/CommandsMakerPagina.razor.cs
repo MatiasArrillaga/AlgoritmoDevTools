@@ -27,10 +27,7 @@ public partial class CommandsMakerPagina : IDisposable
     private string _dominioNuevo = string.Empty;
     private string _nombreDeMigracion = string.Empty;
     private string _ultimoComando = string.Empty;
-    private string _estadoMenu = string.Empty;
-    private string _claseEstadoMenu = "estado-neutro";
     private bool _conPrefijoDeDominio = true;
-    private bool _menuInstalado;
     private bool _agregandoDominio;
     private bool _eliminandoDominio;
 
@@ -44,7 +41,6 @@ public partial class CommandsMakerPagina : IDisposable
         else _dominio = _todosLosDominios.FirstOrDefault() ?? string.Empty;
 
         _nombreDeMigracion = GeneradorDeComandos.NombreDeMigracionSugerido(_dominio);
-        ActualizarEstadoDelMenu();
     }
 
     private void RecargarDominios() => _todosLosDominios = Dominios.GetAll();
@@ -150,48 +146,13 @@ public partial class CommandsMakerPagina : IDisposable
         Informar($"Dominio '{nombre}' eliminado.", "estado-neutro");
     }
 
-    // --- Menú contextual ----------------------------------------------------
-
-    private void InstalarMenu()
-    {
-        var error = MenuContextualComandos.TryInstalar(Dominios.GetAll(), Dominios.GetRecientes());
-        if (error is not null) Informar($"No se pudo agregar al menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void QuitarMenu()
-    {
-        var error = MenuContextualComandos.TryDesinstalar();
-        if (error is not null) Informar($"No se pudo quitar del menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void SincronizarMenu()
-    {
-        MenuContextualComandos.Sincronizar(Dominios.GetAll(), Dominios.GetRecientes());
-        ActualizarEstadoDelMenu();
-    }
-
-    private void ActualizarEstadoDelMenu()
-    {
-        _menuInstalado = MenuContextualComandos.EstaInstalado();
-
-        if (!_menuInstalado)
-        {
-            _estadoMenu = "Menú contextual: no instalado.";
-            _claseEstadoMenu = "estado-neutro";
-            return;
-        }
-
-        // Se muestra el presupuesto porque es la única pista de por qué faltan opciones: pasarse de
-        // 16 no da error, el explorador descarta el resto en silencio.
-        var usados = MenuContextualDevTools.ContarItems();
-        var destacado = Dominios.GetUltimoDominio();
-        var cual = string.IsNullOrWhiteSpace(destacado) ? string.Empty : $" — destaca {destacado}";
-
-        _estadoMenu = $"Menú contextual: {usados}/{MenuContextualDevTools.LimiteDeItems} ítems{cual}.";
-        _claseEstadoMenu = usados >= MenuContextualDevTools.LimiteDeItems ? "estado-error" : "estado-exito";
-    }
+    /// <summary>
+    /// Reescribe el menú contextual, si está puesto, con los dominios que hay ahora. El menú es
+    /// estático: un dominio borrado seguiría apareciendo, y el destacado quedaría en el anterior.
+    ///
+    /// Prenderlo y apagarlo se hace desde Configuraciones; acá sólo se lo mantiene al día.
+    /// </summary>
+    private void SincronizarMenu() => MenuContextualComandos.Sincronizar(Dominios.GetAll(), Dominios.GetRecientes());
 
     private void Informar(string texto, string clase) => Barra.Informar(texto, clase);
 

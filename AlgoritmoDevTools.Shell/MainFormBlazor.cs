@@ -134,7 +134,9 @@ public sealed class MainFormBlazor : Form
         servicios.AddSingleton(new ProfileRepository(new ToolStorage("TyeServiceSelector")));
         servicios.AddSingleton(new DocumentConverter());
 
-        // Toma los tres repositorios de arriba: es lo que viaja en el archivo que se exporta.
+        // Los dos toman los repositorios de arriba: uno para armar el archivo que se exporta, el
+        // otro para saber con qué datos escribir cada menú del explorador.
         servicios.AddSingleton<TransferenciaDeConfiguracion>();
+        servicios.AddSingleton<MenusContextuales>();
     }
 }

@@ -121,6 +121,18 @@ Se resuelve en cada consulta y no se guarda en un campo, para que al cambiarla l
 
 Las preferencias que valen para toda la aplicación. Una sola instancia: dos leyendo el mismo archivo se pisarían al guardar.
 
+### `MenusContextuales`
+
+Qué herramientas dejan sus acciones en el clic derecho de Windows. Vive en Configuraciones, con una casilla por herramienta.
+
+Antes cada pantalla tenía sus botones de agregar y quitar, y para saber qué había puesto en el explorador había que recorrerlas una por una. El menú es uno solo —todas cuelgan de la misma raíz `DevTools` y comparten su presupuesto— así que decidirlo repartido no tenía mucho sentido.
+
+**Prender y apagar es todo lo que hay.** Qué muestra cada grupo lo sigue armando la herramienta con lo que tenga guardado en ese momento, y lo reescribe sola cuando eso cambia: agregar una conexión la hace aparecer en el menú sin pasar por Configuraciones. Por eso acá no se guarda nada — el registro de Windows ya dice qué está instalado, y preguntárselo es más barato que mantener una copia que se puede desincronizar.
+
+**El presupuesto es de 16 ítems en todo el árbol**, submenús incluidos y contando lo que hay adentro, y es compartido entre las herramientas que cuelgan de `DevTools`. Pasarse no da ningún error: el explorador dibuja los primeros 16 y descarta el resto en silencio, así que el síntoma es "me faltan opciones" sin nada que lo explique. La sección muestra cuántos van usados y avisa al llegar al tope. El Markdown Converter no cuenta: su verbo cuelga de la extensión del archivo, no de la raíz.
+
+Para sumarle una herramienta: una entrada más en `MenusContextuales.Todos`, con cómo se pregunta, se instala y se quita su menú.
+
 ### `TransferenciaDeConfiguracion`
 
 Arma y lee el archivo con el que un usuario le pasa su configuración a otro. Está en Configuraciones, y existe porque alguien que recién entra arranca con todo vacío: los trece dominios, las conexiones a cada servidor y los perfiles de servicios, todo a mano.
@@ -232,6 +244,8 @@ new HerramientaUI(
 ```
 
 Y el ícono en `IconosSvg`: **SVG en línea de 16×16, trazo 1,6, sin relleno**, en la misma grilla que los demás. Es lo que hace que se lean como un juego y no como íconos sueltos; además toman el color del tema solos.
+
+Si la herramienta deja algo en el menú contextual del explorador, una entrada más en `MenusContextuales.Todos`. **La pantalla de la herramienta no lleva botones para eso**: prender y apagar los menús se hace desde Configuraciones, en un solo lugar. Lo que sí queda en la pantalla es volver a escribir el menú cuando cambia el dato que lo alimenta —un `Sincronizar` después de cada alta o baja—, porque el menú es estático y si no sigue mostrando lo viejo.
 
 ## 5. Si además va en la ventana clásica
 

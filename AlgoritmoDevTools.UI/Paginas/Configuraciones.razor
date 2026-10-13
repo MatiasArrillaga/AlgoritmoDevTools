@@ -60,6 +60,32 @@ else if (!_hayAlgoritmoCore)
     <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
 }
 
+<TituloDeGrupo Texto="Menú contextual del explorador"
+               Ayuda="Qué herramientas dejan sus acciones en el clic derecho de Windows. Todas cuelgan de un menú DevTools, menos el convertidor, que aparece sobre el documento. Lo que muestra cada una se arma solo con lo que tengas guardado, y se reescribe cuando eso cambia." />
+
+<ul class="arbol" style="margin-top:4px">
+    @foreach (var menu in Menus.Todos)
+    {
+        var actual = menu;
+        <li>
+            <label class="chk">
+                <input type="checkbox" checked="@_instalados.Contains(actual.Herramienta)"
+                       @onchange="e => CambiarMenu(actual, e.Value is true)" />
+                <span>@actual.Herramienta</span>
+            </label>
+            <p class="sub" style="margin:0 0 0 24px">@actual.Que</p>
+        </li>
+    }
+</ul>
+
+<p class="sub @(MenusContextuales.SeLlenoElMenu ? "estado-advertencia" : "")">
+    @MenusContextuales.ItemsUsados de @MenusContextuales.LimiteDeItems ítems usados.
+    @if (MenusContextuales.SeLlenoElMenu)
+    {
+        @("Windows dibuja los primeros y descarta el resto sin avisar: sacá algo antes de seguir.")
+    }
+</p>
+
 <TituloDeGrupo Texto="Exportar e importar configuración"
                Ayuda="Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a alguien que recién arranca y los tiene todos sin cargar nada. Importar agrega lo que falte y no toca lo que ya esté. No viaja nada propio de tu máquina: ni el tema, ni la carpeta de repositorios, ni hasta qué commit migraste." />
 

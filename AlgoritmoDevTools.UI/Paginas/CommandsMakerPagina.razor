@@ -84,16 +84,3 @@
 {
     <pre class="salida">@_ultimoComando</pre>
 }
-
-<p class="grupo">Menú contextual del explorador</p>
-
-<div class="fila" style="margin-top:0">
-    <button type="button" class="btn btn-secundario" @onclick="InstalarMenu">
-        @(_menuInstalado ? "Regenerar menú" : "Agregar al menú")
-    </button>
-    <button type="button" class="btn btn-secundario" disabled="@(!_menuInstalado)" @onclick="QuitarMenu">
-        Quitar del menú
-    </button>
-</div>
-
-<p class="linea-estado @_claseEstadoMenu">@_estadoMenu</p>

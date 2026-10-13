@@ -38,18 +38,14 @@ public partial class MarkdownConverterPagina : IDisposable
     private bool _hayPandoc;
     private bool _convirtiendo;
     private bool _quitarTachado = true;
-    private bool _menuInstalado;
     private string _html = HtmlNo;
     private string? _ultimaCarpeta;
-    private string _estadoMenu = string.Empty;
-    private string _claseEstadoMenu = "estado-neutro";
 
     protected override void OnInitialized()
     {
         Arrastre.Soltados += AlSoltarArchivos;
 
         _hayPandoc = Convertidor.PandocDisponible;
-        ActualizarEstadoDelMenu();
 
         if (!_hayPandoc)
         {
@@ -190,46 +186,9 @@ public partial class MarkdownConverterPagina : IDisposable
         return $"OK        {Path.GetFileName(resultado.OutputPath!)}  ({string.Join(", ", detalle)})";
     }
 
-    // --- Menú contextual ----------------------------------------------------
-
-    private void InstalarMenu()
-    {
-        var error = MenuContextual.TryInstalar(Convertidor.ExtensionesSoportadas);
-        if (error is not null) EstadoMenu($"No se pudo agregar al menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void QuitarMenu()
-    {
-        var error = MenuContextual.TryDesinstalar(Convertidor.ExtensionesSoportadas);
-        if (error is not null) EstadoMenu($"No se pudo quitar del menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void ActualizarEstadoDelMenu()
-    {
-        _menuInstalado = MenuContextual.EstaInstalado(Convertidor.ExtensionesSoportadas);
-
-        if (!_menuInstalado)
-        {
-            EstadoMenu("Menú contextual: no instalado.", "estado-neutro");
-            return;
-        }
-
-        var usados = MenuContextualDevTools.ContarItems();
-        EstadoMenu($"Menú contextual: {usados}/{MenuContextualDevTools.LimiteDeItems} ítems.",
-            usados >= MenuContextualDevTools.LimiteDeItems ? "estado-error" : "estado-exito");
-    }
-
     private void Escribir(string linea) => _registro.AppendLine(linea);
 
     private void Informar(string texto, string clase) => Barra.Informar(texto, clase);
-
-    private void EstadoMenu(string texto, string clase)
-    {
-        _estadoMenu = texto;
-        _claseEstadoMenu = clase;
-    }
 
     /// <summary>
     /// Lo que se suelta sobre la ventana llega acá con su ruta real. Se ignora mientras hay una

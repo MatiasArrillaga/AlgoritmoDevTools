@@ -21,6 +21,9 @@ public partial class Configuraciones : IDisposable
     private BarraDeEstado Barra { get; set; } = default!;
 
     [Inject]
+    private MenusContextuales Menus { get; set; } = default!;
+
+    [Inject]
     private IJSRuntime JS { get; set; } = default!;
 
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
@@ -36,10 +39,50 @@ public partial class Configuraciones : IDisposable
 
     private string? _nombreDelArchivo;
 
+    /// <summary>
+    /// Qué herramientas tienen su menú puesto. Se lee del registro una vez al entrar y después de
+    /// cada cambio: preguntárselo en cada dibujado sería ir al registro por cada herramienta cada
+    /// vez que alguien toca una casilla.
+    /// </summary>
+    private readonly HashSet<string> _instalados = [];
+
     protected override void OnInitialized()
     {
         _temas.TemaCambiado += OnTemaCambiado;
         RevisarCarpeta();
+        RevisarMenus();
+    }
+
+    private void RevisarMenus()
+    {
+        _instalados.Clear();
+
+        foreach (var menu in Menus.Todos.Where(menu => menu.EstaInstalado()))
+        {
+            _instalados.Add(menu.Herramienta);
+        }
+    }
+
+    /// <summary>
+    /// Prende o apaga el menú de una herramienta. Qué ítems escribe los decide ella con lo que haya
+    /// guardado; acá sólo se dice si va o no va.
+    /// </summary>
+    private void CambiarMenu(MenuDeHerramienta menu, bool instalar)
+    {
+        var error = instalar ? menu.Instalar() : menu.Quitar();
+
+        if (error is not null)
+        {
+            var que = instalar ? "agregar al" : "quitar del";
+            Barra.Informar($"No se pudo {que} menú contextual: {error}", "estado-error");
+        }
+        else
+        {
+            var que = instalar ? "agregado al" : "quitado del";
+            Barra.Informar($"{menu.Herramienta}: {que} menú contextual.", "estado-exito");
+        }
+
+        RevisarMenus();
     }
 
     /// <summary>

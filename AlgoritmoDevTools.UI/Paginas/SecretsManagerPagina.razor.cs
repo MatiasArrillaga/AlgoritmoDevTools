@@ -30,18 +30,14 @@ public partial class SecretsManagerPagina : IDisposable
     private string _visor = string.Empty;
     private string _estadoPrueba = string.Empty;
     private string _claseEstadoPrueba = "estado-neutro";
-    private string _estadoMenu = string.Empty;
-    private string _claseEstadoMenu = "estado-neutro";
     private bool _basesHabilitadas;
     private bool _ocupado;
     private bool _probando;
     private bool _eliminandoConexion;
-    private bool _menuInstalado;
 
     protected override async Task OnInitializedAsync()
     {
         RecargarConexiones();
-        ActualizarEstadoDelMenu();
 
         // No se releen los secretos al entrar: el armazón ya los leyó al arrancar para la barra de
         // estado, y volver a pedirlos lanzaba un segundo proceso de dotnet contra el mismo archivo,
@@ -320,7 +316,7 @@ public partial class SecretsManagerPagina : IDisposable
             await Task.Run(() => AplicadorDeSecretos.Aplicar(conexion, baseDatos, Conexiones));
             _visor = _secretos.SalidaParaMostrar;
             RecargarConexiones();
-            ActualizarEstadoDelMenu();
+            SincronizarMenu();
             Informar($"Secretos apuntados a {baseDatos}.", "estado-exito");
         }
         catch (Exception ex)
@@ -333,50 +329,16 @@ public partial class SecretsManagerPagina : IDisposable
         }
     }
 
-    // --- Menú contextual ----------------------------------------------------
-
-    private void InstalarMenu()
-    {
-        var error = MenuContextualSecretos.TryInstalar(Conexiones.GetAll());
-        if (error is not null) EstadoMenu($"No se pudo agregar al menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void QuitarMenu()
-    {
-        var error = MenuContextualSecretos.TryDesinstalar();
-        if (error is not null) EstadoMenu($"No se pudo quitar del menú: {error}", "estado-error");
-        ActualizarEstadoDelMenu();
-    }
-
-    private void SincronizarMenu()
-    {
-        MenuContextualSecretos.Sincronizar(Conexiones.GetAll());
-        ActualizarEstadoDelMenu();
-    }
-
-    private void ActualizarEstadoDelMenu()
-    {
-        _menuInstalado = MenuContextualSecretos.EstaInstalado();
-
-        if (!_menuInstalado)
-        {
-            EstadoMenu("Menú contextual: no instalado.", "estado-neutro");
-            return;
-        }
-
-        var usados = MenuContextualDevTools.ContarItems();
-        EstadoMenu($"Menú contextual: {usados}/{MenuContextualDevTools.LimiteDeItems} ítems.",
-            usados >= MenuContextualDevTools.LimiteDeItems ? "estado-error" : "estado-exito");
-    }
+    /// <summary>
+    /// Reescribe el menú contextual, si está puesto, con las conexiones que hay ahora. El menú es
+    /// estático y cada ítem lleva clavada su base: una conexión borrada seguiría apareciendo y otra
+    /// reapuntada mostraría la base vieja, que es peor que no tener menú.
+    ///
+    /// Prenderlo y apagarlo se hace desde Configuraciones; acá sólo se lo mantiene al día.
+    /// </summary>
+    private void SincronizarMenu() => MenuContextualSecretos.Sincronizar(Conexiones.GetAll());
 
     private void Informar(string texto, string clase) => Estado.Informar(texto, clase);
-
-    private void EstadoMenu(string texto, string clase)
-    {
-        _estadoMenu = texto;
-        _claseEstadoMenu = clase;
-    }
 
     public void Dispose() => Estado.Limpiar();
 }
