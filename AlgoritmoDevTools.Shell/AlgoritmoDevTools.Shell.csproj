@@ -11,7 +11,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>AlgoritmoDevTools.Shell</RootNamespace>
+    <RootNamespace>DevTools.Shell</RootNamespace>
     <StartupObject>AlgoritmoDevTools.Shell.Program</StartupObject>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
 
@@ -27,8 +27,12 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <DebugType>embedded</DebugType>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <AssemblyName>AlgoritmoDevTools</AssemblyName>
+    <AssemblyName>DevTools</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
@@ -75,9 +79,7 @@
     Se toman los Primary: los Alternative son las copias comprimidas (.gz, .br), que existen para
     ahorrar ancho de banda en una descarga y aca no tienen a quien servirle.
   -->
-  <Target Name="EmbeberElContenidoWeb"
-          DependsOnTargets="ResolveStaticWebAssetsInputs"
-          BeforeTargets="AssignTargetPaths">
+  <Target Name="EmbeberElContenidoWeb" DependsOnTargets="ResolveStaticWebAssetsInputs" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
       <_ContenidoWeb Include="@(StaticWebAsset)" Condition="'%(StaticWebAsset.AssetRole)' == 'Primary'">
         <!--
