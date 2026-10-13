@@ -264,6 +264,10 @@ No es un proyecto aparte: es una rama del arranque, así que comparte binario y 
 <DebugType>embedded</DebugType>
 ```
 
-`IncludeAllContentForSelfExtract` no es opcional: es lo que WebView2 necesita para convivir con el archivo único. Hay además un target que borra los `.pdb` y `.xml` residuales del publish.
+`IncludeAllContentForSelfExtract` no es opcional: es lo que WebView2 necesita para convivir con el archivo único.
+
+**El contenido web no entra solo en el `.exe`.** `PublishSingleFile` deja afuera los recursos estáticos —el `index.html`, `app.css`, `blazor.webview.js`—: el SDK da por sentado que atrás hay un servidor web que los va a leer del disco, así que los copia a una carpeta `wwwroot` al lado del ejecutable y los marca como excluidos del archivo único, sin propiedad que lo evite. Un `.exe` repartido sin esa carpeta abre una ventana en blanco que dice *There is no content at*.
+
+Lo resuelve el target `EmbeberElContenidoWeb`, que los incrusta como recursos del ensamblado antes de compilar, y `ContenidoWebEmbebido`, que se los sirve al visor por la misma ruta que pediría un navegador. El target de limpieza borra después los `.pdb`, los `.xml`, el `.staticwebassets.endpoints.json` y la carpeta `wwwroot` que el publish deja igual, de manera que **lo único que queda es el ejecutable**.
 
 El proyecto del Shell usa **`Microsoft.NET.Sdk.Razor`** aunque sea una aplicación de escritorio. Con el SDK común no genera su manifiesto de recursos estáticos y la ventana abre en blanco, sin ningún error.

@@ -53,10 +53,10 @@ public sealed class MainFormBlazor : Form
         servicios.AddBlazorWebViewDeveloperTools();
 #endif
 
-        var vista = new BlazorWebView
+        var vista = new VisorEmbebido
         {
             Dock = DockStyle.Fill,
-            HostPage = Path.Combine("wwwroot", "index.html"),
+            HostPage = PaginaDeInicio(),
             Services = servicios.BuildServiceProvider()
         };
         vista.RootComponents.Add<Raiz>("#app");
@@ -73,6 +73,16 @@ public sealed class MainFormBlazor : Form
 
         PrepararArrastre(vista);
     }
+
+    /// <summary>
+    /// La página con la que arranca el visor.
+    ///
+    /// No se lee del disco —la contesta <see cref="ContenidoWebEmbebido"/> desde adentro del
+    /// ejecutable— pero la ruta igual tiene que ser completa: el visor la resuelve contra el
+    /// directorio actual, que no tiene por qué ser el del ejecutable. El menú contextual del
+    /// explorador, sin ir más lejos, arranca este mismo exe parado en la carpeta donde se hizo clic.
+    /// </summary>
+    private static string PaginaDeInicio() => Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html");
 
     /// <summary>
     /// Engancha el aviso de arrastre que manda la página.

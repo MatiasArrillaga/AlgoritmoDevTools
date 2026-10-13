@@ -52,13 +52,48 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.110" />
   </ItemGroup>
 
-  <!-- Deja sólo el .exe en el folder de publish — elimina PDBs/XML de proyectos referenciados. -->
+  <!--
+    El contenido web —el index.html, el CSS de la interfaz, el blazor.webview.js— viaja incrustado en
+    el ensamblado y no como archivos al lado del .exe.
+
+    El SDK lo trata como si atras hubiera un servidor web que lo va a leer del disco: lo copia a una
+    carpeta wwwroot y lo deja afuera del archivo unico, sin forma de pedirle lo contrario. Aca no hay
+    servidor —el visor pide cada archivo por su ruta y se lo contesta ContenidoWebEmbebido—, asi que
+    se toma la lista que arma el propio SDK y se incrusta antes de compilar.
+
+    Se toman los Primary: los Alternative son las copias comprimidas (.gz, .br), que existen para
+    ahorrar ancho de banda en una descarga y aca no tienen a quien servirle.
+  -->
+  <Target Name="EmbeberElContenidoWeb"
+          DependsOnTargets="ResolveStaticWebAssetsInputs"
+          BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_ContenidoWeb Include="@(StaticWebAsset)" Condition="'%(StaticWebAsset.AssetRole)' == 'Primary'">
+        <!--
+          El SDK nombra los archivos dejando un hueco para la version: "index#[.{fingerprint}]?.html".
+          La ruta que pide el navegador es la de siempre, asi que el hueco se saca. La segunda pasada
+          junta las barras repetidas, porque los archivos de la raiz traen el BasePath en "/".
+        -->
+        <RutaWeb>$([System.Text.RegularExpressions.Regex]::Replace('%(StaticWebAsset.BasePath)/%(StaticWebAsset.RelativePath)', '#\[[^\]]*\]\??', ''))</RutaWeb>
+      </_ContenidoWeb>
+      <EmbeddedResource Include="@(_ContenidoWeb)">
+        <LogicalName>$([System.Text.RegularExpressions.Regex]::Replace('web/%(_ContenidoWeb.RutaWeb)', '/+', '/'))</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Deja sólo el .exe en el folder de publish: los PDB y XML de los proyectos referenciados, y la
+    copia del contenido web que el SDK deja al lado aunque ya viaje adentro del ejecutable.
+  -->
   <Target Name="CleanupPublishOutputs" AfterTargets="Publish">
     <ItemGroup>
       <PublishExtras Include="$(PublishDir)*.pdb" />
       <PublishExtras Include="$(PublishDir)*.xml" />
+      <PublishExtras Include="$(PublishDir)*.staticwebassets.endpoints.json" />
     </ItemGroup>
     <Delete Files="@(PublishExtras)" />
+    <RemoveDir Directories="$(PublishDir)wwwroot" />
   </Target>
 
 </Project>

@@ -38,6 +38,8 @@ Si faltara, Microsoft distribuye un instalador de 2 MB, o se puede empaquetar la
 | Armazón | `AlgoritmoDevTools.UI/Layout/Shell.razor` | Descripción, panel lateral, contenido y barra de estado |
 | Catálogo | `AlgoritmoDevTools.UI/CatalogoDeHerramientas.cs` | Qué herramientas hay y qué componente dibuja cada una |
 | Estilos | `AlgoritmoDevTools.UI/wwwroot/app.css` | Los cuatro temas y todos los componentes visuales |
+| Visor | `AlgoritmoDevTools.Shell/VisorEmbebido.cs` | El `BlazorWebView`, leyendo el contenido de adentro del ejecutable |
+| Contenido web | `AlgoritmoDevTools.Shell/ContenidoWebEmbebido.cs` | Le contesta cada archivo por su ruta, desde los recursos del ensamblado |
 
 El tema se aplica con `data-tema` en el nodo raíz del armazón: todas las variables de color cuelgan de ahí, así que cambiar ese atributo repinta la aplicación entera. Lee y escribe el mismo `ServicioDeTemas` que la ventana clásica, de modo que **el tema elegido en una aparece en la otra**.
 
@@ -50,6 +52,33 @@ Con `Microsoft.NET.Sdk` a secas el proyecto no genera su manifiesto de recursos 
 Para verificarlo sin abrir la ventana: en la carpeta de salida tiene que existir el manifiesto con el nombre del ensamblado del host (`AlgoritmoDevTools.staticwebassets.runtime.json`), no sólo el del proyecto de componentes.
 
 Efecto secundario: el SDK de Razor incluye `wwwroot/**` por su cuenta, así que un `<Content Include="wwwroot\**">` escrito a mano rompe la compilación con `NETSDK1022`.
+
+### El publish de un solo archivo deja el contenido web afuera
+
+`PublishSingleFile` no incluye los recursos estáticos. El SDK los trata como si atrás hubiera un servidor web que los va a leer del disco: los copia a una carpeta `wwwroot` al lado del ejecutable y les pone `ExcludeFromSingleFile`, **sin ninguna propiedad para pedirle lo contrario** —el metadato está escrito a mano en los targets del SDK, y en .NET 10 esos archivos ni siquiera pasan por la lista que arma el archivo único: se copian con una tarea aparte, `_PublishCopyStaticWebAssetsPreserveNewest`, bastante después de que el bundle ya está cerrado.
+
+El `.exe` repartido sin esa carpeta abre una ventana en blanco que dice *There is no content at*, sin más explicación.
+
+La salida es incrustarlos en el ensamblado y servirlos desde ahí:
+
+| Pieza | Qué hace |
+|---|---|
+| Target `EmbeberElContenidoWeb` (csproj del Shell) | Toma `@(StaticWebAsset)` y agrega cada uno como `EmbeddedResource` con `LogicalName` igual a su ruta web, bajo el prefijo `web/` |
+| `ContenidoWebEmbebido` | `IFileProvider` que traduce la ruta que pide el visor al nombre del recurso |
+| `VisorEmbebido` | `BlazorWebView` que devuelve ese proveedor en `CreateFileProvider` |
+| Target `CleanupPublishOutputs` | Borra la carpeta `wwwroot` y el `.staticwebassets.endpoints.json` que el publish deja igual |
+
+Dos detalles del target que no se adivinan:
+
+- **Va en `BeforeTargets="AssignTargetPaths"`, no en `PrepareResources`.** Resolver los recursos estáticos arrastra una cadena larga de targets, y con `BeforeTargets="PrepareResources"` esa cadena termina corriendo *después* de `PrepareResourceNames`: los `EmbeddedResource` se agregan, el log los muestra, y aun así nunca llegan al compilador. El síntoma es un ensamblado que compila sin un error y no tiene ningún recurso adentro.
+- **Se filtra por `AssetRole == 'Primary'`.** Los `Alternative` son las copias comprimidas (`.gz`, `.br`), que existen para ahorrar ancho de banda en una descarga y acá sólo agrandarían el ejecutable.
+
+Para verificarlo sin abrir la ventana, el ensamblado del Shell tiene que pesar cientos de KB y no decenas:
+
+```bash
+dotnet build -c Release -t:Rebuild
+grep -a -c "web/_framework/blazor.webview.js" AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/AlgoritmoDevTools.dll
+```
 
 ### El script va **sin** `autostart="false"`
 
