@@ -53,6 +53,16 @@ Para verificarlo sin abrir la ventana: en la carpeta de salida tiene que existir
 
 Efecto secundario: el SDK de Razor incluye `wwwroot/**` por su cuenta, así que un `<Content Include="wwwroot\**">` escrito a mano rompe la compilación con `NETSDK1022`.
 
+### El tema cuelga de `.shell`, no de `:root`
+
+`data-tema` se aplica en el `<div class="shell">`, así que **todas las variables de color viven dentro de ese nodo**. El `<body>` queda afuera: su `color` y su `background` se resuelven siempre con `:root`, que es el tema claro.
+
+No se nota hasta que alguien elige un tema oscuro. Ahí, todo elemento que no fije su propio `color` hereda del `<body>` —casi negro— y desaparece sobre el fondo oscuro: pasó con `h2` (el título de cada pantalla), `.saludo`, las etiquetas de los tildes y el texto de las confirmaciones, mientras el resto se veía bien porque sí declaraba `color: var(--texto-2)`.
+
+Por eso `.shell` declara `background` y `color` con sus propias variables: es el nodo que cierra el tema, y lo que herede de él ya sale del tema elegido. Una regla nueva **no** necesita repetir `color`; lo que hay que recordar es que fuera de `.shell` el tema no llega.
+
+Caso parecido, por si aparece de nuevo: el signo de pregunta del título dibujaba su círculo con `--borde-campo`. Ese borde está pensado para apoyarse sobre el fondo de un campo y sobre el fondo de la página se pierde, así que en los temas oscuros quedaba el signo flotando solo. Ahora el círculo sale de `currentColor`, que es el mismo color del signo.
+
 ### El publish de un solo archivo deja el contenido web afuera
 
 `PublishSingleFile` no incluye los recursos estáticos. El SDK los trata como si atrás hubiera un servidor web que los va a leer del disco: los copia a una carpeta `wwwroot` al lado del ejecutable y les pone `ExcludeFromSingleFile`, **sin ninguna propiedad para pedirle lo contrario** —el metadato está escrito a mano en los targets del SDK, y en .NET 10 esos archivos ni siquiera pasan por la lista que arma el archivo único: se copian con una tarea aparte, `_PublishCopyStaticWebAssetsPreserveNewest`, bastante después de que el bundle ya está cerrado.

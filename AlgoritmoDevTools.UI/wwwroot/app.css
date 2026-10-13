@@ -104,7 +104,20 @@ html, body {
 #app { height: 100%; }
 
 /* ---------- Armazón ---------- */
-.shell { display: flex; flex-direction: column; height: 100%; }
+
+/*
+  El tema cuelga de acá, así que el color del texto también. El <body> queda afuera del [data-tema],
+  de modo que su `color` siempre resuelve con el tema claro: todo lo que no fije el suyo —los
+  títulos, las etiquetas de los tildes, los textos de confirmación— heredaría de ahí y en los temas
+  oscuros quedaría negro sobre fondo negro.
+*/
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--fondo-principal);
+  color: var(--texto);
+}
 
 
 .cuerpo { flex: 1; display: flex; min-height: 0; }
@@ -242,9 +255,16 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
   height: 14px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid var(--borde-campo);
   color: var(--texto-2);
-  font-size: 9.5px;
+  /*
+    El círculo acompaña al signo en vez de seguir el borde de los campos: ese borde está pensado
+    para apoyarse sobre el fondo de un campo, y sobre el fondo de la página —en los temas oscuros
+    sobre todo— se pierde del todo y deja el signo flotando solo.
+  */
+  border: 1px solid var(--texto-2);
+  border-color: color-mix(in srgb, currentColor 55%, transparent);
+  font-size: 10px;
+  font-weight: 600;
   line-height: 1;
   display: grid;
   place-items: center;
