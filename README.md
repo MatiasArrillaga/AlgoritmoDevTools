@@ -28,7 +28,9 @@ Generar el ejecutable único:
 dotnet publish AlgoritmoDevTools.Shell -c Release
 ```
 
-Salida en `AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/publish/`, autocontenido, con el runtime de .NET 10 adentro.
+Queda **un solo archivo**, `DevTools.exe`, en `AlgoritmoDevTools.Shell/bin/Release/net10.0-windows/win-x64/publish/`: autocontenido, con el runtime de .NET 10 adentro y sin nada al lado. Se copia a donde sea y corre; no necesita instalador ni permisos de administrador.
+
+> El nombre sale del `<AssemblyName>` del csproj, y es el que el actualizador busca entre los archivos del release. Cambiarlo obliga a cambiar también `NombreDelArchivo` en `Actualizador` y la ruta del `files:` en el workflow.
 
 ### Modos de arranque
 
@@ -299,6 +301,27 @@ AlgoritmoDevTools.Tools.MiTool/README.referencia-tecnica-funcional-mi-tool.md
 
 Y una fila en la tabla de este README. Lo que tiene que decir: qué hace, las reglas en vigor, dónde guarda, las decisiones que no conviene revisitar, qué deberían cubrir las pruebas y la deuda conocida. **Las trampas verificadas son lo más valioso**: un síntoma que no se parece a su causa ahorra una tarde entera.
 
+## 8. La lista completa
+
+Los siete pasos de arriba son el camino mínimo. Esta es la lista entera de lugares que tocar, para que no quede ninguno a medias: **lo que falte no rompe la compilación**, simplemente la herramienta no aparece donde debería y nadie se entera hasta que alguien la busca.
+
+| Hay que | Dónde | ¿Siempre? |
+|---|---|---|
+| Crear el proyecto | `AlgoritmoDevTools.Tools.MiTool` | Sí |
+| Referenciarlo | csproj del Shell y de `AlgoritmoDevTools.UI` | Sí |
+| Darle su almacenamiento | `new ToolStorage("MiTool")`, con una clave que no cambie nunca | Si guarda algo |
+| Registrar sus servicios | `MainFormBlazor.RegistrarServiciosDeHerramientas` | Si guarda algo |
+| Escribir la pantalla | `AlgoritmoDevTools.UI/Paginas/MiToolPagina.razor` + `.razor.cs` | Sí |
+| Anotarla en el catálogo | `CatalogoDeHerramientas.Todas`, en el orden en que va en el menú | Sí |
+| Dibujar su ícono | `IconosSvg`: SVG en línea 16×16, trazo 1,6, sin relleno | Sí |
+| Sumar su menú del explorador | `MenusContextuales.Todos`, y un `Sincronizar` en la pantalla tras cada alta o baja | Si deja algo en el clic derecho |
+| Sumar lo suyo al archivo que se exporta | `SeleccionDeExportacion`, `PrepararSeleccion`, `Armar` y una `<RamaDeExportacion>` más | Si guarda algo que le sirva a otro |
+| Sumar su sección de ajustes | `Configuraciones.Secciones` y su bloque en el markup | Si tiene algo configurable |
+| Escribir su documento | `README.referencia-tecnica-funcional-mi-tool.md`, en su carpeta | Sí |
+| Anotarla en la tabla de herramientas | Este README | Sí |
+
+**Lo que no hay que hacer**: poner botones de "agregar al menú contextual" en la pantalla de la herramienta —eso vive en Configuraciones—, escribir colores a mano, ni dejar los avisos en un renglón de la vista en lugar de la barra de estado.
+
 ## Convenciones
 
 - **Idioma**: interfaz y mensajes en español rioplatense (voseo). Código y comentarios en español cuando es contexto de negocio.
@@ -320,9 +343,18 @@ La aplicación se actualiza sola desde los releases de GitHub. El repositorio es
 
 **Sacar una versión** son tres pasos:
 
-1. Subir el `<Version>` de `AlgoritmoDevTools.Shell.csproj`.
-2. Commitear y pushear.
-3. `git tag v1.2.0 && git push origin v1.2.0`
+```bash
+# 1. subir el <Version> de AlgoritmoDevTools.Shell.csproj, commitear y pushear a master
+# 2. etiquetar con el mismo numero, con la v adelante
+git tag -a v1.2.0 -m "Lo que trae" && git push origin v1.2.0
+```
+
+Y verificar que haya salido, porque si el workflow falla nadie se entera: no hay release y las instalaciones siguen viendo la anterior.
+
+```bash
+gh run list --limit 1
+gh release view v1.2.0
+```
 
 El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea el release. **La etiqueta tiene que coincidir con el `<Version>`**: es el número que queda adentro del ejecutable y con el que cada instalación decide si la de GitHub es más nueva que la suya. Si no coinciden, el workflow falla antes de publicar nada, en vez de dejar un release que nadie va a poder usar para actualizar.
 
@@ -332,7 +364,28 @@ El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea e
 
 El orden importa y está probado: se baja a un temporal primero, y si el segundo paso falla el viejo vuelve a su nombre. Una descarga cortada o una carpeta sin permiso de escritura dejan todo como estaba.
 
-**Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Apuntándola a un servidor local que devuelva el mismo JSON que GitHub —`tag_name`, `body` y un `assets` con `name` y `browser_download_url`— se recorre el camino entero: el aviso en el inicio, la descarga y el reemplazo. Sin la variable puesta, que es lo normal, se consulta GitHub.
+**Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Sin ella puesta, que es lo normal, se consulta GitHub.
+
+Apuntándola a un servidor local que devuelva este JSON se recorre el camino entero —el aviso en el inicio, la descarga y el reemplazo— sin publicar nada:
+
+```json
+{
+  "tag_name": "v9.9.9",
+  "body": "Lo que se muestra en la pantalla.",
+  "assets": [
+    { "name": "DevTools.exe", "browser_download_url": "http://localhost:51888/DevTools.exe" }
+  ]
+}
+```
+
+Hay que compilar dos binarios con versiones distintas: uno viejo que hace de instalado y uno nuevo que el servidor entrega como release.
+
+```bash
+dotnet publish AlgoritmoDevTools.Shell -c Release -p:Version=0.9.0 -o <carpeta-vieja>
+dotnet publish AlgoritmoDevTools.Shell -c Release -o <carpeta-release>
+```
+
+Así se verificó esta función: el ejecutable de la carpeta vieja termina con el mismo hash que el del release, queda un `DevTools.exe.anterior` con el anterior y el siguiente arranque lo borra solo.
 
 ## Publish
 
