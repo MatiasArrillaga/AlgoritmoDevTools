@@ -96,7 +96,7 @@ public partial class MarkdownConverterPagina : IDisposable
         var extensiones = string.Join(";", Convertidor.ExtensionesSoportadas.Select(ext => "*" + ext));
         var filtro = $"Documentos convertibles ({extensiones})|{extensiones}|Todos los archivos (*.*)|*.*";
 
-        var rutas = Dialogos.ElegirArchivos("Elegí los documentos a convertir", filtro, _ultimaCarpeta);
+        var rutas = await Dialogos.ElegirArchivos("Elegí los documentos a convertir", filtro, _ultimaCarpeta);
         if (rutas.Count == 0) return;
 
         await Convertir(rutas);

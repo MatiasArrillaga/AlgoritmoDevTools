@@ -2,7 +2,8 @@
 @using AlgoritmoDevTools.UI.Servicios
 
 @*
-    Pantalla de Configuraciones: la apariencia y el comportamiento de arranque.
+    Pantalla de Configuraciones: la apariencia, dónde están los repositorios y el archivo con el que
+    se le pasa la configuración a otro.
 
     Las tarjetas salen del catálogo de temas, así que agregar un quinto tema no obliga a tocar esta
     pantalla. Cada miniatura se pinta con los colores de SU tema y no con los del tema vigente: la
@@ -14,7 +15,7 @@
 
 <TituloDePagina Texto="Configuraciones" Ayuda="Se guardan por usuario y se aplican al instante." />
 
-<p class="grupo">Apariencia</p>
+<TituloDeGrupo Texto="Apariencia" Ayuda="Los cuatro temas de la aplicación. El elegido vale también para la ventana clásica." />
 
 <div class="temas">
     @foreach (var tema in Temas.Todos)
@@ -37,7 +38,8 @@
     }
 </div>
 
-<p class="grupo">Repositorios</p>
+<TituloDeGrupo Texto="Repositorios"
+               Ayuda="La carpeta que contiene AlgoritmoCore. De acá sacan la ruta el detector de migraciones, el selector de servicios y los secretos." />
 
 <div class="fila" style="margin-top:10px">
     <input class="campo mono" readonly value="@RutasDeTrabajo.CarpetaDeRepositorios" />
@@ -57,21 +59,17 @@ else if (!_hayAlgoritmoCore)
     <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
 }
 
-<p class="grupo">Importar y exportar</p>
+<TituloDeGrupo Texto="Exportar e importar configuración"
+               Ayuda="Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a alguien que recién arranca y los tiene todos sin cargar nada. Importar agrega lo que falte y no toca lo que ya esté. No viaja nada propio de tu máquina: ni el tema, ni la carpeta de repositorios, ni hasta qué commit migraste." />
 
-<p class="sub">
-    Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a
-    alguien que recién arranca y los tiene todos sin cargar nada.
-</p>
-
-<label class="chk" style="margin-top:12px">
+<label class="chk" style="margin-top:10px">
     <input type="checkbox" checked="@_conContrasenas" @onchange="e => _conContrasenas = e.Value is true" />
     <span>Incluir las contraseñas de las conexiones</span>
 </label>
 
 @if (_conContrasenas)
 {
-    <p class="linea-estado estado-advertencia">
+    <p class="sub estado-advertencia">
         El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
     </p>
 }
@@ -89,7 +87,7 @@ else if (!_hayAlgoritmoCore)
 
         @if (paquete.EstaVacio)
         {
-            <p class="linea-estado estado-advertencia">No trae nada adentro.</p>
+            <p class="sub estado-advertencia">No trae nada adentro.</p>
         }
         else
         {
@@ -97,7 +95,7 @@ else if (!_hayAlgoritmoCore)
 
             @if (paquete.Conexiones.Count > 0 && !paquete.IncluyeContrasenas)
             {
-                <p class="linea-estado estado-advertencia">
+                <p class="sub estado-advertencia">
                     Las conexiones vienen sin contraseña: vas a tener que completarlas en Secrets Manager.
                 </p>
             }
@@ -110,9 +108,4 @@ else if (!_hayAlgoritmoCore)
             <button type="button" class="btn btn-secundario" @onclick="() => _aImportar = null">Cancelar</button>
         </div>
     </div>
-}
-
-@if (!string.IsNullOrEmpty(_mensaje))
-{
-    <p class="linea-estado @_claseDelMensaje">@_mensaje</p>
 }

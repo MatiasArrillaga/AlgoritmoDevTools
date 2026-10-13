@@ -102,6 +102,33 @@ El atributo `autostart="false"` pertenece al patrón de MAUI, donde el host llam
 
 Después de cambiar el `Sdk=` del `.csproj` hay que recargar el proyecto o la solución. Mientras tanto Visual Studio sigue evaluando con el SDK anterior y reproduce el mismo síntoma aunque el archivo ya esté bien.
 
+### Un diálogo de Windows abierto en el acto cierra la aplicación
+
+Es la trampa más cara de todas, porque **no deja rastro en ningún lado al que uno mire**: no hay excepción, no hay log, no hay pantalla de error. La ventana desaparece a mitad de un clic.
+
+Un diálogo modal de Windows Forms —`OpenFileDialog`, `SaveFileDialog`, `FolderBrowserDialog`— corre su propio bucle de mensajes. Si se lo abre desde el manejador de un `@onclick`, ese bucle arranca **adentro** del aviso con el que WebView2 está entregando el clic. El navegador lo detecta como reentrada y aborta el proceso.
+
+Lo único que queda es el registro de eventos de Windows:
+
+```text
+Nombre del módulo con errores: EmbeddedBrowserWebView.dll
+Código de excepción: 0x80000003
+```
+
+`0x80000003` es un breakpoint, no una violación de acceso: el navegador se detuvo a propósito. Para confirmar que fue el diálogo y no otra cosa, en el `Report.wer` del informe archivado —en `C:\ProgramData\Microsoft\Windows\WER\ReportArchive`, en UTF-16— tienen que aparecer entre los módulos cargados `comdlg32.dll` y `explorerframe.dll`: el diálogo alcanzó a empezar a abrirse.
+
+**La salida** es `DialogosDelSistema.Diferir`, que abre el diálogo con `BeginInvoke` —o sea, en el siguiente ciclo del bucle de mensajes, ya fuera del aviso— y devuelve una `Task` que se completa cuando el usuario lo cierra. Por eso los tres métodos de `IDialogosDelSistema` son asincrónicos y hay que esperarlos con `await`: **no hay forma de ofrecerlos sincrónicos sin cerrar la aplicación**.
+
+```csharp
+// Mal: cierra la aplicación.
+var ruta = Dialogos.ElegirCarpeta("...");
+
+// Bien.
+var ruta = await Dialogos.ElegirCarpeta("...");
+```
+
+Vale para cualquier ventana modal que se abra desde un evento de la página, no sólo para estos tres diálogos.
+
 ### El visor no muestra los diálogos del navegador
 
 `alert`, `confirm` y `prompt` no aparecen. Toda confirmación —borrar un perfil, borrar una conexión, mover el baseline— es un bloque dentro de la propia página, con la clase `confirmacion`.

@@ -17,6 +17,9 @@ public partial class Configuraciones : IDisposable
     [Inject]
     private TransferenciaDeConfiguracion Transferencia { get; set; } = default!;
 
+    [Inject]
+    private BarraDeEstado Barra { get; set; } = default!;
+
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
 
     private bool _carpetaExiste = true;
@@ -29,8 +32,6 @@ public partial class Configuraciones : IDisposable
     private PaqueteDeConfiguracion? _aImportar;
 
     private string? _nombreDelArchivo;
-    private string? _mensaje;
-    private string _claseDelMensaje = "estado-neutro";
 
     protected override void OnInitialized()
     {
@@ -50,9 +51,9 @@ public partial class Configuraciones : IDisposable
         _hayAlgoritmoCore = _carpetaExiste && Directory.Exists(RutasDeTrabajo.AlgoritmoCore);
     }
 
-    private void ElegirCarpetaDeRepositorios()
+    private async Task ElegirCarpetaDeRepositorios()
     {
-        var elegida = Dialogos.ElegirCarpeta(
+        var elegida = await Dialogos.ElegirCarpeta(
             "Elegí la carpeta que contiene los repositorios",
             RutasDeTrabajo.CarpetaDeRepositorios);
 
@@ -78,16 +79,11 @@ public partial class Configuraciones : IDisposable
 
     private void Elegir(Tema tema) => _temas.Cambiar(tema);
 
-    /// <summary>
-    /// Pasa un color del tema a hexadecimal para escribirlo en un style en línea. Las miniaturas no
-    /// pueden salir de las variables CSS porque muestran un tema distinto del que está aplicado.
-    /// </summary>
-    private static string Hex(System.Drawing.Color color) =>
-        $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+    // --- Exportar e importar ----------------------------------------------------
 
-    private void Exportar()
+    private async Task Exportar()
     {
-        var ruta = Dialogos.ElegirDondeGuardar(
+        var ruta = await Dialogos.ElegirDondeGuardar(
             "Elegí dónde guardar la configuración",
             "Configuración de DevTools|*.json",
             $"devtools-{Environment.UserName}-{DateTime.Now:yyyy-MM-dd}.json");
@@ -98,11 +94,11 @@ public partial class Configuraciones : IDisposable
         {
             var paquete = Transferencia.Armar(_conContrasenas);
             Transferencia.Escribir(ruta, paquete);
-            Informar($"Exportado: {Contenido(paquete)}.", "estado-exito");
+            Barra.Informar($"Exportado a {Path.GetFileName(ruta)}: {Contenido(paquete)}.", "estado-exito");
         }
         catch (Exception ex)
         {
-            Informar($"No se pudo exportar: {ex.Message}", "estado-error");
+            Barra.Informar($"No se pudo exportar: {ex.Message}", "estado-error");
         }
     }
 
@@ -110,25 +106,24 @@ public partial class Configuraciones : IDisposable
     /// Lee el archivo y lo deja a la vista, pero no toca nada todavía: primero hay que poder ver qué
     /// trae y de quién es. Recién ahí se confirma.
     /// </summary>
-    private void ElegirQueImportar()
+    private async Task ElegirQueImportar()
     {
-        var elegidos = Dialogos.ElegirArchivos(
+        var elegidos = await Dialogos.ElegirArchivos(
             "Elegí el archivo de configuración",
             "Configuración de DevTools|*.json");
 
         if (elegidos.Count == 0) return;
 
-        _mensaje = null;
-
         try
         {
             _aImportar = Transferencia.Leer(elegidos[0]);
             _nombreDelArchivo = Path.GetFileName(elegidos[0]);
+            Barra.Limpiar();
         }
         catch (Exception ex)
         {
             _aImportar = null;
-            Informar($"No se pudo leer el archivo: {ex.Message}", "estado-error");
+            Barra.Informar($"No se pudo leer el archivo: {ex.Message}", "estado-error");
         }
     }
 
@@ -138,11 +133,11 @@ public partial class Configuraciones : IDisposable
 
         try
         {
-            Informar(Resumen(Transferencia.Importar(_aImportar)), "estado-exito");
+            Barra.Informar(Resumen(Transferencia.Importar(_aImportar)), "estado-exito");
         }
         catch (Exception ex)
         {
-            Informar($"No se pudo importar: {ex.Message}", "estado-error");
+            Barra.Informar($"No se pudo importar: {ex.Message}", "estado-error");
         }
         finally
         {
@@ -192,13 +187,18 @@ public partial class Configuraciones : IDisposable
         };
     }
 
-    private void Informar(string mensaje, string clase)
-    {
-        _mensaje = mensaje;
-        _claseDelMensaje = clase;
-    }
+    /// <summary>
+    /// Pasa un color del tema a hexadecimal para escribirlo en un style en línea. Las miniaturas no
+    /// pueden salir de las variables CSS porque muestran un tema distinto del que está aplicado.
+    /// </summary>
+    private static string Hex(System.Drawing.Color color) =>
+        $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
     private void OnTemaCambiado(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => _temas.TemaCambiado -= OnTemaCambiado;
+    public void Dispose()
+    {
+        _temas.TemaCambiado -= OnTemaCambiado;
+        Barra.Limpiar();
+    }
 }

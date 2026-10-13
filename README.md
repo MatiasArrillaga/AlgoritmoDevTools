@@ -248,6 +248,8 @@ Vale la pena saberlo antes de diseñar la pantalla:
 
 El patrón es siempre el mismo: una interfaz en `AlgoritmoDevTools.UI/Servicios/`, su implementación en el Shell, y registro en `MainFormBlazor`.
 
+> **Un diálogo de Windows no se abre en el acto: hay que esperarlo.** Los tres métodos de `IDialogosDelSistema` devuelven `Task` y van con `await`. No es por rendimiento. Un diálogo modal corre su propio bucle de mensajes, y abrirlo mientras el visor está entregando el clic es volver a entrar en el navegador mientras trabaja: WebView2 **aborta el proceso entero**, sin excepción, sin mensaje y sin nada que se pueda atrapar. La ventana desaparece y listo. `DialogosDelSistema.Diferir` lo deja para el siguiente ciclo del bucle, ya fuera del aviso.
+
 ## 7. Documentarla
 
 Una herramienta nueva deja su documento en su propia carpeta:

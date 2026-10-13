@@ -305,6 +305,18 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--texto-2);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/*
+  El encabezado va en mayúsculas, pero su explicación no: el tooltip hereda el text-transform del
+  título y una frase entera gritada no se lee.
+*/
+.grupo .ayuda::after {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* ---------- Inicio ---------- */

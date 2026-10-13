@@ -1,0 +1,19 @@
+@*
+    Encabezado de una sección, con el signo de pregunta que explica para qué sirve.
+
+    Mismo criterio que el título de la pantalla: lo que la sección hace se cuenta adentro del signo
+    y no en un párrafo arriba, que ocupa lugar todas las veces para algo que se lee una sola.
+*@
+
+<p class="grupo">
+    <span>@Texto</span>
+
+    @if (!string.IsNullOrWhiteSpace(Ayuda))
+    {
+        <span class="ayuda"
+              data-tooltip="@Ayuda"
+              tabindex="0"
+              role="note"
+              aria-label="@Ayuda">?</span>
+    }
+</p>
