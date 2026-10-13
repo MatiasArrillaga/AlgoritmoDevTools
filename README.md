@@ -121,6 +121,14 @@ Se resuelve en cada consulta y no se guarda en un campo, para que al cambiarla l
 
 Las preferencias que valen para toda la aplicación. Una sola instancia: dos leyendo el mismo archivo se pisarían al guardar.
 
+### `ArranqueDelWidget`
+
+Si el widget de bandeja arranca con la sesión de Windows. Se prende desde Configuraciones y desde el menú del propio widget, y por eso el nombre de la entrada y el verbo viven acá: con cada lado escribiendo lo suyo, el usuario terminaría con dos programas arrancando y con un tilde que no coincide con el otro.
+
+**Lo que queda residente es el widget, no la ventana**: al iniciar sesión deja el ícono en la bandeja, sin abrir nada.
+
+El tilde aparece apagado cuando la entrada existe pero apunta a otro ejecutable —publicaste el exe en otra carpeta—, para que al prenderlo se regenere contra el que está corriendo.
+
 ### `MenusContextuales`
 
 Qué herramientas dejan sus acciones en el clic derecho de Windows. Vive en Configuraciones, con una casilla por herramienta.
@@ -244,6 +252,8 @@ new HerramientaUI(
 ```
 
 Y el ícono en `IconosSvg`: **SVG en línea de 16×16, trazo 1,6, sin relleno**, en la misma grilla que los demás. Es lo que hace que se lean como un juego y no como íconos sueltos; además toman el color del tema solos.
+
+Si la herramienta necesita algo configurable, una entrada más en `Configuraciones.Secciones` y su bloque en el markup. La pantalla es un menú a la izquierda con el contenido al lado, y las secciones de un mismo grupo tienen que ir seguidas en la lista: el agrupado sale de ahí.
 
 Si la herramienta deja algo en el menú contextual del explorador, una entrada más en `MenusContextuales.Todos`. **La pantalla de la herramienta no lleva botones para eso**: prender y apagar los menús se hace desde Configuraciones, en un solo lugar. Lo que sí queda en la pantalla es volver a escribir el menú cuando cambia el dato que lo alimenta —un `Sincronizar` después de cada alta o baja—, porque el menú es estático y si no sigue mostrando lo viejo.
 

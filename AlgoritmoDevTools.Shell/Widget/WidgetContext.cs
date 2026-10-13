@@ -1,6 +1,7 @@
-using AlgoritmoDevTools.Core.Infrastructure;
+﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
+using AlgoritmoDevTools.UI.Servicios;
 using System.Diagnostics;
 using System.Drawing;
 
@@ -27,12 +28,10 @@ namespace AlgoritmoDevTools.Shell.Widget;
 /// </summary>
 internal sealed class WidgetContext : ApplicationContext
 {
-    /// <summary>Nombre de la entrada en la clave Run. No cambiarlo: es lo que la identifica.</summary>
-    private const string NOMBRE_EN_ARRANQUE = "AlgoritmoDevTools.Widget";
-
     private const string TITULO = "Algoritmo DevTools";
 
     private readonly NotifyIcon _icono;
+    private readonly ArranqueDelWidget _arranque = new(Program.VerboWidget);
     private readonly SecretService _secretos = SecretService.Shared;
     private readonly SavedConnectionsRepository _conexiones = new(new ToolStorage("Shared"));
     private readonly DomainRepository _dominios = new(new ToolStorage("CommandsMaker"));
@@ -87,7 +86,7 @@ internal sealed class WidgetContext : ApplicationContext
 
         var arranque = new ToolStripMenuItem("Iniciar con Windows")
         {
-            Checked = ArranqueConWindows.EstaActivado(NOMBRE_EN_ARRANQUE),
+            Checked = _arranque.EstaActivado(),
             CheckOnClick = true,
         };
         arranque.Click += (_, _) => AlternarArranque(arranque.Checked);
@@ -278,9 +277,7 @@ internal sealed class WidgetContext : ApplicationContext
 
     private void AlternarArranque(bool activar)
     {
-        var error = activar
-            ? ArranqueConWindows.TryActivar(NOMBRE_EN_ARRANQUE, Program.VerboWidget)
-            : ArranqueConWindows.TryDesactivar(NOMBRE_EN_ARRANQUE);
+        var error = activar ? _arranque.Activar() : _arranque.Desactivar();
 
         if (error is not null)
         {

@@ -9,8 +9,40 @@ using Microsoft.JSInterop;
 
 namespace AlgoritmoDevTools.UI.Paginas;
 
+/// <summary>Cada cosa que se puede configurar. El orden es el del menú.</summary>
+public enum Seccion
+{
+    Apariencia,
+    Repositorios,
+    Inicio,
+    MenuContextual,
+    ExportarEImportar
+}
+
+/// <summary>Una entrada del menú de Configuraciones.</summary>
+/// <param name="Id">Qué sección muestra.</param>
+/// <param name="Grupo">Encabezado bajo el que se agrupa. Las de un mismo grupo van juntas.</param>
+/// <param name="Nombre">Cómo se la nombra en el menú.</param>
+public sealed record EntradaDeAjustes(Seccion Id, string Grupo, string Nombre);
+
 public partial class Configuraciones : IDisposable
 {
+    /// <summary>
+    /// El menú de la izquierda. Agregar una sección es una línea más acá y un bloque en el markup;
+    /// el agrupado sale solo de <see cref="EntradaDeAjustes.Grupo"/>, así que las de un mismo grupo
+    /// tienen que ir seguidas.
+    /// </summary>
+    private static readonly EntradaDeAjustes[] Secciones =
+    [
+        new(Seccion.Apariencia, "General", "Apariencia"),
+        new(Seccion.Repositorios, "General", "Repositorios"),
+        new(Seccion.Inicio, "Integración con Windows", "Inicio con Windows"),
+        new(Seccion.MenuContextual, "Integración con Windows", "Menú contextual"),
+        new(Seccion.ExportarEImportar, "Configuración", "Exportar e importar")
+    ];
+
+    private Seccion _seccion = Seccion.Apariencia;
+
     [Inject]
     private IDialogosDelSistema Dialogos { get; set; } = default!;
 
@@ -22,6 +54,9 @@ public partial class Configuraciones : IDisposable
 
     [Inject]
     private MenusContextuales Menus { get; set; } = default!;
+
+    [Inject]
+    private ArranqueDelWidget Arranque { get; set; } = default!;
 
     [Inject]
     private IJSRuntime JS { get; set; } = default!;
@@ -46,11 +81,36 @@ public partial class Configuraciones : IDisposable
     /// </summary>
     private readonly HashSet<string> _instalados = [];
 
+    private bool _arrancaConWindows;
+
     protected override void OnInitialized()
     {
         _temas.TemaCambiado += OnTemaCambiado;
         RevisarCarpeta();
         RevisarMenus();
+        _arrancaConWindows = Arranque.EstaActivado();
+    }
+
+    /// <summary>
+    /// Pone o saca el widget de los programas que arrancan con la sesión. El tilde se vuelve a leer
+    /// del registro: si la escritura falló, tiene que quedar como estaba y no como se pidió.
+    /// </summary>
+    private void CambiarArranque(bool activar)
+    {
+        var error = activar ? Arranque.Activar() : Arranque.Desactivar();
+
+        if (error is not null)
+        {
+            Barra.Informar($"No se pudo cambiar el inicio con Windows: {error}", "estado-error");
+        }
+        else
+        {
+            Barra.Informar(activar
+                ? "El widget va a arrancar con Windows."
+                : "El widget ya no arranca con Windows.", "estado-exito");
+        }
+
+        _arrancaConWindows = Arranque.EstaActivado();
     }
 
     private void RevisarMenus()

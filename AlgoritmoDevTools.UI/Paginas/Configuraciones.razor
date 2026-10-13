@@ -3,12 +3,11 @@
 @using AlgoritmoDevTools.UI.Servicios
 
 @*
-    Pantalla de Configuraciones: la apariencia, dónde están los repositorios y el archivo con el que
-    se le pasa la configuración a otro.
+    Pantalla de Configuraciones: la apariencia, dónde están los repositorios, qué deja la aplicación
+    en Windows y el archivo con el que se le pasa la configuración a otro.
 
-    Las tarjetas salen del catálogo de temas, así que agregar un quinto tema no obliga a tocar esta
-    pantalla. Cada miniatura se pinta con los colores de SU tema y no con los del tema vigente: la
-    gracia es poder comparar los cuatro antes de elegir.
+    Cada cosa en su sección y una sola a la vista. Apiladas entraban las cinco de hoy, pero la
+    próxima ya no: lo que uno viene a cambiar queda lejos y hay que ir a buscarlo con la rueda.
 
     Referencia funcional y técnica:
     AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md
@@ -16,167 +15,214 @@
 
 <TituloDePagina Texto="Configuraciones" Ayuda="Se guardan por usuario y se aplican al instante." />
 
-<TituloDeGrupo Texto="Apariencia" Ayuda="Los cuatro temas de la aplicación. El elegido vale también para la ventana clásica." />
+<div class="ajustes">
 
-<div class="temas">
-    @foreach (var tema in Temas.Todos)
-    {
-        var actual = tema;
-        <button type="button"
-                class="tema-card @(_temas.Actual.Id == actual.Id ? "elegido" : "")"
-                @onclick="() => Elegir(actual)">
-            <span class="tema-mini">
-                <span class="mini-lateral" style="background:@Hex(actual.FondoLateral)"></span>
-                <span class="mini-cuerpo" style="background:@Hex(actual.FondoPrincipal)">
-                    <span class="mini-boton" style="background:@Hex(actual.Acento)"></span>
-                </span>
-            </span>
-            <span class="tema-nombre">
-                <span class="tema-radio"></span>
-                <span>@actual.Nombre</span>
-            </span>
-        </button>
-    }
-</div>
-
-<TituloDeGrupo Texto="Repositorios"
-               Ayuda="La carpeta que contiene AlgoritmoCore. De acá sacan la ruta el detector de migraciones, el selector de servicios y los secretos." />
-
-<div class="fila" style="margin-top:10px">
-    <input class="campo mono" readonly value="@RutasDeTrabajo.CarpetaDeRepositorios" />
-    <button type="button" class="btn btn-secundario" @onclick="ElegirCarpetaDeRepositorios">Examinar...</button>
-    @if (!string.IsNullOrWhiteSpace(_temas.Configuracion.CarpetaDeRepositorios))
-    {
-        <button type="button" class="btn btn-secundario" @onclick="RestaurarCarpetaPorDefecto">Restaurar</button>
-    }
-</div>
-
-@if (!_carpetaExiste)
-{
-    <p class="linea-estado estado-advertencia">Esa carpeta no existe. Las herramientas que leen el repositorio no van a encontrar nada.</p>
-}
-else if (!_hayAlgoritmoCore)
-{
-    <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
-}
-
-<TituloDeGrupo Texto="Menú contextual del explorador"
-               Ayuda="Qué herramientas dejan sus acciones en el clic derecho de Windows. Todas cuelgan de un menú DevTools, menos el convertidor, que aparece sobre el documento. Lo que muestra cada una se arma solo con lo que tengas guardado, y se reescribe cuando eso cambia." />
-
-<ul class="arbol" style="margin-top:4px">
-    @foreach (var menu in Menus.Todos)
-    {
-        var actual = menu;
-        <li>
-            <label class="chk">
-                <input type="checkbox" checked="@_instalados.Contains(actual.Herramienta)"
-                       @onchange="e => CambiarMenu(actual, e.Value is true)" />
-                <span>@actual.Herramienta</span>
-            </label>
-            <p class="sub" style="margin:0 0 0 24px">@actual.Que</p>
-        </li>
-    }
-</ul>
-
-<p class="sub @(MenusContextuales.SeLlenoElMenu ? "estado-advertencia" : "")">
-    @MenusContextuales.ItemsUsados de @MenusContextuales.LimiteDeItems ítems usados.
-    @if (MenusContextuales.SeLlenoElMenu)
-    {
-        @("Windows dibuja los primeros y descarta el resto sin avisar: sacá algo antes de seguir.")
-    }
-</p>
-
-<TituloDeGrupo Texto="Exportar e importar configuración"
-               Ayuda="Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a alguien que recién arranca y los tiene todos sin cargar nada. Importar agrega lo que falte y no toca lo que ya esté. No viaja nada propio de tu máquina: ni el tema, ni la carpeta de repositorios, ni hasta qué commit migraste." />
-
-<div class="fila" style="margin-top:10px">
-    <button type="button" class="btn btn-secundario" @onclick="PrepararExportacion">Exportar...</button>
-    <button type="button" class="btn btn-secundario" @onclick="ElegirQueImportar">Importar...</button>
-</div>
-
-@if (_seleccion is { } seleccion)
-{
-    <div class="confirmacion">
-        <p><b>Qué llevar en el archivo</b></p>
-
-        <div class="arbol-caja">
-            <ul class="arbol">
-                <RamaDeExportacion T="string"
-                                   Herramienta="Commands Maker"
-                                   Grupo="Todos los dominios"
-                                   Elementos="seleccion.Dominios"
-                                   Vacio="Todavía no agregaste ningún dominio."
-                                   Cambio="StateHasChanged" />
-
-                <RamaDeExportacion T="ConexionExportada"
-                                   Herramienta="Secrets Manager"
-                                   Grupo="Todas las conexiones"
-                                   Elementos="seleccion.Conexiones"
-                                   Vacio="Todavía no guardaste ninguna conexión."
-                                   Cambio="StateHasChanged">
-                    <Opciones>
-                        <li>
-                            <label class="chk">
-                                <input type="checkbox" checked="@seleccion.Contrasenas"
-                                       @onchange="e => seleccion.Contrasenas = e.Value is true" />
-                                <span>Incluir las contraseñas</span>
-                            </label>
-                        </li>
-                    </Opciones>
-                </RamaDeExportacion>
-
-                <RamaDeExportacion T="PerfilExportado"
-                                   Herramienta="Tye Service Selector"
-                                   Grupo="Todos los perfiles"
-                                   Elementos="seleccion.PerfilesDeTye"
-                                   Vacio="Todavía no guardaste ningún perfil."
-                                   Cambio="StateHasChanged" />
-            </ul>
-        </div>
-
-        @if (seleccion.Contrasenas)
+    <nav class="ajustes-menu">
+        @foreach (var grupo in Secciones.GroupBy(seccion => seccion.Grupo))
         {
-            <p class="sub estado-advertencia">
-                El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
+            <p class="ajustes-grupo">@grupo.Key</p>
+
+            @foreach (var seccion in grupo)
+            {
+                var actual = seccion;
+                <button type="button"
+                        class="ajustes-item @(_seccion == actual.Id ? "activo" : "")"
+                        @onclick="() => _seccion = actual.Id">
+                    @actual.Nombre
+                </button>
+            }
+        }
+    </nav>
+
+    <div class="ajustes-cuerpo">
+
+        @if (_seccion is Seccion.Apariencia)
+        {
+            <TituloDeGrupo Texto="Apariencia" Ayuda="Los cuatro temas de la aplicación. El elegido vale también para la ventana clásica." />
+
+            <div class="temas">
+                @foreach (var tema in Temas.Todos)
+                {
+                    var actual = tema;
+                    <button type="button"
+                            class="tema-card @(_temas.Actual.Id == actual.Id ? "elegido" : "")"
+                            @onclick="() => Elegir(actual)">
+                        <span class="tema-mini">
+                            <span class="mini-lateral" style="background:@Hex(actual.FondoLateral)"></span>
+                            <span class="mini-cuerpo" style="background:@Hex(actual.FondoPrincipal)">
+                                <span class="mini-boton" style="background:@Hex(actual.Acento)"></span>
+                            </span>
+                        </span>
+                        <span class="tema-nombre">
+                            <span class="tema-radio"></span>
+                            <span>@actual.Nombre</span>
+                        </span>
+                    </button>
+                }
+            </div>
+        }
+
+        else if (_seccion is Seccion.Repositorios)
+        {
+            <TituloDeGrupo Texto="Repositorios"
+                           Ayuda="La carpeta que contiene AlgoritmoCore. De acá sacan la ruta el detector de migraciones, el selector de servicios y los secretos." />
+
+            <div class="fila" style="margin-top:10px">
+                <input class="campo mono" readonly value="@RutasDeTrabajo.CarpetaDeRepositorios" />
+                <button type="button" class="btn btn-secundario" @onclick="ElegirCarpetaDeRepositorios">Examinar...</button>
+                @if (!string.IsNullOrWhiteSpace(_temas.Configuracion.CarpetaDeRepositorios))
+                {
+                    <button type="button" class="btn btn-secundario" @onclick="RestaurarCarpetaPorDefecto">Restaurar</button>
+                }
+            </div>
+
+            @if (!_carpetaExiste)
+            {
+                <p class="linea-estado estado-advertencia">Esa carpeta no existe. Las herramientas que leen el repositorio no van a encontrar nada.</p>
+            }
+            else if (!_hayAlgoritmoCore)
+            {
+                <p class="linea-estado estado-advertencia">La carpeta existe pero no tiene adentro <span class="mono">AlgoritmoCore</span>.</p>
+            }
+        }
+
+        else if (_seccion is Seccion.Inicio)
+        {
+            <TituloDeGrupo Texto="Inicio con Windows"
+                           Ayuda="Lo que queda residente es el widget de la bandeja, no esta ventana: al iniciar sesión deja el ícono al lado del reloj, con los secretos y los comandos a mano, sin abrir nada. Es el mismo tilde que tiene el widget en su propio menú." />
+
+            <label class="chk" style="margin-top:4px">
+                <input type="checkbox" checked="@_arrancaConWindows" @onchange="e => CambiarArranque(e.Value is true)" />
+                <span>Dejar el widget en la bandeja al iniciar sesión</span>
+            </label>
+        }
+
+        else if (_seccion is Seccion.MenuContextual)
+        {
+            <TituloDeGrupo Texto="Menú contextual del explorador"
+                           Ayuda="Qué herramientas dejan sus acciones en el clic derecho de Windows. Todas cuelgan de un menú DevTools, menos el convertidor, que aparece sobre el documento. Lo que muestra cada una se arma solo con lo que tengas guardado, y se reescribe cuando eso cambia." />
+
+            <ul class="arbol" style="margin-top:4px">
+                @foreach (var menu in Menus.Todos)
+                {
+                    var actual = menu;
+                    <li>
+                        <label class="chk">
+                            <input type="checkbox" checked="@_instalados.Contains(actual.Herramienta)"
+                                   @onchange="e => CambiarMenu(actual, e.Value is true)" />
+                            <span>@actual.Herramienta</span>
+                        </label>
+                        <p class="sub" style="margin:0 0 0 24px">@actual.Que</p>
+                    </li>
+                }
+            </ul>
+
+            <p class="sub @(MenusContextuales.SeLlenoElMenu ? "estado-advertencia" : "")">
+                @MenusContextuales.ItemsUsados de @MenusContextuales.LimiteDeItems ítems usados.
+                @if (MenusContextuales.SeLlenoElMenu)
+                {
+                    @("Windows dibuja los primeros y descarta el resto sin avisar: sacá algo antes de seguir.")
+                }
             </p>
         }
 
-        <div class="acciones">
-            <button type="button" class="btn btn-primario" disabled="@seleccion.NoHayNadaMarcado" @onclick="Exportar">
-                Exportar...
-            </button>
-            <button type="button" class="btn btn-secundario" @onclick="() => _seleccion = null">Cancelar</button>
-        </div>
-    </div>
-}
-
-@if (_aImportar is { } paquete)
-{
-    <div class="confirmacion">
-        <p><b>@_nombreDelArchivo</b></p>
-        <p class="sub">Exportado por @(paquete.Origen ?? "alguien") el @paquete.Exportado.ToLocalTime().ToString("dd/MM/yyyy").</p>
-
-        @if (paquete.EstaVacio)
+        else if (_seccion is Seccion.ExportarEImportar)
         {
-            <p class="sub estado-advertencia">No trae nada adentro.</p>
-        }
-        else
-        {
-            <p style="margin-top:10px">Trae @Contenido(paquete).</p>
+            <TituloDeGrupo Texto="Exportar e importar configuración"
+                           Ayuda="Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a alguien que recién arranca y los tiene todos sin cargar nada. Importar agrega lo que falte y no toca lo que ya esté. No viaja nada propio de tu máquina: ni el tema, ni la carpeta de repositorios, ni hasta qué commit migraste." />
 
-            @if (paquete.Conexiones.Count > 0 && !paquete.IncluyeContrasenas)
+            <div class="fila" style="margin-top:10px">
+                <button type="button" class="btn btn-secundario" @onclick="PrepararExportacion">Exportar...</button>
+                <button type="button" class="btn btn-secundario" @onclick="ElegirQueImportar">Importar...</button>
+            </div>
+
+            @if (_seleccion is { } seleccion)
             {
-                <p class="sub estado-advertencia">
-                    Las conexiones vienen sin contraseña: vas a tener que completarlas en Secrets Manager.
-                </p>
+                <div class="confirmacion">
+                    <p><b>Qué llevar en el archivo</b></p>
+
+                    <div class="arbol-caja">
+                        <ul class="arbol">
+                            <RamaDeExportacion T="string"
+                                               Herramienta="Commands Maker"
+                                               Grupo="Todos los dominios"
+                                               Elementos="seleccion.Dominios"
+                                               Vacio="Todavía no agregaste ningún dominio."
+                                               Cambio="StateHasChanged" />
+
+                            <RamaDeExportacion T="ConexionExportada"
+                                               Herramienta="Secrets Manager"
+                                               Grupo="Todas las conexiones"
+                                               Elementos="seleccion.Conexiones"
+                                               Vacio="Todavía no guardaste ninguna conexión."
+                                               Cambio="StateHasChanged">
+                                <Opciones>
+                                    <li>
+                                        <label class="chk">
+                                            <input type="checkbox" checked="@seleccion.Contrasenas"
+                                                   @onchange="e => seleccion.Contrasenas = e.Value is true" />
+                                            <span>Incluir las contraseñas</span>
+                                        </label>
+                                    </li>
+                                </Opciones>
+                            </RamaDeExportacion>
+
+                            <RamaDeExportacion T="PerfilExportado"
+                                               Herramienta="Tye Service Selector"
+                                               Grupo="Todos los perfiles"
+                                               Elementos="seleccion.PerfilesDeTye"
+                                               Vacio="Todavía no guardaste ningún perfil."
+                                               Cambio="StateHasChanged" />
+                        </ul>
+                    </div>
+
+                    @if (seleccion.Contrasenas)
+                    {
+                        <p class="sub estado-advertencia">
+                            El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
+                        </p>
+                    }
+
+                    <div class="acciones">
+                        <button type="button" class="btn btn-primario" disabled="@seleccion.NoHayNadaMarcado" @onclick="Exportar">
+                            Exportar...
+                        </button>
+                        <button type="button" class="btn btn-secundario" @onclick="() => _seleccion = null">Cancelar</button>
+                    </div>
+                </div>
             }
 
-            <p class="sub">Se agrega lo que te falta. Lo que ya tengas queda como está.</p>
+            @if (_aImportar is { } paquete)
+            {
+                <div class="confirmacion">
+                    <p><b>@_nombreDelArchivo</b></p>
+                    <p class="sub">Exportado por @(paquete.Origen ?? "alguien") el @paquete.Exportado.ToLocalTime().ToString("dd/MM/yyyy").</p>
+
+                    @if (paquete.EstaVacio)
+                    {
+                        <p class="sub estado-advertencia">No trae nada adentro.</p>
+                    }
+                    else
+                    {
+                        <p style="margin-top:10px">Trae @Contenido(paquete).</p>
+
+                        @if (paquete.Conexiones.Count > 0 && !paquete.IncluyeContrasenas)
+                        {
+                            <p class="sub estado-advertencia">
+                                Las conexiones vienen sin contraseña: vas a tener que completarlas en Secrets Manager.
+                            </p>
+                        }
+
+                        <p class="sub">Se agrega lo que te falta. Lo que ya tengas queda como está.</p>
+                    }
+
+                    <div class="acciones">
+                        <button type="button" class="btn btn-primario" disabled="@paquete.EstaVacio" @onclick="Importar">Importar</button>
+                        <button type="button" class="btn btn-secundario" @onclick="() => _aImportar = null">Cancelar</button>
+                    </div>
+                </div>
+            }
         }
 
-        <div class="acciones">
-            <button type="button" class="btn btn-primario" disabled="@paquete.EstaVacio" @onclick="Importar">Importar</button>
-            <button type="button" class="btn btn-secundario" @onclick="() => _aImportar = null">Cancelar</button>
-        </div>
     </div>
-}
+</div>

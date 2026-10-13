@@ -138,5 +138,8 @@ public sealed class MainFormBlazor : Form
         // otro para saber con qué datos escribir cada menú del explorador.
         servicios.AddSingleton<TransferenciaDeConfiguracion>();
         servicios.AddSingleton<MenusContextuales>();
+
+        // El verbo lo pone el Shell, que es el que conoce su propia línea de comandos.
+        servicios.AddSingleton(new ArranqueDelWidget(Program.VerboWidget));
     }
 }

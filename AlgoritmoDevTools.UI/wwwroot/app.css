@@ -479,6 +479,67 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 input.campo[readonly] { color: var(--texto-2); }
 
 /*
+  Configuraciones: el menú de secciones a la izquierda y el contenido al lado. Una sola sección a la
+  vista, porque apiladas obligan a buscar con la rueda lo que uno vino a cambiar.
+*/
+.ajustes {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.ajustes-menu {
+  width: 210px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ajustes-grupo {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+.ajustes-grupo:first-child { margin-top: 0; }
+
+.ajustes-item {
+  text-align: left;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color .12s ease;
+}
+
+.ajustes-item:hover { background: var(--boton-2); }
+
+/* La elegida se marca con el acento, igual que el ícono activo del panel lateral. */
+.ajustes-item.activo {
+  background: var(--boton-2);
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.ajustes-item:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* min-width para que un texto largo no estire la fila y empuje al menú. */
+.ajustes-cuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ya tiene el nombre de la sección arriba: adentro el primer título no necesita separarse más. */
+.ajustes-cuerpo > .grupo:first-child { margin-top: 0; }
+
+/*
   Árbol de exportación. Cada nivel se corre a la derecha y cuelga de una línea vertical, que es lo
   que deja seguir a qué herramienta pertenece un elemento sin tener que contar sangrías.
 */
