@@ -1,4 +1,5 @@
 @using AlgoritmoDevTools.Core.Infrastructure
+@using AlgoritmoDevTools.UI.Componentes
 @using AlgoritmoDevTools.UI.Servicios
 
 @*
@@ -62,22 +63,66 @@ else if (!_hayAlgoritmoCore)
 <TituloDeGrupo Texto="Exportar e importar configuración"
                Ayuda="Las conexiones, los dominios y los perfiles de Tye que cargaste a mano, en un archivo. Pasáselo a alguien que recién arranca y los tiene todos sin cargar nada. Importar agrega lo que falte y no toca lo que ya esté. No viaja nada propio de tu máquina: ni el tema, ni la carpeta de repositorios, ni hasta qué commit migraste." />
 
-<label class="chk" style="margin-top:10px">
-    <input type="checkbox" checked="@_conContrasenas" @onchange="e => _conContrasenas = e.Value is true" />
-    <span>Incluir las contraseñas de las conexiones</span>
-</label>
-
-@if (_conContrasenas)
-{
-    <p class="sub estado-advertencia">
-        El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
-    </p>
-}
-
-<div class="fila" style="margin-top:12px">
-    <button type="button" class="btn btn-secundario" @onclick="Exportar">Exportar...</button>
+<div class="fila" style="margin-top:10px">
+    <button type="button" class="btn btn-secundario" @onclick="PrepararExportacion">Exportar...</button>
     <button type="button" class="btn btn-secundario" @onclick="ElegirQueImportar">Importar...</button>
 </div>
+
+@if (_seleccion is { } seleccion)
+{
+    <div class="confirmacion">
+        <p><b>Qué llevar en el archivo</b></p>
+
+        <div class="arbol-caja">
+            <ul class="arbol">
+                <RamaDeExportacion T="string"
+                                   Herramienta="Commands Maker"
+                                   Grupo="Todos los dominios"
+                                   Elementos="seleccion.Dominios"
+                                   Vacio="Todavía no agregaste ningún dominio."
+                                   Cambio="StateHasChanged" />
+
+                <RamaDeExportacion T="ConexionExportada"
+                                   Herramienta="Secrets Manager"
+                                   Grupo="Todas las conexiones"
+                                   Elementos="seleccion.Conexiones"
+                                   Vacio="Todavía no guardaste ninguna conexión."
+                                   Cambio="StateHasChanged">
+                    <Opciones>
+                        <li>
+                            <label class="chk">
+                                <input type="checkbox" checked="@seleccion.Contrasenas"
+                                       @onchange="e => seleccion.Contrasenas = e.Value is true" />
+                                <span>Incluir las contraseñas</span>
+                            </label>
+                        </li>
+                    </Opciones>
+                </RamaDeExportacion>
+
+                <RamaDeExportacion T="PerfilExportado"
+                                   Herramienta="Tye Service Selector"
+                                   Grupo="Todos los perfiles"
+                                   Elementos="seleccion.PerfilesDeTye"
+                                   Vacio="Todavía no guardaste ningún perfil."
+                                   Cambio="StateHasChanged" />
+            </ul>
+        </div>
+
+        @if (seleccion.Contrasenas)
+        {
+            <p class="sub estado-advertencia">
+                El archivo va a llevar las contraseñas en texto plano. Mandalo por donde mandarías una credencial.
+            </p>
+        }
+
+        <div class="acciones">
+            <button type="button" class="btn btn-primario" disabled="@seleccion.NoHayNadaMarcado" @onclick="Exportar">
+                Exportar...
+            </button>
+            <button type="button" class="btn btn-secundario" @onclick="() => _seleccion = null">Cancelar</button>
+        </div>
+    </div>
+}
 
 @if (_aImportar is { } paquete)
 {

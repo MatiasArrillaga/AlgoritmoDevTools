@@ -1,0 +1,56 @@
+@typeparam T
+
+@*
+    Una herramienta dentro del árbol de exportación: la herramienta, sus opciones sueltas y el grupo
+    con los elementos que se pueden marcar de a uno.
+
+    La casilla de arriba manda sobre todo lo de abajo, y la del grupo sobre sus elementos. Cuando hay
+    algunos marcados y otros no, la casilla queda en el estado intermedio que dibuja el navegador
+    —ni tildada ni vacía—, que es lo que deja ver de un vistazo que ahí adentro hay algo elegido.
+*@
+
+<li class="rama">
+    <label class="chk">
+        <input type="checkbox" checked="@(Estado is EstadoDeRama.Todo)"
+               data-parcial="@((Estado is EstadoDeRama.Algo).ToString().ToLowerInvariant())"
+               @onchange="e => MarcarTodo(e.Value is true)" />
+        <span class="rama-titulo">@Herramienta</span>
+    </label>
+
+    <ul>
+        @if (Opciones is not null)
+        {
+            @Opciones
+        }
+
+        @if (Elementos.Count > 0)
+        {
+            <li>
+                <label class="chk">
+                    <input type="checkbox" checked="@(EstadoDelGrupo is EstadoDeRama.Todo)"
+                           data-parcial="@((EstadoDelGrupo is EstadoDeRama.Algo).ToString().ToLowerInvariant())"
+                           @onchange="e => MarcarElementos(e.Value is true)" />
+                    <span>@Grupo</span>
+                </label>
+
+                <ul>
+                    @foreach (var elemento in Elementos)
+                    {
+                        var actual = elemento;
+                        <li>
+                            <label class="chk">
+                                <input type="checkbox" checked="@actual.Marcado"
+                                       @onchange="e => Marcar(actual, e.Value is true)" />
+                                <span>@actual.Etiqueta</span>
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </li>
+        }
+        else
+        {
+            <li class="rama-vacia">@Vacio</li>
+        }
+    </ul>
+</li>

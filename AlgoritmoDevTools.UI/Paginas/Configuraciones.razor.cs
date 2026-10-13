@@ -20,13 +20,16 @@ public partial class Configuraciones : IDisposable
     [Inject]
     private BarraDeEstado Barra { get; set; } = default!;
 
+    [Inject]
+    private IJSRuntime JS { get; set; } = default!;
+
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
 
     private bool _carpetaExiste = true;
     private bool _hayAlgoritmoCore = true;
 
-    /// <summary>Apagado de entrada: el archivo sólo lleva credenciales si alguien lo pide.</summary>
-    private bool _conContrasenas;
+    /// <summary>Qué se va a llevar el archivo, mientras el árbol está a la vista.</summary>
+    private SeleccionDeExportacion? _seleccion;
 
     /// <summary>Lo que trajo el archivo elegido, mientras espera que lo confirmen.</summary>
     private PaqueteDeConfiguracion? _aImportar;
@@ -81,8 +84,22 @@ public partial class Configuraciones : IDisposable
 
     // --- Exportar e importar ----------------------------------------------------
 
+    /// <summary>
+    /// Abre el árbol con todo lo que hay para exportar. Se arma recién acá, al pedirlo, y no al
+    /// entrar a la pantalla: son tres consultas a SQLite que no tienen por qué correr cada vez que
+    /// alguien viene a cambiar el tema.
+    /// </summary>
+    private void PrepararExportacion()
+    {
+        _aImportar = null;
+        _seleccion = Transferencia.PrepararSeleccion();
+        Barra.Limpiar();
+    }
+
     private async Task Exportar()
     {
+        if (_seleccion is not { } seleccion) return;
+
         var ruta = await Dialogos.ElegirDondeGuardar(
             "Elegí dónde guardar la configuración",
             "Configuración de DevTools|*.json",
@@ -92,13 +109,26 @@ public partial class Configuraciones : IDisposable
 
         try
         {
-            var paquete = Transferencia.Armar(_conContrasenas);
+            var paquete = Transferencia.Armar(seleccion);
             Transferencia.Escribir(ruta, paquete);
             Barra.Informar($"Exportado a {Path.GetFileName(ruta)}: {Contenido(paquete)}.", "estado-exito");
+            _seleccion = null;
         }
         catch (Exception ex)
         {
             Barra.Informar($"No se pudo exportar: {ex.Message}", "estado-error");
+        }
+    }
+
+    /// <summary>
+    /// Pone en su estado intermedio las casillas que mandan sobre otras cuando hay algunas marcadas
+    /// y otras no. Es lo único del árbol que no se puede dejar resuelto en el marcado.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (_seleccion is not null)
+        {
+            await JS.InvokeVoidAsync("devtools.sincronizarParciales");
         }
     }
 
@@ -108,6 +138,8 @@ public partial class Configuraciones : IDisposable
     /// </summary>
     private async Task ElegirQueImportar()
     {
+        _seleccion = null;
+
         var elegidos = await Dialogos.ElegirArchivos(
             "Elegí el archivo de configuración",
             "Configuración de DevTools|*.json");

@@ -38,6 +38,7 @@ Si faltara, Microsoft distribuye un instalador de 2 MB, o se puede empaquetar la
 | Armazón | `AlgoritmoDevTools.UI/Layout/Shell.razor` | Descripción, panel lateral, contenido y barra de estado |
 | Catálogo | `AlgoritmoDevTools.UI/CatalogoDeHerramientas.cs` | Qué herramientas hay y qué componente dibuja cada una |
 | Estilos | `AlgoritmoDevTools.UI/wwwroot/app.css` | Los cuatro temas y todos los componentes visuales |
+| Scripts | `AlgoritmoDevTools.UI/wwwroot/app.js` | Lo poco que no se puede resolver desde Blazor |
 | Visor | `AlgoritmoDevTools.Shell/VisorEmbebido.cs` | El `BlazorWebView`, leyendo el contenido de adentro del ejecutable |
 | Contenido web | `AlgoritmoDevTools.Shell/ContenidoWebEmbebido.cs` | Le contesta cada archivo por su ruta, desde los recursos del ensamblado |
 
@@ -128,6 +129,14 @@ var ruta = await Dialogos.ElegirCarpeta("...");
 ```
 
 Vale para cualquier ventana modal que se abra desde un evento de la página, no sólo para estos tres diálogos.
+
+### Hay estados que no existen en el marcado
+
+Una casilla tiene tres estados, pero el HTML sólo sabe escribir dos: `checked` o nada. El tercero —el intermedio, ni tildada ni vacía, que es el que avisa que adentro hay algunos elegidos y otros no— **no es un atributo**: es una propiedad que sólo existe en el elemento ya creado. No hay forma de pedirla desde el marcado, y por lo tanto tampoco desde Blazor.
+
+El árbol de exportación lo resuelve en dos pasos: el componente deja escrito `data-parcial` en el marcado, y `devtools.sincronizarParciales` —en `app.js`— lo traduce a la propiedad después de cada dibujado, desde `OnAfterRenderAsync`. Va por atributo y no por `ElementReference`: las casillas son tantas como elementos haya, y mantener una referencia por cada una para algo que se resuelve con un selector no se paga.
+
+Si el script no cargara, las casillas padre se verían vacías en vez de intermedias. Es una degradación y no una falla: nada de lo que se exporta depende de eso.
 
 ### El visor no muestra los diálogos del navegador
 

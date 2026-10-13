@@ -39,41 +39,96 @@ public sealed class TransferenciaDeConfiguracion
     }
 
     /// <summary>
-    /// Junta lo que hay guardado en esta máquina.
+    /// Lee todo lo que hay guardado en esta máquina y lo deja listo para que la pantalla lo muestre
+    /// como un árbol. Viene todo marcado menos las contraseñas: lo normal es querer pasar todo, y
+    /// desmarcar lo que sobra es menos trabajo que marcar lo que falta.
+    ///
+    /// La contraseña no se trae acá. Se lee al armar el paquete, sólo si quedó marcada, para que no
+    /// ande dando vueltas en memoria por una pantalla que a lo mejor se cancela.
     /// </summary>
-    /// <param name="conContrasenas">
-    /// Si va la contraseña de cada conexión. Van en texto plano —así están guardadas—, así que el
-    /// archivo pasa a ser una credencial y quien lo exporta tiene que decidirlo cada vez.
-    /// </param>
-    public PaqueteDeConfiguracion Armar(bool conContrasenas) => new()
+    public SeleccionDeExportacion PrepararSeleccion() => new()
     {
-        Exportado = DateTimeOffset.Now,
-        Origen = Environment.UserName,
-        IncluyeContrasenas = conContrasenas,
-
         Conexiones = _conexiones.GetAll()
-            .Select(conexion => new ConexionExportada
+            .Select(conexion => new Seleccionable<ConexionExportada>
             {
-                Servidor = conexion.Server,
-                Base = conexion.DataBase,
-                Usuario = conexion.User,
-                // Con autenticación de Windows no hay nada que mandar: la contraseña guardada está
-                // de más y entra cada uno con su propia cuenta.
-                Contrasena = conContrasenas && !conexion.UseIntegratedSecurity ? conexion.Password : null,
-                SeguridadIntegrada = conexion.UseIntegratedSecurity
+                Valor = new ConexionExportada
+                {
+                    Servidor = conexion.Server,
+                    Base = conexion.DataBase,
+                    Usuario = conexion.User,
+                    SeguridadIntegrada = conexion.UseIntegratedSecurity
+                },
+                Etiqueta = conexion.ToString()
             })
             .ToList(),
 
-        Dominios = _dominios.GetAll(),
+        Dominios = _dominios.GetAll()
+            .Select(dominio => new Seleccionable<string> { Valor = dominio, Etiqueta = dominio })
+            .ToList(),
 
         PerfilesDeTye = _perfiles.GetProfileNames()
-            .Select(nombre => new PerfilExportado
+            .Select(nombre => new Seleccionable<PerfilExportado>
             {
-                Nombre = nombre,
-                Servicios = (_perfiles.GetProfileServices(nombre) ?? []).ToList()
+                Valor = new PerfilExportado
+                {
+                    Nombre = nombre,
+                    Servicios = (_perfiles.GetProfileServices(nombre) ?? []).ToList()
+                },
+                Etiqueta = nombre
             })
             .ToList()
     };
+
+    /// <summary>
+    /// Arma el paquete con lo que quedó marcado en el árbol.
+    /// </summary>
+    public PaqueteDeConfiguracion Armar(SeleccionDeExportacion seleccion)
+    {
+        // Copias y no las instancias del árbol: abajo se les escribe la contraseña, y escribirla
+        // sobre el árbol la dejaría puesta para siempre. Alcanzaría con marcar "incluir las
+        // contraseñas", exportar, desmarcarlo y volver a exportar para que el segundo archivo las
+        // llevara igual, sin que nada en pantalla lo dijera.
+        var conexiones = seleccion.Conexiones
+            .Where(elemento => elemento.Marcado)
+            .Select(elemento => new ConexionExportada
+            {
+                Servidor = elemento.Valor.Servidor,
+                Base = elemento.Valor.Base,
+                Usuario = elemento.Valor.Usuario,
+                SeguridadIntegrada = elemento.Valor.SeguridadIntegrada
+            })
+            .ToList();
+
+        if (seleccion.Contrasenas)
+        {
+            // La contraseña se busca recién acá, contra lo que hay guardado. Con autenticación de
+            // Windows no va ninguna, aunque haya uno guardada: cada uno entra con su propia cuenta.
+            var guardadas = _conexiones.GetAll();
+
+            foreach (var conexion in conexiones.Where(c => !c.SeguridadIntegrada))
+            {
+                conexion.Contrasena = guardadas
+                    .FirstOrDefault(guardada =>
+                        guardada.Server == conexion.Servidor &&
+                        guardada.DataBase == conexion.Base &&
+                        guardada.User == conexion.Usuario)
+                    ?.Password;
+            }
+        }
+
+        return new PaqueteDeConfiguracion
+        {
+            Exportado = DateTimeOffset.Now,
+            Origen = Environment.UserName,
+            IncluyeContrasenas = seleccion.Contrasenas,
+            Conexiones = conexiones,
+            Dominios = Marcados(seleccion.Dominios),
+            PerfilesDeTye = Marcados(seleccion.PerfilesDeTye)
+        };
+    }
+
+    private static List<T> Marcados<T>(IEnumerable<Seleccionable<T>> elementos) =>
+        elementos.Where(elemento => elemento.Marcado).Select(elemento => elemento.Valor).ToList();
 
     public void Escribir(string ruta, PaqueteDeConfiguracion paquete) =>
         File.WriteAllText(ruta, JsonSerializer.Serialize(paquete, Opciones));

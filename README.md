@@ -125,7 +125,11 @@ Las preferencias que valen para toda la aplicación. Una sola instancia: dos ley
 
 Arma y lee el archivo con el que un usuario le pasa su configuración a otro. Está en Configuraciones, y existe porque alguien que recién entra arranca con todo vacío: los trece dominios, las conexiones a cada servidor y los perfiles de servicios, todo a mano.
 
-**Qué viaja y qué no.** Van las tres cosas que sirven igual en cualquier máquina:
+**Se elige qué llevar.** Al exportar aparece un árbol con una rama por herramienta: la herramienta, sus opciones y sus elementos uno por uno. Arranca todo marcado —lo normal es querer pasar todo, y desmarcar lo que sobra es menos trabajo que marcar lo que falta— menos las contraseñas. Desde ahí se puede dejar afuera la conexión a producción o un perfil que se armó para una prueba puntual.
+
+Para sumarle una herramienta al árbol: su lista en `SeleccionDeExportacion`, llenarla en `PrepararSeleccion`, leerla en `Armar` y colgar un `<RamaDeExportacion>` más en la pantalla.
+
+**Qué puede viajar y qué no.** Van las tres cosas que sirven igual en cualquier máquina:
 
 | Va | De dónde sale |
 |---|---|
@@ -135,7 +139,9 @@ Arma y lee el archivo con el que un usuario le pasa su configuración a otro. Es
 
 Queda afuera, a propósito, todo lo que es de la máquina o del avance personal de cada uno: los dominios usados recientemente, el baseline de migraciones —dice hasta qué commit migró uno—, el tema y la carpeta de repositorios. Importar cualquiera de esos le cambiaría al que recibe algo que no es suyo.
 
-**Las contraseñas sólo van si se piden.** Están guardadas en texto plano, así que un archivo con contraseñas adentro es una credencial y hay que tratarlo como tal. El tilde de Configuraciones arranca apagado y la pantalla avisa cuando se enciende. Las conexiones con autenticación de Windows nunca la llevan, aunque tengan una guardada: cada uno entra con su cuenta.
+**Las contraseñas sólo van si se piden.** Están guardadas en texto plano, así que un archivo con contraseñas adentro es una credencial y hay que tratarlo como tal. El tilde arranca apagado en cada exportación —no se recuerda a propósito— y la pantalla avisa cuando se enciende. Las conexiones con autenticación de Windows nunca la llevan, aunque tengan una guardada: cada uno entra con su cuenta.
+
+La contraseña se lee del repositorio recién al escribir el archivo, y sobre **copias** de lo que muestra el árbol. Escribirla sobre el árbol la dejaría puesta: alcanzaría con marcar el tilde, exportar, desmarcarlo y volver a exportar para que el segundo archivo las llevara igual, sin que nada en pantalla lo dijera.
 
 **Importar agrega, nunca pisa.** El que importa puede tener la misma conexión con otra contraseña, dominios propios o un perfil con el mismo nombre y otros servicios adentro; sobrescribirlos sería romperle lo que ya tenía andando. Lo repetido se cuenta y se informa, así el número que ve no tiene por qué dar con el del archivo. Importar dos veces el mismo archivo no duplica nada.
 
