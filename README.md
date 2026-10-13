@@ -1,4 +1,4 @@
-# AlgoritmoDevTools
+﻿# AlgoritmoDevTools
 
 Suite de utilidades para el desarrollo diario sobre **SoftCerealCore** / **AlgoritmoCore**. Un único `.exe` que hospeda varias herramientas, comparte servicios comunes —SQLite local, user-secrets, conexiones guardadas— y se distribuye sin instalador.
 
@@ -123,7 +123,9 @@ Las preferencias que valen para toda la aplicación. Una sola instancia: dos ley
 
 ### `ArranqueDelWidget`
 
-Si el widget de bandeja arranca con la sesión de Windows. Se prende desde Configuraciones y desde el menú del propio widget, y por eso el nombre de la entrada y el verbo viven acá: con cada lado escribiendo lo suyo, el usuario terminaría con dos programas arrancando y con un tilde que no coincide con el otro.
+Si el widget de bandeja arranca con la sesión de Windows. Se prende desde Configuraciones, que es donde está todo lo demás que la aplicación deja puesto en el sistema; el menú del widget no lo repite.
+
+Acá viven el nombre de la entrada, el verbo y el nombre del mutex, porque los usan los dos extremos: esta pantalla para saber si hay un widget y para levantarlo, y el widget al nacer para asegurarse de ser uno solo.
 
 **Lo que queda residente es el widget, no la ventana**: al iniciar sesión deja el ícono en la bandeja, sin abrir nada.
 

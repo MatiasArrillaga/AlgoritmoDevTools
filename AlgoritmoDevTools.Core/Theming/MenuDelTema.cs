@@ -28,6 +28,9 @@ public static class MenuDelTema
     /// <summary>Lo que se le suma al alto de fábrica de cada ítem para que respire.</summary>
     private const int AlturaExtraDelItem = 12;
 
+    /// <summary>Aire a los costados del texto, el mismo para todos los ítems del menú.</summary>
+    private const int MargenDelTexto = 12;
+
     /// <summary>
     /// Aplica el tema vigente a un menú y a todos los submenús que cuelguen de él.
     ///
@@ -53,10 +56,14 @@ public static class MenuDelTema
 
         if (menu is ToolStripDropDownMenu desplegable)
         {
-            // Sin la banda de íconos de la izquierda, que acá no tiene nada que mostrar. La del
-            // tilde queda: es donde se dibuja el de "Iniciar con Windows".
+            // Sin la banda de íconos de la izquierda, que acá no tiene nada que mostrar.
             desplegable.ShowImageMargin = false;
-            desplegable.ShowCheckMargin = true;
+
+            // La del tilde sólo si alguno lo usa. Es la que corre todo el texto a la derecha, y en
+            // un menú donde no hay nada que tildar deja a los renglones empezando en el aire.
+            desplegable.ShowCheckMargin = menu.Items
+                .OfType<ToolStripMenuItem>()
+                .Any(item => item.Checked || item.CheckOnClick);
         }
 
         Redondear(menu);
@@ -68,6 +75,11 @@ public static class MenuDelTema
             item.AutoSize = false;
             item.Height = item.GetPreferredSize(Size.Empty).Height + AlturaExtraDelItem;
             item.Width = menu.Width - menu.Padding.Horizontal;
+
+            // Todos los renglones arrancan en la misma columna y con el texto al medio del alto,
+            // incluidos los que sólo muestran un dato: alineados de a uno, saltan a la vista.
+            item.TextAlign = ContentAlignment.MiddleLeft;
+            item.Padding = new Padding(MargenDelTexto, 0, MargenDelTexto, 0);
 
             // Un submenú recién existe cuando se lo abre, así que se lo prepara en ese momento.
             if (item is ToolStripMenuItem conHijos && conHijos.HasDropDownItems)

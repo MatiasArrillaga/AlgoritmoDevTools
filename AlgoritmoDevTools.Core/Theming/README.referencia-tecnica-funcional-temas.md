@@ -1,4 +1,4 @@
-# Referencia técnica y funcional — Temas de la interfaz
+﻿# Referencia técnica y funcional — Temas de la interfaz
 
 Documento del sistema de temas de Algoritmo DevTools: los cuatro temas que ofrece Configuraciones, cómo se aplican a toda la aplicación y qué hay que saber para extenderlo.
 
@@ -149,6 +149,7 @@ Tres cosas de los menús no se pueden pedir de otra forma, y por eso hay una cla
 | El pintado | `ContextMenuStrip` no tiene colores propios más allá del fondo: el resaltado, los separadores, el tilde y las flechas los dibuja el renderizador, y hay que reemplazarlo entero |
 | Las esquinas redondeadas | Un menú no tiene borde configurable. Se recorta la ventana con una región, y el borde se redibuja con suavizado porque el recorte sale dentado |
 | El alto de cada ítem | De fábrica sale apretado contra el texto; se fija ítem por ítem con `AutoSize = false` |
+| La columna donde arranca el texto | La decide el margen del tilde, que `ToolStripDropDownMenu` muestra siempre. En un menú donde no hay nada que tildar deja los renglones empezando en el aire, así que se enciende sólo si algún ítem lo usa |
 
 El renderizador se registra en `ToolStripManager`, que es de toda la aplicación: cada submenú es una ventana aparte y pedírselo uno por uno obligaría a acordarse de los que todavía no existen. Los submenús sí necesitan su propia preparación —región y altos—, y eso se engancha a `DropDownOpening`, porque un submenú recién existe cuando se lo abre.
 

@@ -10,9 +10,9 @@ namespace AlgoritmoDevTools.UI.Servicios;
 /// bandeja, con los secretos y los comandos a mano, sin abrir nada. Abrir la ventana entera en cada
 /// arranque sería imponerse sobre lo que el usuario vino a hacer.
 ///
-/// Existe para que el nombre de la entrada y el verbo vivan en un solo lugar. Se prende desde dos
-/// lados —el menú del widget y Configuraciones—, y con cada uno escribiendo su propia entrada el
-/// usuario terminaría con dos programas arrancando, y con un tilde que no coincide con el otro.
+/// Existe para que el nombre de la entrada, el verbo y el del mutex vivan en un solo lugar: los
+/// usan los dos extremos, esta pantalla para saber si hay un widget y para levantarlo, y el widget
+/// al nacer para asegurarse de ser uno solo.
 ///
 /// El verbo lo pasa el Shell, que es el que conoce su propia línea de comandos.
 /// </summary>

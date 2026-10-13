@@ -3,7 +3,6 @@ using AlgoritmoDevTools.Core.Theming;
 using Microsoft.Win32;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
-using AlgoritmoDevTools.UI.Servicios;
 using System.Diagnostics;
 using System.Drawing;
 
@@ -33,7 +32,6 @@ internal sealed class WidgetContext : ApplicationContext
     private const string TITULO = "Algoritmo DevTools";
 
     private readonly NotifyIcon _icono;
-    private readonly ArranqueDelWidget _arranque = new(Program.VerboWidget);
     private readonly SecretService _secretos = SecretService.Shared;
     private readonly SavedConnectionsRepository _conexiones = new(new ToolStorage("Shared"));
     private readonly DomainRepository _dominios = new(new ToolStorage("CommandsMaker"));
@@ -87,14 +85,8 @@ internal sealed class WidgetContext : ApplicationContext
         menu.Items.Add(ItemComandos());
         menu.Items.Add(new ToolStripSeparator());
 
-        var arranque = new ToolStripMenuItem("Iniciar con Windows")
-        {
-            Checked = _arranque.EstaActivado(),
-            CheckOnClick = true,
-        };
-        arranque.Click += (_, _) => AlternarArranque(arranque.Checked);
-        menu.Items.Add(arranque);
-
+        // El arranque con Windows no está acá: se maneja desde Configuraciones, que es donde está
+        // todo lo demás que la aplicación deja puesto en el sistema.
         menu.Items.Add("Abrir DevTools", null, (_, _) => AbrirShell());
         menu.Items.Add("Salir", null, (_, _) => Salir());
 
@@ -281,17 +273,6 @@ internal sealed class WidgetContext : ApplicationContext
     }
 
     // --- Acciones del propio widget -----------------------------------------
-
-    private void AlternarArranque(bool activar)
-    {
-        var error = activar ? _arranque.Activar() : _arranque.Desactivar();
-
-        if (error is not null)
-        {
-            MessageBox.Show($"No se pudo cambiar el inicio con Windows:\n\n{error}",
-                TITULO, MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
 
     private void AbrirShell()
     {
