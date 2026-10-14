@@ -66,7 +66,27 @@ jobs:
       - name: Sacar las notas del mensaje de la etiqueta
         shell: pwsh
         run: |
-          $notas = (git tag -l --format='%(contents)' '${{ github.ref_name }}') -join "`n"
+          # actions/checkout deja la etiqueta como liviana aunque se haya anotado: crea la
+          # referencia apuntando al commit y no trae el objeto de la etiqueta. Sin esto,
+          # %(contents) devuelve el mensaje del COMMIT, y el release sale diciendo "Subir a
+          # 1.1.0" con la linea de Co-Authored-By en lugar de los cambios. Paso en la v1.1.0 y
+          # hubo que corregir el release a mano.
+          git fetch --tags --force --quiet
+
+          $notas = ''
+
+          if ((git cat-file -t '${{ github.ref_name }}') -eq 'tag') {
+            $notas = (git tag -l --format='%(contents)' '${{ github.ref_name }}') -join "`n"
+          }
+          else {
+            # Sigue sin ser anotada: se pregunta por la API, que siempre tiene el objeto.
+            Write-Host "La etiqueta no llego anotada al runner; se leen las notas por la API."
+            $ref = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/${{ github.ref_name }}" | ConvertFrom-Json
+
+            if ($ref.object.type -eq 'tag') {
+              $notas = (gh api "repos/$env:GITHUB_REPOSITORY/git/tags/$($ref.object.sha)" | ConvertFrom-Json).message
+            }
+          }
 
           if ([string]::IsNullOrWhiteSpace($notas)) {
             # Etiqueta sin mensaje: liviana, o anotada sin texto. El release sale igual, con lo

@@ -183,18 +183,23 @@
                     </div>
                 </div>
             }
-            else
-            {
-                <div class="fila" style="margin-top:12px">
-                    <button type="button" class="btn btn-secundario" disabled="@Actualizaciones.Buscando" @onclick="Buscar">
-                        @(Actualizaciones.Buscando ? "Buscando..." : "Buscar actualizaciones")
-                    </button>
-                </div>
+            @*
+                Siempre a la vista, y no sólo cuando no hay nada nuevo.
 
-                @if (!string.IsNullOrEmpty(Actualizaciones.UltimoResultado))
-                {
-                    <p class="sub">@Actualizaciones.UltimoResultado</p>
-                }
+                Estaba adentro del else, que es justo al revés de cuando hace falta: teniendo una
+                versión disponible no había forma de volver a preguntar, y eso importa porque lo que
+                se muestra —las notas, sobre todo— se leyó una vez al abrir. Si el release se corrige
+                después de esa consulta, sin este botón hay que reiniciar la aplicación para verlo.
+            *@
+            <div class="fila" style="margin-top:12px">
+                <button type="button" class="btn btn-secundario" disabled="@Actualizaciones.Buscando" @onclick="Buscar">
+                    @(Actualizaciones.Buscando ? "Buscando..." : "Buscar actualizaciones")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Actualizaciones.UltimoResultado))
+            {
+                <p class="sub">@Actualizaciones.UltimoResultado</p>
             }
         }
 
