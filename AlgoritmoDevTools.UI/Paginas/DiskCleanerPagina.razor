@@ -30,7 +30,7 @@
     {
         @* Con algo elegido, la acción primaria es limpiarlo: volver a analizar pasa a secundaria. *@
         <button type="button" class="btn btn-primario" @onclick="AlternarConfirmacion">
-            Limpiar lo elegido (@Tamano(Elegido()))
+            Limpiar lo elegido (@Tamanos.Legible(Elegido()))
         </button>
         <button type="button" class="btn btn-secundario" @onclick="Escanear">Volver a analizar</button>
     }
@@ -56,7 +56,7 @@
         else
         {
             <p>
-                Se van a borrar <b>@Tamano(_plan.Bytes)</b> en @_plan.Rutas @(_plan.Rutas == 1 ? "ubicación" : "ubicaciones"),
+                Se van a borrar <b>@Tamanos.Legible(_plan.Bytes)</b> en @_plan.Rutas @(_plan.Rutas == 1 ? "ubicación" : "ubicaciones"),
                 de @_plan.Items.Count @(_plan.Items.Count == 1 ? "cosa" : "cosas").
             </p>
 
@@ -64,7 +64,7 @@
                 @foreach (var entrada in _plan.Items)
                 {
                     <li>
-                        <b>@Tamano(entrada.Bytes)</b> — @entrada.Item.Ubicacion
+                        <b>@Tamanos.Legible(entrada.Bytes)</b> — @entrada.Item.Ubicacion
                         @if (entrada.Item.ComoSeRevierte is null)
                         {
                             <span class="estado-advertencia"> no se puede deshacer</span>
@@ -106,10 +106,32 @@
 
         <div class="acciones">
             <button type="button" class="btn btn-primario" disabled="@(!SePuedeConfirmar() || _borrando)" @onclick="Borrar">
-                @(_borrando ? "Borrando…" : "Borrar")
+                @if (_borrando)
+                {
+                    <span class="girando"></span>
+                    <text>Borrando…</text>
+                }
+                else
+                {
+                    <text>Borrar</text>
+                }
             </button>
-            <button type="button" class="btn btn-secundario" disabled="@_borrando" @onclick="CerrarConfirmacion">Cancelar</button>
+            @if (_borrando)
+            {
+                @* Corta lo que falta. Lo ya borrado no vuelve, y el reporte lo dice. *@
+                <button type="button" class="btn btn-secundario" @onclick="CancelarBorrado">Cortar</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-secundario" @onclick="CerrarConfirmacion">Cancelar</button>
+            }
         </div>
+
+        @if (_borrando)
+        {
+            <p class="sub borrando-ahora">@_borrandoAhora</p>
+            <p class="sub">Si cortás, lo que ya se borró no vuelve: se detiene lo que falta.</p>
+        }
     </div>
 }
 
@@ -119,7 +141,7 @@
                    Ayuda="Lo liberado sale de sumar lo que pesaba cada cosa antes de borrarla, no de mirar el espacio libre del disco: ese número se mueve solo." />
 
     <p>
-        Se liberaron <b>@Tamano(_resultado.BytesLiberados)</b> en @_resultado.Borradas
+        Se liberaron <b>@Tamanos.Legible(_resultado.BytesLiberados)</b> en @_resultado.Borradas
         @(_resultado.Borradas == 1 ? "ubicación" : "ubicaciones").
         @if (_resultado.Fallidas > 0)
         {
@@ -131,7 +153,7 @@
         @foreach (var porItem in _resultado.Items)
         {
             <li>
-                <b>@Tamano(porItem.BytesLiberados)</b> — @porItem.Item.Ubicacion
+                <b>@Tamanos.Legible(porItem.BytesLiberados)</b> — @porItem.Item.Ubicacion
                 @if (porItem.Fallos.Count > 0)
                 {
                     <span class="sub"> · @porItem.Fallos.Count sin borrar</span>
@@ -163,7 +185,7 @@
     @if (_resultado.ParaElevar.Count > 0)
     {
         <p class="estado-advertencia">
-            Falta @Tamano(_resultado.ParaElevar.Sum(i => i.Bytes)) que necesita permiso de administrador:
+            Falta @Tamanos.Legible(_resultado.ParaElevar.Sum(i => i.Bytes)) que necesita permiso de administrador:
             @string.Join(", ", _resultado.ParaElevar.Select(i => i.Item.Ubicacion)).
         </p>
         <div class="acciones">
@@ -186,27 +208,14 @@
     <TituloDeGrupo Texto="El disco"
                    Ayuda="Lo elegido y lo que se puede limpiar salen de lo medido. Ocupado es todo el resto, sin desglosar. Libre es lo que había al momento de analizar." />
 
-    <div class="barra-disco" role="img" aria-label="@DescripcionDeLaBarra()">
-        @foreach (var tramo in Tramos())
-        {
-            <div class="@tramo.Clase" style="width:@(tramo.Porcentaje.ToString("0.###", Cultura))%"></div>
-        }
-    </div>
-
-    <div class="leyenda-disco">
-        @foreach (var tramo in Tramos())
-        {
-            <span>
-                <span class="@($"punto {tramo.Clase}")"></span>
-                @tramo.Nombre
-                <b>@Tamano(tramo.Bytes)</b>
-            </span>
-        }
-    </div>
+    <BarraDeDisco Total="_escaneo.Disco.Total"
+                  Tramos="Tramos()"
+                  ConLeyenda="true"
+                  Descripcion="@DescripcionDeLaBarra()" />
 
     @if (Elegido() > 0)
     {
-        <p class="sub">Si limpiás lo elegido, el libre pasaría a @Tamano(_escaneo.Disco.Libre + Elegido()) — es una cuenta, no una medición.</p>
+        <p class="sub">Si limpiás lo elegido, el libre pasaría a @Tamanos.Legible(_escaneo.Disco.Libre + Elegido()) — es una cuenta, no una medición.</p>
     }
 
     @foreach (var grupo in _items.GroupBy(i => i.Item.Grupo).OrderBy(g => g.Key))
@@ -219,7 +228,7 @@
                        ClaseDelIcono="@(cual == GrupoLimpieza.Seguro ? "es-seguro" : "es-con-criterio")"
                        Detalle="@TotalDelGrupo(cual)"
                        Contraido="@EstaContraido(cual)"
-                       AlAlternar="@(_ => AlternarGrupo(cual))"
+                       AlAlternar="@(cual == GrupoLimpieza.Seguro ? AlternarSeguro : AlternarConCriterio)"
                        Ayuda="@(cual == GrupoLimpieza.Seguro
                                   ? "Vuelve solo: compilados, descargas, temporales. Viene tildado."
                                   : "Depende de cómo trabajes, y algunas cosas no se recuperan. Viene destildado y conviene leer qué se pierde.")" />
@@ -260,7 +269,7 @@
                                        @onchange="e => Tildar(actual, e.Value is true)" />
                             </td>
                             <td>@actual.Item.Ubicacion</td>
-                            <td class="col-tamano">@Tamano(actual.Item.Bytes)</td>
+                            <td class="col-tamano">@Tamanos.Legible(actual.Item.Bytes)</td>
                             <td class="sub">@actual.Item.Descripcion</td>
                         </tr>
 

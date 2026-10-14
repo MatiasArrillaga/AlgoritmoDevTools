@@ -2,6 +2,7 @@
 using System.Globalization;
 using AlgoritmoDevTools.Tools.DiskCleaner.Model;
 using AlgoritmoDevTools.Tools.DiskCleaner.Services;
+using AlgoritmoDevTools.UI.Componentes;
 using AlgoritmoDevTools.UI.Servicios;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -16,13 +17,6 @@ namespace AlgoritmoDevTools.UI.Paginas;
 /// </summary>
 public partial class DiskCleanerPagina : IDisposable
 {
-    /// <summary>
-    /// Los anchos de la barra van en el atributo style, así que el separador decimal tiene que ser
-    /// el punto: con la cultura de la máquina, "15,9" no es un porcentaje válido y el tramo se
-    /// dibuja con ancho cero sin que nada avise.
-    /// </summary>
-    private static readonly CultureInfo Cultura = CultureInfo.InvariantCulture;
-
     /// <summary>
     /// Los dos íconos que encabezan cada grupo, del mismo juego que los del panel lateral: 16x16,
     /// trazo, sin relleno. Encabezan el grupo en lugar de repetirse en cada fila, que era una
@@ -59,6 +53,9 @@ public partial class DiskCleanerPagina : IDisposable
     private PlanDeLimpieza? _plan;
     private ResultadoDeLimpieza? _resultado;
     private bool _borrando;
+    private string? _borrandoAhora;
+    private DateTime _ultimoAviso;
+    private CancellationTokenSource? _cancelandoBorrado;
     private bool _elevando;
 
     /// <summary>Los grupos plegados. Vale para esta vista: no se recuerda entre corridas.</summary>
@@ -89,8 +86,12 @@ public partial class DiskCleanerPagina : IDisposable
             var resultado = await Escaneo.EscanearAsync(_cancelacion.Token);
             Mostrar(resultado);
 
+            // Es el unico momento en que este numero es cierto: el inicio lo muestra tal cual, con
+            // su fecha, en lugar de volver a medir medio disco para abrir una pantalla.
+            Perfil.GuardarEscaneo(Gestionable());
+
             Barra.Informar(
-                $"{_items.Count} cosas encontradas, {Tamano(Gestionable())} que se pueden limpiar.",
+                $"{_items.Count} cosas encontradas, {Tamanos.Legible(Gestionable())} que se pueden limpiar.",
                 "estado-exito");
         }
         catch (OperationCanceledException)
@@ -164,13 +165,16 @@ public partial class DiskCleanerPagina : IDisposable
         if (_plan is null || !SePuedeConfirmar()) return;
 
         _borrando = true;
+        _cancelandoBorrado = new CancellationTokenSource();
         Barra.Informar("Borrando…", "estado-neutro");
 
         try
         {
-            var resultado = await Ejecutor.EjecutarSinElevarAsync(_plan);
+            var resultado = await Ejecutor.EjecutarSinElevarAsync(
+                _plan, QueSeEstaBorrando(), _cancelandoBorrado.Token);
 
             _resultado = resultado;
+            Perfil.GuardarLimpieza(resultado.BytesLiberados);
             _escaneo = null;
             _items = [];
             _elegido = null;
@@ -186,8 +190,38 @@ public partial class DiskCleanerPagina : IDisposable
         finally
         {
             _borrando = false;
+            _borrandoAhora = null;
+            _cancelandoBorrado?.Dispose();
+            _cancelandoBorrado = null;
         }
     }
+
+    /// <summary>
+    /// Corta lo que falta. Lo que ya se borró no vuelve: el reporte lo muestra igual, porque es
+    /// peor dejar al usuario sin saber qué alcanzó a pasar.
+    /// </summary>
+    private void CancelarBorrado()
+    {
+        _cancelandoBorrado?.Cancel();
+        _borrandoAhora = "Cortando…";
+    }
+
+    /// <summary>
+    /// Lo que se está borrando en este momento, para que la espera no parezca un cuelgue.
+    ///
+    /// Deja pasar a lo sumo un aviso cada 80 ms. Borrar 428 carpetas llega en ráfaga, y redibujar
+    /// la pantalla una vez por carpeta cuesta más que el borrado y encima deja un texto que no se
+    /// alcanza a leer.
+    /// </summary>
+    private IProgress<string> QueSeEstaBorrando() => new Progress<string>(que =>
+    {
+        var ahora = DateTime.UtcNow;
+        if (ahora - _ultimoAviso < TimeSpan.FromMilliseconds(80)) return;
+
+        _ultimoAviso = ahora;
+        _borrandoAhora = que;
+        StateHasChanged();
+    });
 
     /// <summary>
     /// Pide el permiso de administrador <b>una sola vez</b> y borra lo que había quedado,
@@ -213,6 +247,7 @@ public partial class DiskCleanerPagina : IDisposable
             }
 
             _resultado = Fusionar(_resultado, elevados);
+            Perfil.GuardarLimpieza(_resultado.BytesLiberados);
             Barra.Informar(Cierre(_resultado), _resultado.Fallidas > 0 ? "estado-advertencia" : "estado-exito");
         }
         catch (Exception ex)
@@ -256,7 +291,9 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     private static string Cierre(ResultadoDeLimpieza resultado)
     {
-        var liberado = $"Se liberaron {Tamano(resultado.BytesLiberados)}";
+        var liberado = resultado.Cancelado
+            ? $"Cortado: alcanzó a liberar {Tamanos.Legible(resultado.BytesLiberados)}"
+            : $"Se liberaron {Tamanos.Legible(resultado.BytesLiberados)}";
 
         if (resultado.Fallidas == 0) return $"{liberado}.";
 
@@ -333,6 +370,18 @@ public partial class DiskCleanerPagina : IDisposable
 
     private bool EstaContraido(GrupoLimpieza grupo) => _contraidos.Contains(grupo);
 
+    /// <summary>
+    /// Uno por grupo, con nombre, en lugar de una lambda armada en el marcado.
+    ///
+    /// Una lambda inline se reconstruye en cada dibujado, así que el <c>EventCallback</c> que
+    /// recibe el encabezado cambia de identidad todas las veces y lo obliga a redibujarse sin que
+    /// nada haya cambiado. Con un método nombrado el delegate es el mismo —mismo objeto, mismo
+    /// método— y la comparación da igual.
+    /// </summary>
+    private void AlternarSeguro(bool _) => AlternarGrupo(GrupoLimpieza.Seguro);
+
+    private void AlternarConCriterio(bool _) => AlternarGrupo(GrupoLimpieza.ConCriterio);
+
     private void AlternarGrupo(GrupoLimpieza grupo)
     {
         if (!_contraidos.Add(grupo)) _contraidos.Remove(grupo);
@@ -357,7 +406,7 @@ public partial class DiskCleanerPagina : IDisposable
         var elegido = delGrupo.Where(i => i.Tildado).Sum(i => i.Item.Bytes);
         var total = delGrupo.Where(i => i.Item.SeBorra).Sum(i => i.Item.Bytes);
 
-        return $"{Tamano(elegido)} de {Tamano(total)}";
+        return $"{Tamanos.Legible(elegido)} de {Tamanos.Legible(total)}";
     }
 
     private bool HayElegibles(GrupoLimpieza grupo) =>
@@ -427,18 +476,15 @@ public partial class DiskCleanerPagina : IDisposable
     private long SePuede() => Gestionable() - Elegido();
 
     private string Resumen() =>
-        $"{Tamano(_escaneo!.Disco.Libre)} libres de {Tamano(_escaneo.Disco.Total)} · {Tamano(Gestionable())} se pueden limpiar";
+        $"{Tamanos.Legible(_escaneo!.Disco.Libre)} libres de {Tamanos.Legible(_escaneo.Disco.Total)} · {Tamanos.Legible(Gestionable())} se pueden limpiar";
 
     /// <summary>
-    /// Los cuatro tramos de la barra, en orden. Un tramo en cero no se dibuja, y uno muy chico
-    /// igual se ve: con 6,9 GB sobre 476 el libre es el 1,4 % y desaparecería justo cuando más
-    /// importa mirarlo.
+    /// Los cuatro tramos de la barra, en orden. El ancho y el mínimo visible los resuelve el
+    /// componente: acá sólo se dice qué es cada tramo y cuánto pesa.
     /// </summary>
-    private IEnumerable<Tramo> Tramos()
+    private IReadOnlyList<TramoDelDisco> Tramos()
     {
         var total = _escaneo!.Disco.Total;
-        if (total <= 0) yield break;
-
         var elegido = Elegido();
         var sePuede = SePuede();
         var libre = _escaneo.Disco.Libre;
@@ -447,38 +493,19 @@ public partial class DiskCleanerPagina : IDisposable
         // debe borrar, y nombrarlo invita a borrarlo por fuera de la herramienta.
         var ocupado = Math.Max(0, total - elegido - sePuede - libre);
 
-        foreach (var tramo in new[]
-                 {
-                     new Tramo("Elegido para limpiar", "tramo-elegido", elegido, 0),
-                     new Tramo("Se puede limpiar", "tramo-posible", sePuede, 0),
-                     new Tramo("Ocupado", "tramo-ocupado", ocupado, 0),
-                     new Tramo("Libre", "tramo-libre", libre, 0)
-                 })
-        {
-            if (tramo.Bytes <= 0) continue;
-
-            yield return tramo with { Porcentaje = Math.Max(1.2, tramo.Bytes * 100d / total) };
-        }
+        return
+        [
+            new TramoDelDisco("Elegido para limpiar", "tramo-elegido", elegido),
+            new TramoDelDisco("Se puede limpiar", "tramo-posible", sePuede),
+            new TramoDelDisco("Ocupado", "tramo-ocupado", ocupado),
+            new TramoDelDisco("Libre", "tramo-libre", libre)
+        ];
     }
 
     private string DescripcionDeLaBarra() =>
-        $"Disco de {Tamano(_escaneo!.Disco.Total)}: {Tamano(Elegido())} elegidos para limpiar, " +
-        $"{Tamano(SePuede())} que se pueden limpiar y {Tamano(_escaneo.Disco.Libre)} libres.";
+        $"Disco de {Tamanos.Legible(_escaneo!.Disco.Total)}: {Tamanos.Legible(Elegido())} elegidos para limpiar, " +
+        $"{Tamanos.Legible(SePuede())} que se pueden limpiar y {Tamanos.Legible(_escaneo.Disco.Libre)} libres.";
 
-    private static string Tamano(long bytes)
-    {
-        string[] unidades = ["B", "KB", "MB", "GB", "TB"];
-        double valor = bytes;
-        var unidad = 0;
-
-        while (valor >= 1024 && unidad < unidades.Length - 1)
-        {
-            valor /= 1024;
-            unidad++;
-        }
-
-        return $"{valor.ToString(unidad == 0 ? "0" : "0.##", CultureInfo.CurrentCulture)} {unidades[unidad]}";
-    }
 
     public void Dispose()
     {
@@ -489,5 +516,4 @@ public partial class DiskCleanerPagina : IDisposable
 
     private enum EstadoDelTilde { Ninguno, Algunos, Todos }
 
-    private sealed record Tramo(string Nombre, string Clase, long Bytes, double Porcentaje);
 }

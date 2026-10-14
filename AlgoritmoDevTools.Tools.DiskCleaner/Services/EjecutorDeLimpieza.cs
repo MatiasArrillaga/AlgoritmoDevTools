@@ -25,9 +25,14 @@ public sealed record ResultadoPorItem(
 /// Cómo le fue a la limpieza entera.
 /// </summary>
 /// <param name="ParaElevar">Lo que no se intentó porque necesita permiso de administrador.</param>
+/// <param name="Cancelado">
+/// Si se cortó por pedido del usuario. Lo que figura en <paramref name="Items"/> igual se borró:
+/// cancelar detiene lo que falta, no deshace lo hecho.
+/// </param>
 public sealed record ResultadoDeLimpieza(
     IReadOnlyList<ResultadoPorItem> Items,
-    IReadOnlyList<ItemDelPlan> ParaElevar)
+    IReadOnlyList<ItemDelPlan> ParaElevar,
+    bool Cancelado = false)
 {
     public long BytesLiberados => Items.Sum(i => i.BytesLiberados);
     public int Borradas => Items.Sum(i => i.Borradas);
@@ -57,8 +62,13 @@ public sealed class EjecutorDeLimpieza
     /// Ejecuta lo que no necesita elevación y devuelve aparte lo que sí, para que se pida permiso
     /// una sola vez al final en lugar de una por ítem.
     /// </summary>
+    /// <param name="progreso">
+    /// Qué se está borrando en este momento. Borrar cientos de carpetas tarda lo suficiente como
+    /// para que, sin esto, parezca que la aplicación se colgó.
+    /// </param>
     public Task<ResultadoDeLimpieza> EjecutarSinElevarAsync(
         PlanDeLimpieza plan,
+        IProgress<string>? progreso = null,
         CancellationToken cancelacion = default) =>
         Task.Run(() =>
         {
@@ -67,7 +77,9 @@ public sealed class EjecutorDeLimpieza
 
             foreach (var entrada in plan.Items)
             {
-                cancelacion.ThrowIfCancellationRequested();
+                // Cortar y devolver lo hecho, en lugar de tirar. Cancelar a mitad de camino no
+                // deshace nada: lo que ya se borró, se borró, y el usuario tiene que poder verlo.
+                if (cancelacion.IsCancellationRequested) break;
 
                 if (entrada.RequiereAdmin)
                 {
@@ -75,15 +87,28 @@ public sealed class EjecutorDeLimpieza
                     continue;
                 }
 
-                hechos.Add(Ejecutar(entrada, cancelacion));
+                hechos.Add(Ejecutar(entrada, progreso, cancelacion));
             }
 
-            return new ResultadoDeLimpieza(hechos, paraElevar);
+            return new ResultadoDeLimpieza(hechos, paraElevar, cancelacion.IsCancellationRequested);
         }, cancelacion);
 
-    private static ResultadoPorItem Ejecutar(ItemDelPlan entrada, CancellationToken cancelacion)
+    private static ResultadoPorItem Ejecutar(
+        ItemDelPlan entrada,
+        IProgress<string>? progreso,
+        CancellationToken cancelacion)
     {
-        var (liberados, borradas, fallos) = BorrarRutas(entrada.Rutas, cancelacion);
+        // El nombre del ítem y no el de la ruta: "Compilados de 428 proyectos" dice algo, y una
+        // ruta de carpeta de salida pasa tan rápido que no se llega a leer. El contador es lo que
+        // muestra que avanza.
+        var (liberados, borradas, fallos) = BorrarRutas(
+            entrada.Rutas,
+            cancelacion,
+            progreso is null ? null : (hechas, total) => progreso.Report(
+                total <= 1
+                    ? entrada.Item.Ubicacion
+                    : $"{entrada.Item.Ubicacion} ({hechas} de {total})"));
+
         return new ResultadoPorItem(entrada.Item, liberados, borradas, fallos);
     }
 
@@ -96,15 +121,23 @@ public sealed class EjecutorDeLimpieza
     /// </summary>
     public static (long Liberados, int Borradas, IReadOnlyList<FalloDeBorrado> Fallos) BorrarRutas(
         IEnumerable<string> rutas,
-        CancellationToken cancelacion = default)
+        CancellationToken cancelacion = default,
+        Action<int, int>? avisar = null)
     {
         long liberados = 0;
         var borradas = 0;
         var fallos = new List<FalloDeBorrado>();
 
-        foreach (var ruta in rutas)
+        var todas = rutas as IReadOnlyList<string> ?? [.. rutas];
+        var hechas = 0;
+
+        foreach (var ruta in todas)
         {
-            cancelacion.ThrowIfCancellationRequested();
+            // Se corta entre rutas y no en medio de una: una carpeta a medio borrar es peor que
+            // una carpeta entera borrada o una entera intacta.
+            if (cancelacion.IsCancellationRequested) break;
+
+            avisar?.Invoke(++hechas, todas.Count);
 
             // Última pregunta antes de tocar el disco. Que llegue hasta acá algo protegido sería un
             // error de otro lado, pero este es el único punto donde el error se vuelve irreversible.
@@ -182,11 +215,13 @@ public sealed class EjecutorDeLimpieza
 
     private static long Pesar(string ruta, CancellationToken cancelacion)
     {
-        if (Directory.Exists(ruta)) return EnumeracionSegura.Medir(ruta, cancelacion).Bytes;
-
         try
         {
-            return new FileInfo(ruta).Length;
+            // Sin token: medir ya empezó y tarda poco. Cortarlo acá dejaría la ruta borrada sin
+            // haberla contado, y el reporte diría que se liberó menos de lo que se liberó.
+            return Directory.Exists(ruta)
+                ? EnumeracionSegura.Medir(ruta).Bytes
+                : new FileInfo(ruta).Length;
         }
         catch
         {

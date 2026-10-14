@@ -1,0 +1,31 @@
+@*
+    El disco entero en una barra, repartido en tramos.
+
+    El tramo que representa lo que no se ofrece es anónimo a propósito: ahí adentro está lo que no
+    se debe borrar, y nombrarlo invita a borrarlo por fuera de la herramienta. El total puede ser
+    honesto sin nombrarlo.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Tools.DiskCleaner/README.referencia-tecnica-funcional-limpieza-disco.md
+*@
+
+<div class="barra-disco" role="img" aria-label="@Descripcion">
+    @foreach (var tramo in Visibles())
+    {
+        <div class="@tramo.Clase" style="width:@(Porcentaje(tramo).ToString("0.###", Invariante))%"></div>
+    }
+</div>
+
+@if (ConLeyenda)
+{
+    <div class="leyenda-disco">
+        @foreach (var tramo in Visibles())
+        {
+            <span>
+                <span class="@($"punto {tramo.Clase}")"></span>
+                @tramo.Nombre
+                <b>@Tamanos.Legible(tramo.Bytes)</b>
+            </span>
+        }
+    </div>
+}

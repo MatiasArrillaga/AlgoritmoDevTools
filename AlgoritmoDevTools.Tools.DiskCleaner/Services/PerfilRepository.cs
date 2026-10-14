@@ -1,5 +1,6 @@
 ﻿using AlgoritmoDevTools.Core.Abstractions;
 using AlgoritmoDevTools.Tools.DiskCleaner.Model;
+using Microsoft.Data.Sqlite;
 
 namespace AlgoritmoDevTools.Tools.DiskCleaner.Services;
 
@@ -34,7 +35,78 @@ public sealed class PerfilRepository
                 TILDADO      INTEGER NOT NULL,
                 IGNORAR      INTEGER NOT NULL DEFAULT 0,
                 ACTUALIZADO  TEXT NOT NULL
+            );
+
+            -- Una sola fila, con lo que hace falta para mostrar el estado del disco en el inicio
+            -- sin volver a medirlo. La clave fija es lo que garantiza que sea una y no se acumulen.
+            CREATE TABLE IF NOT EXISTS ULTIMA_CORRIDA (
+                ID                 INTEGER PRIMARY KEY CHECK (ID = 1),
+                ESCANEO_FECHA      TEXT,
+                ESCANEO_LIBERABLE  INTEGER NOT NULL DEFAULT 0,
+                LIMPIEZA_FECHA     TEXT,
+                LIMPIEZA_LIBERADO  INTEGER NOT NULL DEFAULT 0
             );";
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Deja anotado cuánto se podía liberar y cuándo se midió.
+    ///
+    /// Lo guarda el escaneo porque es el único momento en que ese número es cierto: el inicio lo
+    /// muestra tal cual, con su fecha, en lugar de volver a medir medio disco para abrir una
+    /// pantalla.
+    /// </summary>
+    public void GuardarEscaneo(long liberable) => Escribir(@"
+        INSERT INTO ULTIMA_CORRIDA (ID, ESCANEO_FECHA, ESCANEO_LIBERABLE)
+        VALUES (1, @fecha, @valor)
+        ON CONFLICT(ID) DO UPDATE SET ESCANEO_FECHA = @fecha, ESCANEO_LIBERABLE = @valor;", liberable);
+
+    /// <summary>Deja anotado cuánto se liberó y cuándo.</summary>
+    public void GuardarLimpieza(long liberado) => Escribir(@"
+        INSERT INTO ULTIMA_CORRIDA (ID, LIMPIEZA_FECHA, LIMPIEZA_LIBERADO)
+        VALUES (1, @fecha, @valor)
+        ON CONFLICT(ID) DO UPDATE SET LIMPIEZA_FECHA = @fecha, LIMPIEZA_LIBERADO = @valor;", liberado);
+
+    /// <summary>
+    /// Lo de la última vez. Nunca tira: esto lo lee el inicio, y una base que no se pueda abrir no
+    /// puede impedir que la aplicación arranque.
+    /// </summary>
+    public UltimaCorrida LeerUltimaCorrida()
+    {
+        try
+        {
+            using var db = _storage.OpenConnection();
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = @"
+                SELECT ESCANEO_FECHA, ESCANEO_LIBERABLE, LIMPIEZA_FECHA, LIMPIEZA_LIBERADO
+                FROM ULTIMA_CORRIDA WHERE ID = 1;";
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return UltimaCorrida.Ninguna;
+
+            return new UltimaCorrida(
+                Fecha(reader, 0),
+                reader.GetInt64(1),
+                Fecha(reader, 2),
+                reader.GetInt64(3));
+        }
+        catch
+        {
+            return UltimaCorrida.Ninguna;
+        }
+    }
+
+    /// <summary>Se guarda en UTC y se devuelve en hora local, que es la que el usuario reconoce.</summary>
+    private static DateTime? Fecha(SqliteDataReader reader, int columna) =>
+        reader.IsDBNull(columna) ? null : DateTime.Parse(reader.GetString(columna)).ToLocalTime();
+
+    private void Escribir(string sentencia, long valor)
+    {
+        using var db = _storage.OpenConnection();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = sentencia;
+        cmd.Parameters.AddWithValue("@fecha", DateTime.UtcNow.ToString("O"));
+        cmd.Parameters.AddWithValue("@valor", valor);
         cmd.ExecuteNonQuery();
     }
 

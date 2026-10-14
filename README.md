@@ -425,3 +425,23 @@ El caso del widget se prueba aparte, porque es el que fallaba: se abre el widget
 Lo resuelve el target `EmbeberElContenidoWeb`, que los incrusta como recursos del ensamblado antes de compilar, y `ContenidoWebEmbebido`, que se los sirve al visor por la misma ruta que pediría un navegador. El target de limpieza borra después los `.pdb`, los `.xml`, el `.staticwebassets.endpoints.json` y la carpeta `wwwroot` que el publish deja igual, de manera que **lo único que queda es el ejecutable**.
 
 El proyecto del Shell usa **`Microsoft.NET.Sdk.Razor`** aunque sea una aplicación de escritorio. Con el SDK común no genera su manifiesto de recursos estáticos y la ventana abre en blanco, sin ningún error.
+
+## Deuda conocida
+
+| Qué | Estado |
+|---|---|
+| `System.Security.Cryptography.Pkcs` 9.0.4 con vulnerabilidad **alta** ([GHSA-846f-f764-76mx](https://github.com/advisories/GHSA-846f-f764-76mx)) y otra moderada | Llega como transitiva de `Microsoft.Data.SqlClient` 6.1.3, así que se arregla subiendo esa, y ese salto de major **merece su propio cambio**: la librería ya cambió defaults de cifrado entre versiones y tanto el Secrets Manager como el Commands Maker dependen de ese comportamiento |
+
+**El detalle que importa de esta deuda no es el paquete, es cómo apareció.** Estuvo invisible todo el tiempo porque el feed interno `packages.algoritmo.com.ar` no respondía, y con el feed caído el SDK **no audita nada**: en lugar de avisar, emite un `NU1900` diciendo que no pudo consultar los datos de vulnerabilidad.
+
+O sea que un build sin advertencias de seguridad puede significar dos cosas muy distintas:
+
+```bash
+# Esto NO prueba que no haya paquetes vulnerables si el feed no contesta.
+dotnet build -c Release
+
+# Esto sí: lo pregunta y falla si no puede.
+dotnet list package --vulnerable --include-transitive
+```
+
+Conviene correr el segundo antes de dar por buena una verificación de seguridad, y desconfiar de cualquier `NU1900` en la salida: mientras esté, la auditoría no está corriendo.

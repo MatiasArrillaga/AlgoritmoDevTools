@@ -143,3 +143,22 @@ public sealed record ItemLimpieza
 /// en lugar de aparecer destildados.
 /// </summary>
 public sealed record ItemOfrecido(ItemLimpieza Item, bool Tildado);
+
+/// <summary>
+/// Lo que quedó de la última vez, para poder mostrarlo sin volver a medir.
+///
+/// Existe por el inicio de la aplicación: ahí hay que decir cuánto se puede liberar, y medirlo
+/// tarda cerca de un minuto. Lo que se muestra es **una foto con fecha**, no el estado de ahora, y
+/// por eso la fecha viaja al lado del número: sin ella, un dato de hace un mes se lee como si fuera
+/// de recién.
+/// </summary>
+/// <param name="Escaneo">Cuándo se midió por última vez. <c>null</c> si nunca se analizó.</param>
+/// <param name="Liberable">Cuánto se podía liberar en ese momento.</param>
+/// <param name="Limpieza">Cuándo se limpió por última vez. <c>null</c> si nunca se limpió.</param>
+/// <param name="Liberado">Cuánto se liberó esa vez.</param>
+public sealed record UltimaCorrida(DateTime? Escaneo, long Liberable, DateTime? Limpieza, long Liberado)
+{
+    public static readonly UltimaCorrida Ninguna = new(null, 0, null, 0);
+
+    public bool SeAnalizoAlgunaVez => Escaneo is not null;
+}

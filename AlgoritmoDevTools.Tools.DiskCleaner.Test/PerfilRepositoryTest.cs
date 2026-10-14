@@ -108,6 +108,65 @@ public class PerfilRepositoryTest
         Assert.False(repo.Aplicar([deriva]).Single().Tildado);
     }
 
+    [Fact]
+    public void Sin_haber_analizado_nunca_no_inventa_datos()
+    {
+        using var arbol = new ArbolDePrueba();
+        var corrida = new PerfilRepository(new StorageDePrueba(arbol.Raiz)).LeerUltimaCorrida();
+
+        // El inicio distingue "nunca analizaste" de "0 GB liberables", que dicen cosas distintas.
+        Assert.False(corrida.SeAnalizoAlgunaVez);
+        Assert.Null(corrida.Escaneo);
+        Assert.Null(corrida.Limpieza);
+    }
+
+    [Fact]
+    public void Lo_medido_y_lo_liberado_quedan_anotados_por_separado()
+    {
+        using var arbol = new ArbolDePrueba();
+        var repo = new PerfilRepository(new StorageDePrueba(arbol.Raiz));
+
+        repo.GuardarEscaneo(79_000_000_000);
+        repo.GuardarLimpieza(23_000_000_000);
+
+        var corrida = repo.LeerUltimaCorrida();
+
+        // Guardar uno no puede pisar al otro: son dos momentos distintos y el inicio los muestra
+        // como dos renglones.
+        Assert.Equal(79_000_000_000, corrida.Liberable);
+        Assert.Equal(23_000_000_000, corrida.Liberado);
+        Assert.NotNull(corrida.Escaneo);
+        Assert.NotNull(corrida.Limpieza);
+    }
+
+    [Fact]
+    public void Volver_a_analizar_pisa_lo_anterior_y_no_acumula()
+    {
+        using var arbol = new ArbolDePrueba();
+        var repo = new PerfilRepository(new StorageDePrueba(arbol.Raiz));
+
+        repo.GuardarEscaneo(100);
+        repo.GuardarEscaneo(200);
+        repo.GuardarEscaneo(300);
+
+        Assert.Equal(300, repo.LeerUltimaCorrida().Liberable);
+    }
+
+    [Fact]
+    public void La_fecha_vuelve_en_hora_local()
+    {
+        using var arbol = new ArbolDePrueba();
+        var repo = new PerfilRepository(new StorageDePrueba(arbol.Raiz));
+
+        repo.GuardarEscaneo(1);
+        var guardada = repo.LeerUltimaCorrida().Escaneo!.Value;
+
+        // Se guarda en UTC y se muestra en la hora que el usuario reconoce. Sin la conversión, en
+        // Argentina el "hace cuánto" daría tres horas de más.
+        Assert.Equal(DateTimeKind.Local, guardada.Kind);
+        Assert.True(Math.Abs((DateTime.Now - guardada).TotalMinutes) < 2);
+    }
+
     /// <summary>
     /// Apunta a una carpeta temporal en lugar de a la base real del usuario.
     /// </summary>

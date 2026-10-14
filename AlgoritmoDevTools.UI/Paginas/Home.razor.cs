@@ -1,6 +1,8 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Tools.DiskCleaner.Model;
+using AlgoritmoDevTools.Tools.DiskCleaner.Services;
 using AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 using AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
 using AlgoritmoDevTools.UI;
@@ -16,6 +18,9 @@ public partial class Home : IDisposable
 {
     [Inject]
     private BaselineRepository Baselines { get; set; } = default!;
+
+    [Inject]
+    private PerfilRepository Limpieza { get; set; } = default!;
 
     [Inject]
     private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
@@ -43,6 +48,9 @@ public partial class Home : IDisposable
     private string _baseDeDatos = string.Empty;
     private string _nombresActivos = string.Empty;
     private string? _baseline;
+    private UltimaCorrida _ultimaCorrida = UltimaCorrida.Ninguna;
+    private long _discoTotal;
+    private long _discoOcupado;
     private string? _rama;
     private string? _perfil;
     private int _serviciosActivos;
@@ -74,6 +82,7 @@ public partial class Home : IDisposable
 
         LeerServicios();
         LeerBaseline();
+        LeerDisco();
 
         _perfil = ConfiguracionDevTools.Compartida.UltimoPerfilDeTye;
         if (string.IsNullOrWhiteSpace(_perfil)) _perfil = null;
@@ -181,4 +190,80 @@ public partial class Home : IDisposable
         var sha = Baselines.GetBaseline(RutasDeTrabajo.AlgoritmoCore);
         _baseline = sha is null ? null : (sha.Length >= 7 ? sha[..7] : sha);
     }
+
+    /// <summary>
+    /// El estado del disco. <b>No mide nada</b>, y eso no es una omisión: medir lo que se puede
+    /// liberar tarda cerca de un minuto, y esta pantalla tiene que aparecer al instante.
+    ///
+    /// Lo ocupado sale del sistema y es de ahora; lo liberable es lo que quedó anotado la última
+    /// vez que alguien analizó el disco. Son dos cosas distintas y por eso la fecha va al lado del
+    /// número: sin ella, un dato de hace un mes se lee como si fuera de recién.
+    /// </summary>
+    private void LeerDisco()
+    {
+        _ultimaCorrida = Limpieza.LeerUltimaCorrida();
+
+        try
+        {
+            var raiz = Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.System));
+            if (string.IsNullOrWhiteSpace(raiz)) return;
+
+            var unidad = new DriveInfo(raiz);
+            _discoTotal = unidad.TotalSize;
+            _discoOcupado = unidad.TotalSize - unidad.AvailableFreeSpace;
+        }
+        catch
+        {
+            // Una unidad que no se pueda consultar deja la tarjeta sin cifras, no a la pantalla sin
+            // abrir.
+        }
+    }
+
+    /// <summary>
+    /// Cuándo fue, en palabras. Un "hace 2 días" dice más de un vistazo que una fecha, que obliga a
+    /// restar mentalmente para saber si el número de al lado todavía sirve.
+    /// </summary>
+    private static string HaceCuanto(DateTime cuando)
+    {
+        var transcurrido = DateTime.Now - cuando;
+
+        if (transcurrido < TimeSpan.FromMinutes(1)) return "recién";
+        if (transcurrido < TimeSpan.FromHours(1)) return $"hace {(int)transcurrido.TotalMinutes} min";
+        if (transcurrido < TimeSpan.FromDays(1)) return $"hace {(int)transcurrido.TotalHours} h";
+        if (transcurrido < TimeSpan.FromDays(2)) return "ayer";
+        if (transcurrido < TimeSpan.FromDays(30)) return $"hace {(int)transcurrido.TotalDays} días";
+
+        return cuando.ToString("d/M/yyyy");
+    }
+
+    /// <summary>
+    /// Pasado un tiempo, lo medido deja de ser representativo y la tarjeta lo dice en gris en lugar
+    /// de esconderlo: un número viejo con su fecha es más útil que ningún número.
+    /// </summary>
+    private static bool EstaViejo(DateTime cuando) => DateTime.Now - cuando > TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// Los tramos de la barra del inicio. Son tres y no cuatro: "elegido para limpiar" sale de lo
+    /// que el usuario tilda, y acá no hay nada tildado.
+    ///
+    /// Lo liberable es lo que quedó anotado del último análisis, así que puede no corresponderse
+    /// con el ocupado de ahora. Es el precio de no medir medio disco para abrir una pantalla, y por
+    /// eso la fecha va escrita debajo.
+    /// </summary>
+    private IReadOnlyList<TramoDelDisco> TramosDelDisco()
+    {
+        var libre = _discoTotal - _discoOcupado;
+        var liberable = Math.Min(_ultimaCorrida.Liberable, _discoOcupado);
+
+        return
+        [
+            new TramoDelDisco("Se puede liberar", "tramo-posible", liberable),
+            new TramoDelDisco("Ocupado", "tramo-ocupado", _discoOcupado - liberable),
+            new TramoDelDisco("Libre", "tramo-libre", libre)
+        ];
+    }
+
+    private string DescripcionDelDisco() =>
+        $"Disco de {Tamanos.Legible(_discoTotal)}: {Tamanos.Legible(_discoOcupado)} ocupados, " +
+        $"de los cuales {Tamanos.Legible(_ultimaCorrida.Liberable)} se pueden liberar.";
 }

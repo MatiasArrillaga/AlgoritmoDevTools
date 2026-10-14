@@ -128,6 +128,61 @@ public class LimpiezaServiceTest
     }
 
     [Fact]
+    public async Task Cancelar_corta_lo_que_falta_y_devuelve_lo_hecho()
+    {
+        using var arbol = new ArbolDePrueba();
+
+        // Diez items de a uno: la cancelacion se pide mientras el borrado avanza.
+        var ofrecidos = new List<ItemOfrecido>();
+        for (var i = 0; i < 10; i++)
+        {
+            arbol.Archivo($"item{i}\\dato.bin", 1000);
+            ofrecidos.Add(new ItemOfrecido(Item($"item{i}", [Path.Combine(arbol.Raiz, $"item{i}")]), true));
+        }
+
+        var plan = await new LimpiezaService().PrevisualizarAsync(ofrecidos);
+        using var cancelacion = new CancellationTokenSource();
+
+        // Cortar apenas empieza el tercero.
+        var avisos = 0;
+        var progreso = new Progress<string>(_ =>
+        {
+            if (++avisos >= 3) cancelacion.Cancel();
+        });
+
+        var resultado = await new EjecutorDeLimpieza()
+            .EjecutarSinElevarAsync(plan, progreso, cancelacion.Token);
+
+        Assert.True(resultado.Cancelado);
+
+        // Lo que alcanzó a borrarse está en el reporte: cancelar detiene lo que falta, no deshace
+        // lo hecho. Perder ese dato dejaría al usuario sin saber qué pasó.
+        Assert.True(resultado.Borradas > 0, "No alcanzó a borrar nada");
+        Assert.True(resultado.Borradas < 10, $"No cortó: borró las {resultado.Borradas}");
+        Assert.Equal(resultado.Borradas * 1000, resultado.BytesLiberados);
+
+        // Y lo que no se tocó sigue en disco.
+        var quedaron = Enumerable.Range(0, 10).Count(i => Directory.Exists(Path.Combine(arbol.Raiz, $"item{i}")));
+        Assert.Equal(10 - resultado.Borradas, quedaron);
+    }
+
+    [Fact]
+    public async Task Sin_cancelar_no_queda_marcado_como_cortado()
+    {
+        using var arbol = new ArbolDePrueba();
+        var carpeta = arbol.Carpeta("x");
+        arbol.Archivo(@"x\a.bin", 50);
+
+        var plan = await new LimpiezaService().PrevisualizarAsync(
+            [new ItemOfrecido(Item("normal", [carpeta]), true)]);
+
+        var resultado = await new EjecutorDeLimpieza().EjecutarSinElevarAsync(plan);
+
+        Assert.False(resultado.Cancelado);
+        Assert.Equal(50, resultado.BytesLiberados);
+    }
+
+    [Fact]
     public async Task Avisa_cuando_algo_va_a_necesitar_permisos()
     {
         using var arbol = new ArbolDePrueba();
