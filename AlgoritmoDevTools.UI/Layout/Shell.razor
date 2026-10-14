@@ -77,4 +77,7 @@
         <span>@_base</span>
         <span class="@(Estado.Mensaje is null ? "" : Estado.Clase)">@(Estado.Mensaje ?? _mensaje)</span>
     </div>
+
+    @* Van acá y no en una pantalla: lo que avisan puede haber terminado estando en otra. *@
+    <Pastillas />
 </div>

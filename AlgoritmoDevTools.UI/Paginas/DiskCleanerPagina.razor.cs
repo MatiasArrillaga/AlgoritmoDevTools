@@ -37,7 +37,7 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     private const string PalabraDeConfirmacion = "BORRAR";
 
-    [Inject] private EscaneoService Escaneo { get; set; } = default!;
+    [Inject] private SesionDeLimpieza Sesion { get; set; } = default!;
     [Inject] private LimpiezaService Limpieza { get; set; } = default!;
     [Inject] private EjecutorDeLimpieza Ejecutor { get; set; } = default!;
     [Inject] private ElevacionService Elevacion { get; set; } = default!;
@@ -45,11 +45,23 @@ public partial class DiskCleanerPagina : IDisposable
     [Inject] private BarraDeEstado Barra { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
-    private Escaneo? _escaneo;
-    private List<ItemOfrecido> _items = [];
+    /// <summary>
+    /// Lo medido, lo encontrado y si hay un análisis corriendo salen de la sesión y no de campos de
+    /// acá: tienen que sobrevivir a que el usuario se vaya a otra herramienta. Está explicado en
+    /// <see cref="SesionDeLimpieza"/>.
+    ///
+    /// <see cref="Items"/> devuelve la lista de la sesión, no una copia, así que tildar sigue
+    /// escribiendo donde corresponde.
+    /// </summary>
+    private Escaneo? Medido => Sesion.Medido;
+
+    private List<ItemOfrecido> Items => Sesion.Items;
+
+    private bool Analizando => Sesion.Analizando;
+
+    private int Ignorados => Sesion.Ignorados;
+
     private ItemOfrecido? _elegido;
-    private bool _escaneando;
-    private int _ignorados;
     private PlanDeLimpieza? _plan;
     private ResultadoDeLimpieza? _resultado;
     private bool _borrando;
@@ -61,7 +73,35 @@ public partial class DiskCleanerPagina : IDisposable
     /// <summary>Los grupos plegados. Vale para esta vista: no se recuerda entre corridas.</summary>
     private readonly HashSet<GrupoLimpieza> _contraidos = [];
     private string _confirmacionEscrita = string.Empty;
-    private CancellationTokenSource? _cancelacion;
+
+    /// <summary>
+    /// Si la pantalla sigue montada. Lo que corre en segundo plano y avisa —el progreso del
+    /// borrado— tiene que mirarlo antes de tocar nada de acá.
+    /// </summary>
+    private bool _enPantalla = true;
+
+    /// <summary>
+    /// La pantalla se vuelve a dibujar cuando la sesión avisa, porque el análisis puede terminar
+    /// estando el usuario en otra herramienta y al volver tiene que encontrarlo hecho.
+    ///
+    /// El aviso llega en el hilo en el que terminó el recorrido del disco, así que el repintado se
+    /// pide con <c>InvokeAsync</c>: tocar la interfaz desde otro hilo la cierra.
+    /// </summary>
+    protected override void OnInitialized() => Sesion.Cambio += AlCambiarLaSesion;
+
+    private void AlCambiarLaSesion()
+    {
+        // El aviso puede llegar en el mismo momento en que la pantalla se está yendo, entre que la
+        // sesión lo dispara y el Dispose alcanza a desuscribirse. Si el dibujante ya no está, no
+        // hay nada que repintar y tampoco motivo para tirar: es justo lo que cerraba la ventana.
+        try
+        {
+            InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
 
     /// <summary>
     /// El estado intermedio de una casilla no existe en el marcado: es una propiedad del elemento
@@ -71,54 +111,21 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool primeraVez)
     {
-        if (_items.Count > 0) await JS.InvokeVoidAsync("devtools.sincronizarParciales");
+        if (Items.Count > 0) await JS.InvokeVoidAsync("devtools.sincronizarParciales");
     }
 
-    private async Task Escanear()
+    /// <summary>
+    /// Lanza el análisis y vuelve en el acto: lo corre la sesión, que vive más que esta pantalla.
+    /// Los cincuenta segundos que tarda se pueden pasar en otra herramienta.
+    /// </summary>
+    private void Escanear()
     {
-        _escaneando = true;
-        _cancelacion = new CancellationTokenSource();
         _resultado = null;
-        Barra.Limpiar();
-
-        try
-        {
-            var resultado = await Escaneo.EscanearAsync(_cancelacion.Token);
-            Mostrar(resultado);
-
-            // Es el unico momento en que este numero es cierto: el inicio lo muestra tal cual, con
-            // su fecha, en lugar de volver a medir medio disco para abrir una pantalla.
-            Perfil.GuardarEscaneo(Gestionable());
-
-            Barra.Informar(
-                $"{_items.Count} cosas encontradas, {Tamanos.Legible(Gestionable())} que se pueden limpiar.",
-                "estado-exito");
-        }
-        catch (OperationCanceledException)
-        {
-            Barra.Informar("Análisis cancelado.", "estado-neutro");
-        }
-        catch (Exception ex)
-        {
-            Barra.Informar($"No se pudo analizar el disco: {ex.Message}", "estado-error");
-        }
-        finally
-        {
-            _escaneando = false;
-            _cancelacion?.Dispose();
-            _cancelacion = null;
-        }
-    }
-
-    private void Mostrar(Escaneo resultado)
-    {
-        _escaneo = resultado;
-        _items = [.. Perfil.Aplicar(resultado.Items)];
-        _ignorados = resultado.Items.Count - _items.Count;
         _elegido = null;
+        Sesion.Analizar();
     }
 
-    private void Cancelar() => _cancelacion?.Cancel();
+    private void Cancelar() => Sesion.Cancelar();
 
     /// <summary>
     /// El mismo botón abre y cierra la confirmación. Al abrirla se arma el plan en el momento: lo
@@ -139,7 +146,7 @@ public partial class DiskCleanerPagina : IDisposable
 
         try
         {
-            _plan = await Limpieza.PrevisualizarAsync(_items);
+            _plan = await Limpieza.PrevisualizarAsync(Items);
         }
         catch (Exception ex)
         {
@@ -175,10 +182,8 @@ public partial class DiskCleanerPagina : IDisposable
 
             _resultado = resultado;
             Perfil.GuardarLimpieza(resultado.BytesLiberados);
-            _escaneo = null;
-            _items = [];
+            Sesion.Olvidar();
             _elegido = null;
-            _ignorados = 0;
             CerrarConfirmacion();
 
             Barra.Informar(Cierre(resultado), resultado.Fallidas > 0 ? "estado-advertencia" : "estado-exito");
@@ -215,6 +220,10 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     private IProgress<string> QueSeEstaBorrando() => new Progress<string>(que =>
     {
+        // Si la pantalla ya no está, el borrado sigue pero no hay dónde mostrarlo: repintar un
+        // componente desarmado es lo que cierra la ventana.
+        if (!_enPantalla) return;
+
         var ahora = DateTime.UtcNow;
         if (ahora - _ultimoAviso < TimeSpan.FromMilliseconds(80)) return;
 
@@ -332,15 +341,15 @@ public partial class DiskCleanerPagina : IDisposable
     {
         if (!ofrecido.Item.SePuedeElegir) return;
 
-        var posicion = _items.FindIndex(i => i.Item.Id == ofrecido.Item.Id);
+        var posicion = Items.FindIndex(i => i.Item.Id == ofrecido.Item.Id);
         if (posicion < 0) return;
 
-        _items[posicion] = _items[posicion] with { Tildado = tildado };
-        if (Seleccionado(ofrecido)) _elegido = _items[posicion];
+        Items[posicion] = Items[posicion] with { Tildado = tildado };
+        if (Seleccionado(ofrecido)) _elegido = Items[posicion];
 
         // Lo elegido cambió, así que el plan que estuviera a la vista ya no lo describe.
         CerrarConfirmacion();
-        Perfil.Guardar([_items[posicion]]);
+        Perfil.Guardar([Items[posicion]]);
     }
 
     /// <summary>
@@ -351,18 +360,18 @@ public partial class DiskCleanerPagina : IDisposable
     {
         var cambiados = new List<ItemOfrecido>();
 
-        for (var i = 0; i < _items.Count; i++)
+        for (var i = 0; i < Items.Count; i++)
         {
-            if (_items[i].Item.Grupo != grupo || !_items[i].Item.SePuedeElegir) continue;
+            if (Items[i].Item.Grupo != grupo || !Items[i].Item.SePuedeElegir) continue;
 
-            _items[i] = _items[i] with { Tildado = tildado };
-            cambiados.Add(_items[i]);
+            Items[i] = Items[i] with { Tildado = tildado };
+            cambiados.Add(Items[i]);
         }
 
         if (cambiados.Count == 0) return;
 
         if (_elegido is not null)
-            _elegido = _items.FirstOrDefault(i => i.Item.Id == _elegido.Item.Id) ?? _elegido;
+            _elegido = Items.FirstOrDefault(i => i.Item.Id == _elegido.Item.Id) ?? _elegido;
 
         CerrarConfirmacion();
         Perfil.Guardar(cambiados);
@@ -402,7 +411,7 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     private string TotalDelGrupo(GrupoLimpieza grupo)
     {
-        var delGrupo = _items.Where(i => i.Item.Grupo == grupo).ToArray();
+        var delGrupo = Items.Where(i => i.Item.Grupo == grupo).ToArray();
         var elegido = delGrupo.Where(i => i.Tildado).Sum(i => i.Item.Bytes);
         var total = delGrupo.Where(i => i.Item.SeBorra).Sum(i => i.Item.Bytes);
 
@@ -410,11 +419,11 @@ public partial class DiskCleanerPagina : IDisposable
     }
 
     private bool HayElegibles(GrupoLimpieza grupo) =>
-        _items.Any(i => i.Item.Grupo == grupo && i.Item.SePuedeElegir);
+        Items.Any(i => i.Item.Grupo == grupo && i.Item.SePuedeElegir);
 
     private EstadoDelTilde EstadoDelGrupo(GrupoLimpieza grupo)
     {
-        var elegibles = _items.Where(i => i.Item.Grupo == grupo && i.Item.SePuedeElegir).ToArray();
+        var elegibles = Items.Where(i => i.Item.Grupo == grupo && i.Item.SePuedeElegir).ToArray();
         if (elegibles.Length == 0) return EstadoDelTilde.Ninguno;
 
         var tildados = elegibles.Count(i => i.Tildado);
@@ -431,8 +440,7 @@ public partial class DiskCleanerPagina : IDisposable
     private void AlternarIgnorar(ItemOfrecido ofrecido)
     {
         Perfil.Ignorar(ofrecido.Item.Id);
-        _items.RemoveAll(i => i.Item.Id == ofrecido.Item.Id);
-        _ignorados++;
+        Sesion.ReaplicarPerfil();
         _elegido = null;
 
         Barra.Informar($"{ofrecido.Item.Ubicacion} no se va a volver a ofrecer.", "estado-neutro");
@@ -440,13 +448,14 @@ public partial class DiskCleanerPagina : IDisposable
 
     private void MostrarTodoDeNuevo()
     {
-        if (_escaneo is null) return;
+        if (Medido is null) return;
 
-        var visibles = _items.Select(i => i.Item.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (var item in _escaneo.Items.Where(i => !visibles.Contains(i.Id)))
+        var visibles = Items.Select(i => i.Item.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var item in Medido.Items.Where(i => !visibles.Contains(i.Id)))
             Perfil.DejarDeIgnorar(item.Id);
 
-        Mostrar(_escaneo);
+        Sesion.ReaplicarPerfil();
+        _elegido = null;
         Barra.Informar("Vuelven a ofrecerse todas.", "estado-neutro");
     }
 
@@ -469,14 +478,14 @@ public partial class DiskCleanerPagina : IDisposable
         }
     }
 
-    private long Elegido() => _items.Where(i => i.Tildado).Sum(i => i.Item.Bytes);
+    private long Elegido() => Items.Where(i => i.Tildado).Sum(i => i.Item.Bytes);
 
-    private long Gestionable() => _items.Where(i => i.Item.SeBorra).Sum(i => i.Item.Bytes);
+    private long Gestionable() => Sesion.Gestionable();
 
     private long SePuede() => Gestionable() - Elegido();
 
     private string Resumen() =>
-        $"{Tamanos.Legible(_escaneo!.Disco.Libre)} libres de {Tamanos.Legible(_escaneo.Disco.Total)} · {Tamanos.Legible(Gestionable())} se pueden limpiar";
+        $"{Tamanos.Legible(Medido!.Disco.Libre)} libres de {Tamanos.Legible(Medido.Disco.Total)} · {Tamanos.Legible(Gestionable())} se pueden limpiar";
 
     /// <summary>
     /// Los cuatro tramos de la barra, en orden. El ancho y el mínimo visible los resuelve el
@@ -484,10 +493,10 @@ public partial class DiskCleanerPagina : IDisposable
     /// </summary>
     private IReadOnlyList<TramoDelDisco> Tramos()
     {
-        var total = _escaneo!.Disco.Total;
+        var total = Medido!.Disco.Total;
         var elegido = Elegido();
         var sePuede = SePuede();
-        var libre = _escaneo.Disco.Libre;
+        var libre = Medido.Disco.Libre;
 
         // Lo que queda es todo el resto del disco, sin desglosar: ahí adentro está lo que no se
         // debe borrar, y nombrarlo invita a borrarlo por fuera de la herramienta.
@@ -503,15 +512,20 @@ public partial class DiskCleanerPagina : IDisposable
     }
 
     private string DescripcionDeLaBarra() =>
-        $"Disco de {Tamanos.Legible(_escaneo!.Disco.Total)}: {Tamanos.Legible(Elegido())} elegidos para limpiar, " +
-        $"{Tamanos.Legible(SePuede())} que se pueden limpiar y {Tamanos.Legible(_escaneo.Disco.Libre)} libres.";
+        $"Disco de {Tamanos.Legible(Medido!.Disco.Total)}: {Tamanos.Legible(Elegido())} elegidos para limpiar, " +
+        $"{Tamanos.Legible(SePuede())} que se pueden limpiar y {Tamanos.Legible(Medido.Disco.Libre)} libres.";
 
 
+    /// <summary>
+    /// Se va la pantalla, no el análisis: lo que esté corriendo sigue en la sesión y avisa por la
+    /// barra cuando termina. Por eso tampoco se limpia la barra mientras analiza —el aviso de que
+    /// está trabajando es justamente lo que hay que dejar a la vista—.
+    /// </summary>
     public void Dispose()
     {
-        _cancelacion?.Cancel();
-        _cancelacion?.Dispose();
-        Barra.Limpiar();
+        _enPantalla = false;
+        Sesion.Cambio -= AlCambiarLaSesion;
+        if (!Sesion.Analizando) Barra.Limpiar();
     }
 
     private enum EstadoDelTilde { Ninguno, Algunos, Todos }

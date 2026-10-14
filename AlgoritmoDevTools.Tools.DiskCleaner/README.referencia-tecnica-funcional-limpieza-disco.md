@@ -178,6 +178,7 @@ CREATE TABLE PREFERENCIAS (
 | Archivo | Rol |
 |---|---|
 | `AlgoritmoDevTools.UI/Paginas/DiskCleanerPagina.razor(.cs)` | Pantalla |
+| `AlgoritmoDevTools.UI/Servicios/SesionDeLimpieza.cs` | Lo medido y el análisis en curso, **fuera de la pantalla** para que sobrevivan a cambiar de herramienta — ver 10.9 |
 | `Model/ItemLimpieza.cs` | El modelo entero: qué es un ítem, qué se puede elegir y qué no |
 | `Services/EscaneoService.cs` | Orquesta los detectores, con paralelismo acotado |
 | `Services/Detectores/CatalogoDeDetectores.cs` | Qué se busca y en qué orden |
@@ -254,6 +255,25 @@ La asimetría que sí importa: **los instaladores bloquean** (el daño es irreve
 El helper elevado borra con permisos de administrador y su entrada es un archivo. Una entrada manipulada sería un borrado arbitrario con privilegios, y lo que lo impide es que **`EjecutorDeLimpieza.BorrarRutas` revalida cada ruta ahí adentro**, no antes de elevar.
 
 Lo mismo vale para el borrado recursivo: `Directory.Delete(recursive: true)` **no consulta nada**, le pide al sistema el árbol entero. Por eso existe `RutasProtegidas.ContieneAlgunaProtegida` —la pregunta inversa— y se hace justo antes de tocar el disco.
+
+### 10.9 · Lo medido y el análisis en curso viven fuera de la pantalla
+
+El estado del análisis —lo medido, lo encontrado con su tildado, y si hay un recorrido corriendo— está en `SesionDeLimpieza` (`AlgoritmoDevTools.UI/Servicios/`), registrada **singleton**, y no en campos de `DiskCleanerPagina`. La pantalla sólo lee de ahí y se suscribe a `Cambio`.
+
+Dos motivos, y los dos se vieron en uso:
+
+1. **Cambiar de herramienta durante el análisis cerraba la aplicación.** `Escanear()` era un controlador asincrónico de cincuenta segundos; al irse, Blazor desarma el componente y su `Dispose` cancelaba **y liberaba** el `CancellationTokenSource` en el acto, con el `Parallel.ForEachAsync` todavía en vuelo. Al volver del `await`, el controlador intentaba repintar un componente que ya no existía. En el visor, una excepción que nadie atrapa **cierra la ventana entera**, así que el síntoma es "se cerró el programa" y no un error.
+2. **Cambiar de herramienta después del análisis lo perdía**, y había que esperar los cincuenta segundos otra vez para ver lo mismo.
+
+Reglas que se siguen de esto:
+
+- **El `CancellationTokenSource` se libera en el `finally` de quien lanzó la operación**, no en el `Dispose` del componente: ese es el único momento en que nadie más lo usa. Cancelar desde afuera sí es válido; liberar, no.
+- **Lo que avisa desde segundo plano vuelve al hilo de la interfaz antes de tocarla** (`InvokeAsync`), y mira si la pantalla sigue montada. Por eso `AlCambiarLaSesion` traga `ObjectDisposedException` —la ventana entre el aviso y la desuscripción— y el progreso del borrado chequea `_enPantalla`.
+- **`Dispose` de la pantalla no limpia la barra de estado si hay un análisis corriendo**: ese aviso es justamente lo que tiene que quedar a la vista desde otra herramienta.
+- **El aviso de fin lleva "Disk Cleaner:" adelante**, porque puede llegar estando en otra pantalla y ahí "23 cosas encontradas" no dice de qué habla.
+- **El fin del análisis avisa por los dos canales**: la barra de estado y una pastilla. Sólo la barra no alcanzaba —es lo que se probó primero—: cualquier pantalla que escriba la pisa y el `Dispose` de la que lo puso la limpia, así que el que se había ido a trabajar en otra herramienta no se enteraba nunca. Cancelar, en cambio, no lleva pastilla: eso lo acaba de hacer el usuario mirando. La diferencia entre los dos canales está en la sección 5.2 de `AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md`.
+
+**Lo que todavía no está resuelto:** el **borrado** sigue siendo un controlador del componente. Irse de la pantalla mientras borra no lo corta —y no debería cortarlo— pero su final tampoco está puesto en la sesión. Hoy sólo está protegido el repintado del progreso. Si se toca esa parte, conviene mudarlo a `SesionDeLimpieza` con el mismo patrón.
 
 ## 11. Trampas verificadas
 

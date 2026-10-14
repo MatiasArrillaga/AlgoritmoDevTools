@@ -533,7 +533,14 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .acciones { margin-top: 18px; display: flex; gap: 10px; }
 
 .chk { display: flex; align-items: center; gap: 9px; cursor: pointer; margin: 9px 0; }
-.chk input { accent-color: var(--acento); width: 15px; height: 15px; }
+/*
+  El acento va en todas las casillas y no sólo en las de .chk.
+
+  Las de la grilla del Disk Cleaner van sueltas en la celda, sin esa clase, así que se quedaban con
+  el azul de Windows en los cuatro temas —y con el tema verde era un azul que no aparecía en ningún
+  otro lado de la pantalla—. Una casilla es una casilla: el color sale del tema, esté donde esté.
+*/
+input[type="checkbox"] { accent-color: var(--acento); width: 15px; height: 15px; }
 
 /* ---------- Tarjetas de tema ---------- */
 .temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 10px; max-width: 700px; }
@@ -731,6 +738,79 @@ select.campo { padding: 0 8px; }
 .estado-error { color: var(--error); }
 .estado-advertencia { color: var(--advertencia); }
 .estado-neutro { color: var(--texto-2); }
+
+/* ---------- Avisos que se van solos ---------- */
+
+/*
+  Esquina de abajo a la derecha, apilados, el más nuevo abajo.
+
+  Para lo que termina cuando el usuario ya está en otra pantalla. La barra de estado no servía para
+  eso: son veintiocho píxeles al pie, en gris, y el aviso de que el análisis del disco había
+  terminado pasaba desapercibido.
+
+  Por encima de la barra de estado y no tapándola, que sigue mostrando contra qué base se trabaja.
+*/
+.pastillas {
+  position: fixed;
+  right: 18px;
+  bottom: 40px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+
+  /* Para que el hueco entre pastillas no se coma los clics de lo que haya abajo. */
+  pointer-events: none;
+}
+
+.pastilla {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  padding: 11px 12px 11px 14px;
+  background: var(--fondo-campo);
+  border: 1px solid var(--borde-campo);
+
+  /*
+    La franja del costado lleva el color del estado y el texto queda legible: pintar el fondo entero
+    del color obliga a elegir un texto que funcione en las cuatro paletas, y en los temas oscuros
+    siempre quedaba alguno flojo.
+  */
+  border-left: 3px solid currentColor;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+  font-size: 12.5px;
+  animation: entra-pastilla .18s ease-out;
+}
+
+/* El color del estado se queda en la franja; el texto va con el del tema. */
+.pastilla-texto { color: var(--texto); line-height: 1.4; }
+
+.pastilla-cerrar {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--texto-2);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.pastilla-cerrar:hover { background: var(--boton-2-hover); color: var(--texto); }
+.pastilla-cerrar:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+
+@keyframes entra-pastilla {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pastilla { animation: none; }
+}
 
 /* ---------- Limpieza de disco ---------- */
 

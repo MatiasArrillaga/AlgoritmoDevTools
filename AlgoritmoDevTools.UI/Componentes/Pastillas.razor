@@ -1,0 +1,56 @@
+@using AlgoritmoDevTools.UI.Servicios
+@implements IDisposable
+@inject Avisos Avisos
+
+@*
+    Los avisos que se van solos, apilados en la esquina de abajo a la derecha.
+
+    Vive en el armazón y no en una pantalla: lo que avisa puede haber terminado mientras el usuario
+    estaba en otra herramienta, que es justamente el caso para el que existe.
+
+    Cuándo usar esto y cuándo la barra de estado, en la sección 5.2 de
+    AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md.
+*@
+
+@if (Avisos.Activos.Count > 0)
+{
+    @*
+        aria-live polite y no assertive: avisa que algo terminó, no interrumpe lo que se esté
+        haciendo. El contenedor está siempre que haya algo, para que el lector de pantalla anuncie
+        lo que se agrega adentro.
+    *@
+    <div class="pastillas" role="status" aria-live="polite">
+        @foreach (var aviso in Avisos.Activos)
+        {
+            <div class="pastilla @aviso.Clase" @key="aviso.Id">
+                <span class="pastilla-texto">@aviso.Texto</span>
+                <button type="button"
+                        class="pastilla-cerrar"
+                        aria-label="Cerrar el aviso"
+                        @onclick="() => Avisos.Cerrar(aviso.Id)">✕</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Avisos.Cambio += AlCambiar;
+
+    /// <summary>
+    /// El aviso llega desde el hilo del que lo produjo —el final del análisis, por ejemplo—, así
+    /// que el repintado se pide con InvokeAsync. Tocar la interfaz desde otro hilo cierra la
+    /// ventana.
+    /// </summary>
+    private void AlCambiar()
+    {
+        try
+        {
+            InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    public void Dispose() => Avisos.Cambio -= AlCambiar;
+}

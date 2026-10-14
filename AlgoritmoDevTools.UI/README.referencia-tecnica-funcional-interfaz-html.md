@@ -156,6 +156,28 @@ El tooltip es propio y no el del sistema: el del `title` tiene la demora y el as
 
 Cada tema define su `--tooltip-fondo`: el acento llevado casi al negro, para que el globo se lea como su sombra.
 
+## 5.2. Dónde va cada aviso: la barra de estado y las pastillas
+
+Hay **dos** canales, y sirven para cosas distintas. Elegir mal el canal es cómo se pierde un aviso.
+
+| | `BarraDeEstado` | `Avisos` (pastillas) |
+|---|---|---|
+| Qué es | El estado **actual** de la pantalla en la que estás | Un hecho puntual que acaba de pasar |
+| Dónde | La franja de 28px al pie | Pastillas en la esquina de abajo a la derecha |
+| Cuánto dura | Hasta que otra pantalla escriba, o hasta que la pantalla se vaya | 6 segundos, 12 si es un error; también se cierran a mano |
+| Para qué | "Listando…", "aplicado", contra qué base se trabaja | Lo que termina **cuando ya no estás mirando esa pantalla** |
+
+**Por qué hicieron falta las pastillas.** El análisis del disco tarda cincuenta segundos y se puede seguir trabajando en otra herramienta mientras corre (ver `SesionDeLimpieza`). Avisaba sólo por la barra, y ahí el aviso **no sobrevive**: cualquier pantalla que escriba lo pisa, y el `Dispose` de la que lo puso lo limpia. El que se iba a hacer otra cosa nunca se enteraba de que había terminado. Aparte, son 28 píxeles de texto gris al pie: aun estando, pasa desapercibido.
+
+Piezas: `Servicios/Avisos.cs` (el servicio, singleton), `Componentes/Pastillas.razor` (el que los dibuja) y las clases `.pastillas` / `.pastilla` en `app.css`.
+
+Reglas al usarlas:
+
+- **El texto dice de qué herramienta habla**: "Disk Cleaner: 23 cosas encontradas…". Puede llegar estando en otra pantalla, y ahí el número solo no dice nada.
+- **No para lo que el usuario acaba de hacer mirando.** Cancelar un análisis no lleva pastilla: ya sabe lo que pasó.
+- **Se puede llamar desde cualquier hilo**, pero `Pastillas` vuelve al de la interfaz con `InvokeAsync` antes de repintar. Tocarla desde otro hilo cierra la ventana.
+- La franja del costado lleva el color del estado y el texto va con el del tema. Pintar el fondo entero del color obliga a buscar un texto que se lea en las cuatro paletas, y en las oscuras siempre quedaba alguno flojo.
+
 ## 6. Diferencias con la ventana clásica
 
 | Qué | Clásica | HTML | Por qué |

@@ -62,6 +62,11 @@ public sealed class MainFormBlazor : Form
         servicios.AddSingleton<IArchivosArrastrados>(_arrastre);
         servicios.AddSingleton<IZonaDeArrastre>(_zonaDeArrastre);
         servicios.AddSingleton<BarraDeEstado>();
+
+        // Aparte de la barra: la barra muestra el estado de la pantalla en la que estas, y otra
+        // pantalla lo pisa. Lo que termina mientras hacias otra cosa necesita algo que no se borre
+        // solo por haber cambiado de herramienta.
+        servicios.AddSingleton<Avisos>();
 #if DEBUG
         // Habilita el clic derecho con "Inspeccionar", que es la única forma cómoda de depurar el
         // HTML. En Release queda fuera para que no aparezca en la máquina de nadie más.
@@ -177,6 +182,10 @@ public sealed class MainFormBlazor : Form
         servicios.AddSingleton<LimpiezaService>();
         servicios.AddSingleton<EjecutorDeLimpieza>();
         servicios.AddSingleton<ElevacionService>();
+
+        // Singleton y no por pantalla: es lo que deja seguir analizando despues de cambiar de
+        // herramienta, y encontrar lo analizado al volver.
+        servicios.AddSingleton<SesionDeLimpieza>();
         servicios.AddSingleton(new DocumentConverter());
 
         // Los dos toman los repositorios de arriba: uno para armar el archivo que se exporta, el
