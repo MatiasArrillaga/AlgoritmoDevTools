@@ -6,6 +6,7 @@ using AlgoritmoDevTools.Tools.ModelDriftChecker;
 using AlgoritmoDevTools.Tools.SecretsManager;
 using AlgoritmoDevTools.Tools.SecretsManager.Services;
 using AlgoritmoDevTools.Core.Infrastructure;
+using AlgoritmoDevTools.Tools.DiskCleaner.Services;
 using AlgoritmoDevTools.Tools.TyeServiceSelector;
 using AlgoritmoDevTools.UI.Servicios;
 
@@ -82,6 +83,15 @@ static class Program
         {
             case VerboWidget:
                 EjecutarWidget();
+                return true;
+
+            // Esta es la mitad elevada de la limpieza de disco: la aplicacion se relanza a si misma
+            // con permisos de administrador para las pocas cosas que los necesitan, hace lo suyo y
+            // sale sin abrir ninguna ventana. Lo que hay que borrar llega en un archivo y el
+            // resultado se escribe en otro, porque pedir permisos obliga a UseShellExecute y eso
+            // impide redirigir la salida.
+            case ElevacionService.VerboLimpiarElevado:
+                if (args.Length > 2) ElevacionService.EjecutarComoHelper(args[1], args[2]);
                 return true;
 
             case VerboHtml:

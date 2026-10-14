@@ -678,6 +678,108 @@ select.campo { padding: 0 8px; }
 .estado-advertencia { color: var(--advertencia); }
 .estado-neutro { color: var(--texto-2); }
 
+/* ---------- Limpieza de disco ---------- */
+
+/*
+  El total del disco en una sola barra. El acento marca lo accionable —lo elegido fuerte, lo que
+  todavía se puede en el mismo color atenuado— y el resto son neutros: "ocupado" tiene que leerse
+  como fondo, no como algo para mirar, porque es justamente lo que no se ofrece.
+*/
+.barra-disco {
+  display: flex;
+  height: 22px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--borde-campo);
+  background: var(--boton-2);
+  margin-bottom: 10px;
+}
+.tramo-elegido { background: var(--acento); }
+.tramo-posible { background: var(--acento); opacity: .35; }
+.tramo-ocupado { background: var(--boton-2-hover); }
+.tramo-libre   { background: var(--fondo-campo); }
+
+.leyenda-disco {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 13px;
+  color: var(--texto-2);
+  margin-bottom: 14px;
+}
+.leyenda-disco > span { display: flex; align-items: center; gap: 6px; }
+.leyenda-disco b { color: var(--texto); font-weight: 600; }
+
+.punto { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+/* El tramo libre es del color del campo: sin borde, el punto de la leyenda no se vería. */
+.punto.tramo-libre { border: 1px solid var(--borde-campo); }
+.punto.tramo-posible { opacity: .35; }
+
+.grilla-disco { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
+.grilla-disco th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--texto-2);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--separador);
+}
+.grilla-disco td { padding: 8px; border-bottom: 1px solid var(--separador); vertical-align: top; }
+.grilla-disco tbody tr:hover td { background: var(--boton-2); }
+.grilla-disco tr.elegida td { background: var(--boton-2-hover); }
+
+/*
+  El ícono que encabeza cada grupo. Es lo que antes decía una columna entera repitiendo el mismo
+  valor en todas las filas del grupo.
+
+  Los colores son los de estado y no los del tema: verde es "salió bien" también en las paletas
+  azules, porque acá el color es significado y no identidad.
+*/
+/*
+  El encabezado plegable. Es un botón porque se puede accionar, pero tiene que leerse igual que el
+  título que no se pliega: sin fondo, sin borde y con la misma tipografía.
+*/
+.grupo-plegable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.grupo-plegable:hover { background: none; }
+
+.chevron { display: inline-flex; flex: none; transition: transform .12s ease; }
+.chevron svg { width: 14px; height: 14px; stroke: var(--texto-2); stroke-width: 1.6; fill: none; }
+.chevron:not(.cerrado) { transform: rotate(90deg); }
+
+/* El total de la sección, al final del renglón: resume sin obligar a desplegarla. */
+.detalle-grupo { margin-left: auto; font-weight: 400; color: var(--texto-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron { transition: none; }
+}
+
+.icono-grupo { display: inline-flex; flex: none; }
+.icono-grupo svg { width: 16px; height: 16px; stroke-width: 1.6; fill: none; }
+.icono-grupo.es-seguro svg { stroke: var(--exito); }
+.icono-grupo.es-con-criterio svg { stroke: var(--advertencia); }
+
+/* El detalle del plan dentro de la confirmación: qué entra y qué queda afuera, con su motivo. */
+.lista-plan { margin: 4px 0 10px; padding-left: 18px; }
+.lista-plan li { margin-bottom: 3px; }
+
+/* El detalle del ítem elegido, desplegado bajo su fila para no perder de vista cuál es. */
+.grilla-disco tr.detalle td { background: var(--boton-2); border-bottom: 1px solid var(--separador); }
+.grilla-disco tr.detalle p { margin: 0 0 6px; }
+.grilla-disco tr.detalle p:last-of-type { margin-bottom: 10px; }
+.grilla-disco tr.detalle .fila { margin: 0; }
+
+.col-tilde { width: 32px; }
+.col-tamano { width: 96px; text-align: right; white-space: nowrap; }
+
 /* La barra de arrastre sigue al tema: en oscuro, la de Windows se ve como un parche claro. */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

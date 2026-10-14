@@ -3,17 +3,50 @@
 
     Mismo criterio que el título de la pantalla: lo que la sección hace se cuenta adentro del signo
     y no en un párrafo arriba, que ocupa lugar todas las veces para algo que se lee una sola.
+
+    Si recibe AlAlternar, el encabezado se vuelve un botón que contrae y expande lo que tiene
+    debajo. Lo que se contrae lo decide quien lo usa: acá sólo se avisa del clic.
 *@
 
-<p class="grupo">
-    <span>@Texto</span>
+@if (AlAlternar.HasDelegate)
+{
+    <button type="button" class="grupo grupo-plegable" aria-expanded="@((!Contraido).ToString().ToLowerInvariant())"
+            @onclick="() => AlAlternar.InvokeAsync(!Contraido)">
+        <span class="@($"chevron {(Contraido ? "cerrado" : "")}")" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><path d="m5.5 3.5 5 4.5-5 4.5" /></svg>
+        </span>
 
-    @if (!string.IsNullOrWhiteSpace(Ayuda))
-    {
-        <span class="ayuda"
-              data-tooltip="@Ayuda"
-              tabindex="0"
-              role="note"
-              aria-label="@Ayuda">?</span>
-    }
-</p>
+        @ContenidoDelTitulo
+    </button>
+}
+else
+{
+    <p class="grupo">
+        @ContenidoDelTitulo
+    </p>
+}
+
+@code {
+    private RenderFragment ContenidoDelTitulo => @<text>
+        @if (!string.IsNullOrWhiteSpace(Icono))
+        {
+            <span class="@($"icono-grupo {ClaseDelIcono}")" aria-hidden="true">@((MarkupString)Icono)</span>
+        }
+
+        <span>@Texto</span>
+
+        @if (!string.IsNullOrWhiteSpace(Ayuda))
+        {
+            <span class="ayuda"
+                  data-tooltip="@Ayuda"
+                  tabindex="0"
+                  role="note"
+                  aria-label="@Ayuda">?</span>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Detalle))
+        {
+            <span class="detalle-grupo">@Detalle</span>
+        }
+    </text>;
+}

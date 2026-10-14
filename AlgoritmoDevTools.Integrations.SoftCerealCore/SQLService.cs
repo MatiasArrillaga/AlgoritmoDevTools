@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
 namespace AlgoritmoDevTools.Integrations.SoftCerealCore;
 
@@ -35,7 +35,123 @@ public static class SQLService
     }
 
     /// <summary>
-    /// Verifica que se pueda abrir una conexi�n con las credenciales dadas (sin requerir una BD espec�fica).
+    /// Un archivo de log, con lo que hace falta para decidir si conviene achicarlo.
+    /// </summary>
+    /// <param name="Database">La base a la que pertenece.</param>
+    /// <param name="LogicalName">
+    /// El nombre con el que lo conoce SQL Server, que es el que pide SHRINKFILE. <b>No tiene por
+    /// qué parecerse al del archivo</b>: varias bases restauradas del mismo backup comparten el
+    /// nombre lógico aunque sus archivos se llamen distinto.
+    /// </param>
+    /// <param name="PhysicalPath">El archivo en disco.</param>
+    /// <param name="AllocatedBytes">Lo que ocupa.</param>
+    /// <param name="UsedBytes">Lo que de eso está realmente en uso.</param>
+    /// <param name="ReuseWait">
+    /// Qué impide reusar el espacio. Con ACTIVE_TRANSACTION achicar no recupera nada y puede
+    /// trabarse.
+    /// </param>
+    /// <param name="RecoveryModel">SIMPLE, FULL o BULK_LOGGED.</param>
+    public sealed record LogFile(
+        string Database,
+        string LogicalName,
+        string PhysicalPath,
+        long AllocatedBytes,
+        long UsedBytes,
+        string ReuseWait,
+        string RecoveryModel);
+
+    public sealed record GetLogFilesResult(IReadOnlyList<LogFile> Logs, string? Error)
+    {
+        public bool IsSuccess => Error is null;
+        public static GetLogFilesResult Ok(IReadOnlyList<LogFile> logs) => new(logs, null);
+        public static GetLogFilesResult Fail(string error) => new(Array.Empty<LogFile>(), error);
+    }
+
+    /// <summary>
+    /// Los archivos de log de las bases indicadas. Nunca tira.
+    ///
+    /// <b>Se conecta a cada base y pregunta ahí adentro.</b> No es un rodeo: <c>sys.database_files</c>
+    /// es por base, y preguntarle a master da los nombres lógicos de master. Varias bases salidas
+    /// del mismo backup tienen todas el mismo nombre lógico de log, así que resolverlo desde afuera
+    /// termina apuntando al archivo equivocado.
+    ///
+    /// Una base puede tener más de un log y por eso se devuelven todas las filas: un archivo suelto
+    /// que no figure acá no es necesariamente una base huérfana.
+    ///
+    /// Una base que no se pueda abrir se saltea; las demás se devuelven igual.
+    /// </summary>
+    public static GetLogFilesResult TryGetLogFiles(ConnectionData args, IEnumerable<string> databases)
+    {
+        if (string.IsNullOrWhiteSpace(args.Server)) return GetLogFilesResult.Fail("El servidor es obligatorio.");
+
+        const string consulta = @"
+            SELECT  f.name,
+                    f.physical_name,
+                    CAST(f.size AS bigint) * 8192,
+                    CAST(ISNULL(FILEPROPERTY(f.name, 'SpaceUsed'), 0) AS bigint) * 8192,
+                    d.log_reuse_wait_desc,
+                    d.recovery_model_desc
+            FROM    sys.database_files f
+            JOIN    sys.databases d ON d.name = DB_NAME()
+            WHERE   f.type = 1;";
+
+        var logs = new List<LogFile>();
+        string? ultimoError = null;
+
+        foreach (var baseDeDatos in databases)
+        {
+            if (string.IsNullOrWhiteSpace(baseDeDatos)) continue;
+
+            var builder = new SqlConnectionStringBuilder
+            {
+                DataSource = args.Server,
+                InitialCatalog = baseDeDatos,
+                TrustServerCertificate = true,
+                ConnectTimeout = 10
+            };
+
+            if (args.UseIntegratedSecurity)
+            {
+                builder.IntegratedSecurity = true;
+            }
+            else
+            {
+                builder.UserID = args.User;
+                builder.Password = args.Password;
+            }
+
+            try
+            {
+                using var connection = new SqlConnection(builder.ConnectionString);
+                connection.Open();
+
+                using var command = new SqlCommand(consulta, connection);
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    logs.Add(new LogFile(
+                        baseDeDatos,
+                        reader.GetString(0),
+                        reader.GetString(1),
+                        reader.GetInt64(2),
+                        reader.GetInt64(3),
+                        reader.IsDBNull(4) ? "NOTHING" : reader.GetString(4),
+                        reader.IsDBNull(5) ? string.Empty : reader.GetString(5)));
+                }
+            }
+            catch (Exception ex)
+            {
+                ultimoError = ex.Message;
+            }
+        }
+
+        return logs.Count == 0 && ultimoError is not null
+            ? GetLogFilesResult.Fail(ultimoError)
+            : GetLogFilesResult.Ok(logs);
+    }
+
+    /// <summary>
+    /// Verifica que se pueda abrir una conexión con las credenciales dadas (sin requerir una BD específica).
     /// Devuelve null si OK, o un mensaje de error.
     /// </summary>
     public static string? TryTestConnection(ConnectionData args)
@@ -44,7 +160,7 @@ public static class SQLService
         if (!args.UseIntegratedSecurity)
         {
             if (string.IsNullOrWhiteSpace(args.User)) return "El usuario es obligatorio.";
-            if (string.IsNullOrWhiteSpace(args.Password)) return "La contrase�a es obligatoria.";
+            if (string.IsNullOrWhiteSpace(args.Password)) return "La contraseña es obligatoria.";
         }
 
         var cs = args.UseIntegratedSecurity

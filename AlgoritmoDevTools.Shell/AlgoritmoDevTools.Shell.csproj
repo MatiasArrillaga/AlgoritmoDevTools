@@ -45,6 +45,7 @@
     <ProjectReference Include="..\AlgoritmoDevTools.Core\AlgoritmoDevTools.Core.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Integrations.SoftCerealCore\AlgoritmoDevTools.Integrations.SoftCerealCore.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.CommandsMaker\AlgoritmoDevTools.Tools.CommandsMaker.csproj" />
+    <ProjectReference Include="..\AlgoritmoDevTools.Tools.DiskCleaner\AlgoritmoDevTools.Tools.DiskCleaner.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.MarkdownConverter\AlgoritmoDevTools.Tools.MarkdownConverter.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.ModelDriftChecker\AlgoritmoDevTools.Tools.ModelDriftChecker.csproj" />
     <ProjectReference Include="..\AlgoritmoDevTools.Tools.SecretsManager\AlgoritmoDevTools.Tools.SecretsManager.csproj" />

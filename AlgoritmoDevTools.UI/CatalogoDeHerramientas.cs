@@ -66,7 +66,14 @@ public static class CatalogoDeHerramientas
             "Markdown Converter",
             "Convierte documentos entre Markdown y los formatos de entrega.",
             IconosSvg.Documento,
-            typeof(Paginas.MarkdownConverterPagina))
+            typeof(Paginas.MarkdownConverterPagina)),
+
+        new HerramientaUI(
+            "DiskCleaner",
+            "Disk Cleaner",
+            "Muestra qué ocupa el disco, explica el riesgo de cada cosa y limpia sólo lo que elijas.",
+            IconosSvg.Limpieza,
+            typeof(Paginas.DiskCleanerPagina))
     };
 }
 

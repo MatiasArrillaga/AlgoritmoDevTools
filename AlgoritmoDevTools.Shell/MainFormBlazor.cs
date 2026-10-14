@@ -1,6 +1,8 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Tools.DiskCleaner.Services;
+using AlgoritmoDevTools.Tools.DiskCleaner.Services.Detectores;
 using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
 using AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 using AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
@@ -157,6 +159,13 @@ public sealed class MainFormBlazor : Form
         servicios.AddSingleton(new DomainRepository(new ToolStorage("CommandsMaker")));
         servicios.AddSingleton(new SavedConnectionsRepository(new ToolStorage("Shared")));
         servicios.AddSingleton(new ProfileRepository(new ToolStorage("TyeServiceSelector")));
+        servicios.AddSingleton(new PerfilRepository(new ToolStorage("DiskCleaner")));
+        // El detector de logs necesita las conexiones guardadas, que son las de la clave "Shared".
+        servicios.AddSingleton(sp => new EscaneoService(
+            CatalogoDeDetectores.Todos(sp.GetRequiredService<SavedConnectionsRepository>())));
+        servicios.AddSingleton<LimpiezaService>();
+        servicios.AddSingleton<EjecutorDeLimpieza>();
+        servicios.AddSingleton<ElevacionService>();
         servicios.AddSingleton(new DocumentConverter());
 
         // Los dos toman los repositorios de arriba: uno para armar el archivo que se exporta, el

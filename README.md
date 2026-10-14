@@ -52,6 +52,7 @@ Cada una tiene su documento de referencia, con sus reglas, sus decisiones y sus 
 | **Schema Change Detector** | Si los commits traídos exigen migraciones | [referencia](AlgoritmoDevTools.Tools.ModelDriftChecker/README.referencia-tecnica-funcional-schema-change-detector.md) |
 | **Selector de Servicios (Tye)** | Qué microservicios levanta el entorno local | [referencia](AlgoritmoDevTools.Tools.TyeServiceSelector/README.referencia-tecnica-funcional-selector-de-servicios.md) |
 | **Convertidor a Markdown** | Documentos a Markdown para pasarle a un asistente | [referencia](AlgoritmoDevTools.Tools.MarkdownConverter/README.referencia-tecnica-funcional-convertidor-markdown.md) |
+| **Disk Cleaner** | Qué ocupa el disco, con qué riesgo tiene borrar cada cosa | [referencia](AlgoritmoDevTools.Tools.DiskCleaner/README.referencia-tecnica-funcional-limpieza-disco.md) |
 
 Transversales:
 
