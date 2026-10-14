@@ -1,4 +1,4 @@
-namespace AlgoritmoDevTools.UI.Servicios;
+﻿namespace AlgoritmoDevTools.UI.Servicios;
 
 /// <summary>Un aviso a la vista, con el tiempo que le queda manejado por <see cref="Avisos"/>.</summary>
 /// <param name="Id">Identidad propia: es lo que deja cerrar uno sin tocar los otros.</param>

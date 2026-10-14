@@ -321,7 +321,9 @@ Los siete pasos de arriba son el camino mínimo. Esta es la lista entera de luga
 | Escribir su documento | `README.referencia-tecnica-funcional-mi-tool.md`, en su carpeta | Sí |
 | Anotarla en la tabla de herramientas | Este README | Sí |
 
-**Lo que no hay que hacer**: poner botones de "agregar al menú contextual" en la pantalla de la herramienta —eso vive en Configuraciones—, escribir colores a mano, ni dejar los avisos en un renglón de la vista en lugar de la barra de estado.
+**Lo que no hay que hacer**: poner botones de "agregar al menú contextual" en la pantalla de la herramienta —eso vive en Configuraciones—, escribir colores a mano, ni dejar los avisos en un renglón de la vista.
+
+Los avisos tienen dos canales y ninguno es un renglón en la pantalla: la **barra de estado** para el estado actual de lo que se está mirando, y una **pastilla** para lo que termina cuando el usuario ya se fue a otra herramienta. Cuál usar y cuándo, en la sección 5.2 de [Interfaz HTML](AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md).
 
 ## Convenciones
 

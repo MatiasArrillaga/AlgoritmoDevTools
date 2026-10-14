@@ -82,9 +82,9 @@ Usa la clave `"Shared"` y no `"SecretsManager"` porque esas conexiones las consu
 | `Views/SecretsManagerView.cs` | Pantalla de la ventana clásica, bajo `--clasico` |
 | `Services/AplicadorDeSecretos.cs` | Reescribe las cadenas y recuerda la base |
 | `Services/MenuContextualSecretos.cs` | Alta y baja del grupo en el registro |
-| `Integrations.SoftCerealCore/SecretService.cs` | Lectura y escritura de los secretos |
-| `Integrations.SoftCerealCore/SavedConnectionsRepository.cs` | CRUD de conexiones |
-| `Integrations.SoftCerealCore/SQLService.cs` | Probar conexión y listar bases |
+| `AlgoritmoDevTools.Integrations.SoftCerealCore/SecretService.cs` | Lectura y escritura de los secretos |
+| `AlgoritmoDevTools.Integrations.SoftCerealCore/SavedConnectionsRepository.cs` | CRUD de conexiones |
+| `AlgoritmoDevTools.Integrations.SoftCerealCore/SQLService.cs` | Probar conexión y listar bases |
 
 ## 6. Decisiones que conviene no revisitar
 

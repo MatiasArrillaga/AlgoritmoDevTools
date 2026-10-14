@@ -4,7 +4,7 @@ Escanea el disco, explica qué es cada cosa que ocupa espacio y qué se pierde a
 
 Referencia general: [README.md](../README.md) · Interfaz: [interfaz HTML](../AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md)
 
-> **Estado al 14/10/2026: implementada y probada, sin commitear.** Rama `agregar-limpieza-de-disco`. Escanea, muestra, deja elegir, previsualiza, borra y eleva; 50 pruebas en verde. Lo que falta está en la sección 13.
+> **Estado al 14/10/2026: implementada, probada y commiteada.** Rama `agregar-limpieza-de-disco`, cinco commits desde `7e0bb3f`. Escanea, muestra, deja elegir, previsualiza, borra y eleva; **56 pruebas en verde**. Lo que falta está en la sección 13.
 >
 > **La sección 11 es el activo principal**: trece trampas verificadas, cada una con su causa y su solución, y cada una costó un intento fallido o una tarde.
 >
@@ -191,7 +191,7 @@ CREATE TABLE PREFERENCIAS (
 | `Services/QuienLoTiene.cs` | Restart Manager: quién tiene tomado un archivo que no se pudo borrar |
 | `Services/PerfilRepository.cs` | SQLite, elecciones del usuario |
 | `Services/ElevacionService.cs` | Relanza el helper con `Verb="runas"` y corre del otro lado |
-| `AlgoritmoDevTools.Tools.DiskCleaner.Test/` | 50 pruebas. El primer proyecto de tests del repositorio |
+| `AlgoritmoDevTools.Tools.DiskCleaner.Test/` | 56 pruebas. El primer proyecto de tests del repositorio |
 
 **El dry-run y el borrado están en clases separadas a propósito.** El que mira la previsualización tiene que poder confiar en que eso no toca nada, y la forma de garantizarlo es que `LimpiezaService` no tenga ningún camino hasta `EjecutorDeLimpieza`. No es que no borre: es que no sabe borrar.
 
@@ -274,6 +274,12 @@ Reglas que se siguen de esto:
 - **El fin del análisis avisa por los dos canales**: la barra de estado y una pastilla. Sólo la barra no alcanzaba —es lo que se probó primero—: cualquier pantalla que escriba la pisa y el `Dispose` de la que lo puso la limpia, así que el que se había ido a trabajar en otra herramienta no se enteraba nunca. Cancelar, en cambio, no lleva pastilla: eso lo acaba de hacer el usuario mirando. La diferencia entre los dos canales está en la sección 5.2 de `AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md`.
 
 **Lo que todavía no está resuelto:** el **borrado** sigue siendo un controlador del componente. Irse de la pantalla mientras borra no lo corta —y no debería cortarlo— pero su final tampoco está puesto en la sesión. Hoy sólo está protegido el repintado del progreso. Si se toca esa parte, conviene mudarlo a `SesionDeLimpieza` con el mismo patrón.
+
+### 10.10 · La pantalla no scrollea: scrollea el listado
+
+El estado del disco y la barra quedan fijos arriba, y lo que se mueve con la rueda es sólo el listado de lo encontrado (`.listado-limpieza`, en `AlgoritmoDevTools.UI/wwwroot/app.css`). No es cosmético: **la barra es contra lo que uno decide qué borrar**, y si se va para arriba con el scroll hay que elegir a ciegas.
+
+Era la única pantalla sin ningún tope: son dos tablas que crecen con lo que se haya encontrado, y con los dos grupos abiertos pedía 1040 contra los 612 de lugar. El alto del listado no es un `vh` sino lo que le deje el resto, por lo mismo que las demás pantallas — está en la sección 5.2 de [interfaz HTML](../AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md).
 
 ## 11. Trampas verificadas
 
@@ -428,7 +434,7 @@ Es la razón por la que su menú tiene **Salir** a mano. `dotnet build -c Releas
 - Un ítem con proceso bloqueante **se reporta y se intenta igual**: advierte, no impide.
 - Ningún ítem del catálogo expone `Windows\Installer` ni `pagefile.sys`.
 
-**Estado al 14/10/2026: 50 pruebas, todas en verde, en 17 segundos.**
+**Estado al 14/10/2026: 56 pruebas, todas en verde, en unos 10 segundos.**
 
 ```bash
 dotnet test AlgoritmoDevTools.Tools.DiskCleaner.Test -c Release

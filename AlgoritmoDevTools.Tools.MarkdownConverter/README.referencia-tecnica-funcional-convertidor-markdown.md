@@ -90,7 +90,7 @@ Se busca en este orden: al lado del `.exe` —así se puede repartir el Shell co
 | `Services/DocumentConverter.cs` | Conversión y limpieza |
 | `Services/PandocRunner.cs` | Ubicación e invocación de pandoc |
 | `Services/MenuContextual.cs` | Alta y baja en el registro |
-| `Shell/ZonaDeArrastre.cs` | La franja donde se sueltan los documentos |
+| `AlgoritmoDevTools.Shell/ZonaDeArrastre.cs` | La franja donde se sueltan los documentos |
 
 ## 8. Trampas verificadas
 

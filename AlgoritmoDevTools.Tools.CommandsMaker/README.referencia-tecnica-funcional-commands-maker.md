@@ -64,7 +64,7 @@ Lo comparte el Schema Change Detector: los dominios son los mismos.
 | `Views/CommandsMakerView.cs` | Pantalla de la ventana clásica, bajo `--clasico` |
 | `Services/GeneradorDeComandos.cs` | Arma los comandos y resuelve la cadena |
 | `Services/MenuContextualComandos.cs` | Alta y baja del grupo en el registro |
-| `Integrations.SoftCerealCore/DomainRepository.cs` | CRUD de dominios y registro de uso |
+| `AlgoritmoDevTools.Integrations.SoftCerealCore/DomainRepository.cs` | CRUD de dominios y registro de uso |
 
 ## 7. Qué tendrían que cubrir las pruebas
 

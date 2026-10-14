@@ -264,8 +264,11 @@ El armazón lo dibuja con `DynamicComponent`. Una entrada sin componente muestra
 | Commands Maker | `CommandsMakerPagina` | Migrada |
 | Markdown Converter | `MarkdownConverterPagina` | Migrada, sin arrastrar y soltar |
 | Model Drift Checker | `ModelDriftCheckerPagina` | Migrada |
+| Disk Cleaner | `DiskCleanerPagina` | **Sólo HTML**: nunca tuvo vista clásica |
 
 Las vistas de Windows Forms **siguen en el repositorio** y funcionando bajo `--clasico`. Conviene dejarlas hasta que las pantallas nuevas tengan uso real encima.
+
+El Disk Cleaner es el primero que nació acá y no tiene equivalente clásico: no implementa `ITool` ni aparece bajo `--clasico`. Es el camino que conviene seguir para una herramienta nueva —está en la sección 7— y además es el que más apoya en el armazón, porque su análisis sobrevive a la pantalla (`SesionDeLimpieza`) y avisa con una pastilla cuando termina.
 
 ## 9. Deuda conocida
 

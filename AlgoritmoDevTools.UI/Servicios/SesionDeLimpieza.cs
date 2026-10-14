@@ -1,4 +1,4 @@
-using AlgoritmoDevTools.Tools.DiskCleaner.Model;
+﻿using AlgoritmoDevTools.Tools.DiskCleaner.Model;
 using AlgoritmoDevTools.Tools.DiskCleaner.Services;
 
 namespace AlgoritmoDevTools.UI.Servicios;
