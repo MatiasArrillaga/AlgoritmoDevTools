@@ -400,23 +400,9 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 /* ---------- Inicio ---------- */
 
 /*
-  Aviso de versión nueva, arriba de las tarjetas del inicio. Lleva el acento porque es lo único de
-  esa pantalla sobre lo que hay algo que hacer; el resto es estado y se mira nomás.
+  Lo de la versión nueva era un bloque de acá, arriba de las tarjetas. Se fue a una pastilla
+  (.pastilla, más abajo): puesto en el inicio sólo lo veía el que pasaba por el inicio.
 */
-.aviso-version {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-  padding: 12px 16px;
-  border: 1px solid var(--acento);
-  border-left-width: 3px;
-  background: var(--fondo-campo);
-  font-size: 13px;
-}
-
-.aviso-version .btn { height: 30px; padding: 0 14px; }
 .saludo { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
 .saludo-sub { margin: 5px 0 0; font-size: 13px; color: var(--texto-2); }
 
@@ -787,6 +773,24 @@ select.campo { padding: 0 8px; }
 
 /* El color del estado se queda en la franja; el texto va con el del tema. */
 .pastilla-texto { color: var(--texto); line-height: 1.4; }
+
+/*
+  La que ofrece hacer algo lleva el acento en la franja, no el color del estado. Es la misma regla
+  que seguía el bloque de versión nueva del inicio: el acento marca lo accionable. Con el color del
+  estado, un aviso neutro quedaba con una franja gris que no se distinguía del borde.
+*/
+.pastilla-con-accion { border-left-color: var(--acento); }
+
+/*
+  El botón de los avisos que ofrecen hacer algo —actualizar, reiniciar—. Más bajo que un botón de
+  pantalla: acá acompaña a un renglón de texto, no encabeza un formulario.
+*/
+.pastilla-accion {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
 
 .pastilla-cerrar {
   flex: none;

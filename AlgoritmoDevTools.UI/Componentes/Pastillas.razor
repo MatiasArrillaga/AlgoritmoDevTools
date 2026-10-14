@@ -22,8 +22,16 @@
     <div class="pastillas" role="status" aria-live="polite">
         @foreach (var aviso in Avisos.Activos)
         {
-            <div class="pastilla @aviso.Clase" @key="aviso.Id">
+            <div class="pastilla @aviso.Clase @(aviso.Accion is null ? null : "pastilla-con-accion")" @key="aviso.Id">
                 <span class="pastilla-texto">@aviso.Texto</span>
+
+                @if (aviso.Accion is not null)
+                {
+                    <button type="button" class="btn btn-primario pastilla-accion" @onclick="() => Actuar(aviso)">
+                        @aviso.Accion
+                    </button>
+                }
+
                 <button type="button"
                         class="pastilla-cerrar"
                         aria-label="Cerrar el aviso"
@@ -50,6 +58,16 @@
         catch (ObjectDisposedException)
         {
         }
+    }
+
+    /// <summary>
+    /// Hace lo que el aviso ofrecía y lo saca: ya se actuó, el ofrecimiento dejó de tener sentido.
+    /// Se cierra primero porque la acción puede reiniciar la aplicación.
+    /// </summary>
+    private void Actuar(Aviso aviso)
+    {
+        Avisos.Cerrar(aviso.Id);
+        aviso.AlActuar?.Invoke();
     }
 
     public void Dispose() => Avisos.Cambio -= AlCambiar;

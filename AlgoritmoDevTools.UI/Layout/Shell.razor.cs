@@ -17,6 +17,12 @@ public partial class Shell : IDisposable
     [Inject]
     private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
 
+    [Inject]
+    private Avisos Avisos { get; set; } = default!;
+
+    [Inject]
+    private IReinicioDeLaAplicacion _reinicio { get; set; } = default!;
+
     /// <summary>Qué está mostrando el panel central.</summary>
     private enum Vista { Home, Herramienta, Configuraciones }
 
@@ -30,25 +36,30 @@ public partial class Shell : IDisposable
     private string _base = "Base: -";
     private string _mensaje = string.Empty;
 
-    /// <summary>
-    /// El paso a la sección de actualizaciones, para el aviso del inicio. Lo baja el armazón porque
-    /// es el único que sabe qué se está mostrando; dejar al usuario en Configuraciones a secas lo
-    /// obligaría a buscar dónde estaba eso que le acababan de ofrecer.
-    /// </summary>
-    private EventCallback _irAActualizaciones;
-
     /// <summary>Con qué sección abre Configuraciones. Null es la primera, que es lo habitual.</summary>
     private Paginas.Seccion? _seccionDeConfiguraciones;
+
+    /// <summary>
+    /// Cuántas veces se pidió una sección puntual. Es el <c>@key</c> de Configuraciones: cambiarlo
+    /// la rearma para que tome la sección pedida. Ver <see cref="AbrirConfiguraciones"/>.
+    /// </summary>
+    private int _pedidoDeSeccion;
+
+    /// <summary>La pastilla de la versión que está a la vista, para poder reemplazarla.</summary>
+    private Guid? _avisoDeVersion;
+
+    /// <summary>
+    /// Qué situación de versión ya se avisó. Es lo que hace que cerrar la pastilla la cierre de
+    /// verdad: sin esto, el siguiente chequeo la volvería a poner.
+    /// </summary>
+    private string? _versionAvisada;
 
     protected override void OnInitialized()
     {
         _temas.TemaCambiado += OnTemaCambiado;
         _secretos.SecretsChanged += OnSecretosCambiaron;
         Estado.Cambio += OnEstadoCambio;
-        Actualizaciones.Cambio += OnEstadoCambio;
-
-        _irAActualizaciones = EventCallback.Factory.Create(
-            this, () => AbrirConfiguraciones(Paginas.Seccion.Actualizaciones));
+        Actualizaciones.Cambio += OnActualizacionesCambio;
 
         // Siempre arranca en el inicio: es el resumen de cómo quedó el entorno, que es justo lo
         // que se quiere ver al abrir.
@@ -127,6 +138,12 @@ public partial class Shell : IDisposable
     private void AbrirConfiguraciones(Paginas.Seccion? seccion = null)
     {
         _seccionDeConfiguraciones = seccion;
+
+        // Sólo cuando se pide una sección puntual: es lo que hace que el componente se arme de
+        // nuevo y la tome aunque ya se esté en Configuraciones. Entrar por el ícono no lleva
+        // sección, y ahí no hay por qué rearmar nada.
+        if (seccion is not null) _pedidoDeSeccion++;
+
         _vista = Vista.Configuraciones;
         _descripcion = "Ajusta la apariencia y el comportamiento de Algoritmo DevTools.";
     }
@@ -135,11 +152,82 @@ public partial class Shell : IDisposable
 
     private void OnEstadoCambio(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
+    private void OnActualizacionesCambio(object? sender, EventArgs e) => InvokeAsync(() =>
+    {
+        RefrescarAvisoDeVersion();
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// Deja a la vista una pastilla con lo que hay para hacer con la versión, y nada si no hay nada.
+    ///
+    /// Antes esto era un bloque en el inicio, y ahí sólo se veía estando en el inicio: quien abría
+    /// la aplicación y se iba derecho a una herramienta no se enteraba de que había una versión
+    /// nueva. La pastilla vive en el armazón, así que aparece donde sea que esté el usuario.
+    ///
+    /// Esta <b>no expira</b>: lleva un botón, y un ofrecimiento que se va solo a los seis segundos
+    /// no es un ofrecimiento.
+    ///
+    /// Se avisa una vez por situación —lo recuerda <c>_versionAvisada</c>—, así que cerrarla la
+    /// cierra de verdad y no vuelve con el siguiente chequeo. Para volver a ella está
+    /// Configuraciones, en Actualizaciones.
+    /// </summary>
+    private void RefrescarAvisoDeVersion()
+    {
+        var instalada = Actualizaciones.EsperandoReinicio;
+        var nueva = Actualizaciones.Disponible;
+
+        var situacion = instalada is not null ? $"reinicio:{instalada.Etiqueta}"
+            : nueva is not null ? $"nueva:{nueva.Etiqueta}"
+            : null;
+
+        if (situacion == _versionAvisada) return;
+
+        if (_avisoDeVersion is { } anterior) Avisos.Cerrar(anterior);
+
+        _versionAvisada = situacion;
+        _avisoDeVersion = null;
+
+        if (instalada is not null)
+        {
+            _avisoDeVersion = Avisos.Fijar(
+                $"Quedó instalada la {instalada.Etiqueta}. Empieza a correr cuando reinicies.",
+                "estado-exito",
+                "Reiniciar ahora",
+                ReiniciarAhora);
+        }
+        else if (nueva is not null)
+        {
+            _avisoDeVersion = Avisos.Fijar(
+                $"Hay una versión nueva: {nueva.Etiqueta}. Tenés la {ServicioDeActualizaciones.VersionActual.ToString(3)}.",
+                "estado-neutro",
+                "Actualizar",
+                IrAActualizaciones);
+        }
+    }
+
+    /// <summary>
+    /// Lleva a Configuraciones, en Actualizaciones, desde la pastilla.
+    ///
+    /// El repintado va explícito y no se puede sacar: cambiar de vista desde acá no es un clic del
+    /// armazón sino de <c>Pastillas</c>, y Blazor sólo redibuja solo al componente cuyo controlador
+    /// atendió el clic. Sin esto, el botón cambia la vista y la pantalla se queda como estaba,
+    /// exactamente como si no hiciera nada.
+    /// </summary>
+    private void IrAActualizaciones()
+    {
+        AbrirConfiguraciones(Paginas.Seccion.Actualizaciones);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Cierra y vuelve a abrir, para que empiece a correr la versión ya instalada.</summary>
+    private void ReiniciarAhora() => _reinicio.Reiniciar();
+
     public void Dispose()
     {
         _temas.TemaCambiado -= OnTemaCambiado;
         _secretos.SecretsChanged -= OnSecretosCambiaron;
         Estado.Cambio -= OnEstadoCambio;
-        Actualizaciones.Cambio -= OnEstadoCambio;
+        Actualizaciones.Cambio -= OnActualizacionesCambio;
     }
 }

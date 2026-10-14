@@ -4,7 +4,9 @@ namespace AlgoritmoDevTools.UI.Servicios;
 /// <param name="Id">Identidad propia: es lo que deja cerrar uno sin tocar los otros.</param>
 /// <param name="Texto">Lo que se lee.</param>
 /// <param name="Clase">Clase de estilo, la misma familia que usa la barra de estado.</param>
-public sealed record Aviso(Guid Id, string Texto, string Clase);
+/// <param name="Accion">Etiqueta del botón, cuando el aviso ofrece hacer algo. Null si sólo informa.</param>
+/// <param name="AlActuar">Qué hace ese botón.</param>
+public sealed record Aviso(Guid Id, string Texto, string Clase, string? Accion = null, Action? AlActuar = null);
 
 /// <summary>
 /// Avisos que aparecen un rato en una esquina y se van solos.
@@ -67,6 +69,26 @@ public sealed class Avisos
 
         // Sin await: el que avisa no tiene por qué esperar a que el aviso se vaya.
         _ = Expirar(aviso.Id, cuanto);
+    }
+
+    /// <summary>
+    /// Deja un aviso que <b>no se va solo</b>, con un botón para hacer algo al respecto.
+    ///
+    /// Para lo que sigue siendo cierto hasta que el usuario haga algo —hay una versión nueva, quedó
+    /// una instalada esperando el reinicio—. Uno de estos no puede expirar: si se fuera a los seis
+    /// segundos, el botón se iría con él.
+    ///
+    /// Devuelve el identificador para poder reemplazarlo cuando la situación cambia, que es lo que
+    /// evita terminar con tres pastillas diciendo cosas distintas de lo mismo.
+    /// </summary>
+    public Guid Fijar(string texto, string clase, string accion, Action alActuar)
+    {
+        var aviso = new Aviso(Guid.NewGuid(), texto, clase, accion, alActuar);
+
+        lock (_candado) _activos.Add(aviso);
+
+        Cambio?.Invoke();
+        return aviso.Id;
     }
 
     private async Task Expirar(Guid id, TimeSpan cuanto)

@@ -22,19 +22,6 @@ public partial class Home : IDisposable
     [Inject]
     private PerfilRepository Limpieza { get; set; } = default!;
 
-    [Inject]
-    private ServicioDeActualizaciones Actualizaciones { get; set; } = default!;
-
-    [Inject]
-    private IReinicioDeLaAplicacion Reinicio { get; set; } = default!;
-
-    /// <summary>
-    /// El paso a Configuraciones, que es donde se instala. Lo baja el armazón: esta pantalla no sabe
-    /// navegar, sólo avisa.
-    /// </summary>
-    [CascadingParameter(Name = "IrAActualizaciones")]
-    private EventCallback IrAActualizaciones { get; set; }
-
     private const int ServiciosQueSeListan = 6;
 
     private readonly SecretService _secretos = SecretService.Shared;
@@ -71,11 +58,6 @@ public partial class Home : IDisposable
         // Los secretos los lee el armazón una sola vez al arrancar, y puede no haber terminado
         // cuando esta pantalla se dibuja: por eso además de leerlos ahora se escucha el aviso.
         _secretos.SecretsChanged += AlLlegarLosSecretos;
-
-        // La consulta a GitHub la larga el armazón y termina después de que esta pantalla se dibujó.
-        // Sin escucharla, el aviso no aparece hasta que uno entra y sale: Blazor no vuelve a dibujar
-        // un componente sin parámetros sólo porque el padre se dibujó de nuevo.
-        Actualizaciones.Cambio += AlCambiarLasActualizaciones;
 
         LeerSecretos();
         _leyendoSecretos = !_haySecreto;
@@ -131,16 +113,7 @@ public partial class Home : IDisposable
         StateHasChanged();
     });
 
-    private void AlCambiarLasActualizaciones(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
-
-    /// <summary>Cierra y vuelve a abrir, para que empiece a correr la versión ya instalada.</summary>
-    private void Reiniciar() => Reinicio.Reiniciar();
-
-    public void Dispose()
-    {
-        _secretos.SecretsChanged -= AlLlegarLosSecretos;
-        Actualizaciones.Cambio -= AlCambiarLasActualizaciones;
-    }
+    public void Dispose() => _secretos.SecretsChanged -= AlLlegarLosSecretos;
 
     private void LeerSecretos()
     {

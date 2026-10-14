@@ -50,14 +50,20 @@
 
         <main class="contenido">
             <CascadingValue Value="_descripcion" Name="AyudaDeLaHerramienta">
-            <CascadingValue Value="_irAActualizaciones" Name="IrAActualizaciones">
                 @if (_vista == Vista.Home)
                 {
                     <Home />
                 }
                 else if (_vista == Vista.Configuraciones)
                 {
-                    <Configuraciones Inicial="_seccionDeConfiguraciones" />
+                    @*
+                        El @key cambia cada vez que se pide una sección puntual, para que el
+                        componente se arme de nuevo y la tome: Configuraciones sólo mira Inicial en
+                        OnInitialized, así que estando ya en esta pantalla —que es lo que pasa
+                        cuando la pastilla de versión se toca desde acá— el parámetro llegaba y no
+                        hacía nada.
+                    *@
+                    <Configuraciones Inicial="_seccionDeConfiguraciones" @key="_pedidoDeSeccion" />
                 }
                 else if (_seleccionada?.Componente is not null)
                 {
@@ -67,7 +73,6 @@
                 {
                     <HerramientaPendiente Herramienta="_seleccionada" />
                 }
-            </CascadingValue>
             </CascadingValue>
         </main>
     </div>

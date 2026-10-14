@@ -20,20 +20,11 @@
 <h1 class="saludo">Hola @_usuario!</h1>
 <p class="saludo-sub">Así quedó configurado tu entorno.</p>
 
-@if (Actualizaciones.EsperandoReinicio is { } instalada)
-{
-    <div class="aviso-version">
-        <span>Quedó instalada la <b>@instalada.Etiqueta</b>. Empieza a correr cuando reinicies.</span>
-        <button type="button" class="btn btn-primario" @onclick="Reiniciar">Reiniciar ahora</button>
-    </div>
-}
-else if (Actualizaciones.Disponible is { } nueva)
-{
-    <div class="aviso-version">
-        <span>Hay una versión nueva: <b>@nueva.Etiqueta</b>. Tenés la @ServicioDeActualizaciones.VersionActual.ToString(3).</span>
-        <button type="button" class="btn btn-primario" @onclick="IrAActualizaciones">Actualizar</button>
-    </div>
-}
+@*
+    Lo de la versión ya no se escribe acá: lo avisa el armazón con una pastilla, que aparece esté el
+    usuario donde esté. Puesto en el inicio, el que abría la aplicación y se iba derecho a una
+    herramienta no se enteraba nunca. Está en Shell.RefrescarAvisoDeVersion.
+*@
 
 <div class="tarjetas">
 

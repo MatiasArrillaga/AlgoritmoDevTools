@@ -54,6 +54,24 @@ Para verificarlo sin abrir la ventana: en la carpeta de salida tiene que existir
 
 Efecto secundario: el SDK de Razor incluye `wwwroot/**` por su cuenta, así que un `<Content Include="wwwroot\**">` escrito a mano rompe la compilación con `NETSDK1022`.
 
+### Ese manifiesto le gana a `ContenidoWebEmbebido`
+
+Vale saberlo antes de intentar **transformar** la página host —escribirle algo antes de entregarla, por ejemplo el tema puesto—, porque no funciona y el motivo no se ve por ningún lado.
+
+Mientras `index.html` viva en `wwwroot/` como `Content`, el manifiesto que genera el SDK la mapea al **archivo fuente de este repositorio** (es el `ContentRoots[0]` de `DevTools.staticwebassets.runtime.json`). El visor la lee de ahí, cruda, y `ContenidoWebEmbebido` **nunca llega a verla**: cualquier reemplazo que uno escriba en el proveedor no pasa, y en pantalla quedan los marcadores sin sustituir.
+
+Dos cosas lo hacen difícil de ver:
+
+- **Al publicar como archivo único no hay manifiesto**, así que gana el proveedor y anda bien. El problema aparece sólo corriendo desde `bin`, que es donde se prueba.
+- **Que el proveedor funcione aislado no prueba nada.** Una prueba que instancie `ContenidoWebEmbebido` y le pida `index.html` pasa igual, porque el que la desvía al archivo del repositorio es el visor, no el proveedor.
+
+Lo que hay que mirar es si **`index.html` figura entre los hijos de `Root`** en el manifiesto de la carpeta de salida. Si figura, el proveedor no la entrega. Para que la entregue hay que sacarla de los recursos estáticos y embeberla a mano, con el mismo `LogicalName` que arma `EmbeberElContenidoWeb`:
+
+```xml
+<Content Remove="wwwroot\index.html" />
+<EmbeddedResource Include="wwwroot\index.html" LogicalName="web/index.html" />
+```
+
 ### El tema cuelga de `.shell`, no de `:root`
 
 `data-tema` se aplica en el `<div class="shell">`, así que **todas las variables de color viven dentro de ese nodo**. El `<body>` queda afuera: su `color` y su `background` se resuelven siempre con `:root`, que es el tema claro.
@@ -142,6 +160,22 @@ Si el script no cargara, las casillas padre se verían vacías en vez de interme
 
 `alert`, `confirm` y `prompt` no aparecen. Toda confirmación —borrar un perfil, borrar una conexión, mover el baseline— es un bloque dentro de la propia página, con la clase `confirmacion`.
 
+### Medir una pantalla sin abrir la aplicación
+
+Al visor no se le puede entrar con herramientas de desarrollo, así que para cualquier cosa de alto, ancho o scroll conviene medir afuera: se reproduce el marcado de la pantalla en un `.html` suelto, se le pone **el `app.css` de verdad al lado** y se lo sirve en un navegador con el viewport en el `ClientSize` de la ventana (hoy 1460x640).
+
+Con eso se contesta lo que importa —si una pantalla entra o se pasa, y por cuánto— sin compilar ni cerrar la aplicación:
+
+```js
+const c = document.querySelector('.contenido');
+({ scrollea: c.scrollHeight > c.clientHeight, sePasaPor: c.scrollHeight - c.clientHeight })
+```
+
+Dos advertencias de alguien que ya se equivocó midiendo así:
+
+- **`scrollHeight` se satura con el alto visible.** Para saber cuánto mide el contenido *de verdad* hay que medir contra el último hijo, no pedirle el `scrollHeight` al contenedor.
+- **Nada de medir colores en un bucle que cambia `data-tema`.** `getComputedStyle` devuelve el valor de la vuelta anterior, y los botones tienen `transition: background-color .12s`, así que se leen colores intermedios. Parece un bug del tema y no lo es.
+
 ## 5. Lo que la interfaz HTML no puede hacer sola
 
 El motor de Edge **no entrega la ruta en disco** de un archivo elegido o arrastrado: por seguridad sólo da su contenido. Como las herramientas trabajan con rutas reales —pandoc deja el `.md` al lado del original—, elegir archivos pasa por el diálogo de Windows.
@@ -164,8 +198,13 @@ Hay **dos** canales, y sirven para cosas distintas. Elegir mal el canal es cómo
 |---|---|---|
 | Qué es | El estado **actual** de la pantalla en la que estás | Un hecho puntual que acaba de pasar |
 | Dónde | La franja de 28px al pie | Pastillas en la esquina de abajo a la derecha |
-| Cuánto dura | Hasta que otra pantalla escriba, o hasta que la pantalla se vaya | 6 segundos, 12 si es un error; también se cierran a mano |
+| Cuánto dura | Hasta que otra pantalla escriba, o hasta que la pantalla se vaya | 6 segundos, 12 si es un error; las fijadas, hasta que las cierres |
 | Para qué | "Listando…", "aplicado", contra qué base se trabaja | Lo que termina **cuando ya no estás mirando esa pantalla** |
+
+Hay dos formas de dejar una pastilla:
+
+- **`Mostrar`** — informa y se va sola. El fin del análisis del disco.
+- **`Fijar`** — lleva un botón y **no expira**, porque un ofrecimiento que se va a los seis segundos no es un ofrecimiento. Devuelve el identificador para poder reemplazarla cuando la situación cambia. Lo usa el aviso de versión.
 
 **Por qué hicieron falta las pastillas.** El análisis del disco tarda cincuenta segundos y se puede seguir trabajando en otra herramienta mientras corre (ver `SesionDeLimpieza`). Avisaba sólo por la barra, y ahí el aviso **no sobrevive**: cualquier pantalla que escriba lo pisa, y el `Dispose` de la que lo puso lo limpia. El que se iba a hacer otra cosa nunca se enteraba de que había terminado. Aparte, son 28 píxeles de texto gris al pie: aun estando, pasa desapercibido.
 
@@ -176,7 +215,18 @@ Reglas al usarlas:
 - **El texto dice de qué herramienta habla**: "Disk Cleaner: 23 cosas encontradas…". Puede llegar estando en otra pantalla, y ahí el número solo no dice nada.
 - **No para lo que el usuario acaba de hacer mirando.** Cancelar un análisis no lleva pastilla: ya sabe lo que pasó.
 - **Se puede llamar desde cualquier hilo**, pero `Pastillas` vuelve al de la interfaz con `InvokeAsync` antes de repintar. Tocarla desde otro hilo cierra la ventana.
-- La franja del costado lleva el color del estado y el texto va con el del tema. Pintar el fondo entero del color obliga a buscar un texto que se lea en las cuatro paletas, y en las oscuras siempre quedaba alguno flojo.
+- La franja del costado lleva el color del estado y el texto va con el del tema. Pintar el fondo entero del color obliga a buscar un texto que se lea en las cuatro paletas, y en las oscuras siempre quedaba alguno flojo. **Si la pastilla ofrece una acción, la franja va con el acento** (`.pastilla-con-accion`): el acento marca lo accionable, y con el color del estado un aviso neutro quedaba con una franja gris que no se distinguía del borde.
+
+### El aviso de versión nueva vive acá, no en el inicio
+
+Era un bloque arriba de las tarjetas del inicio (`.aviso-version`, ya borrado). El problema es obvio dicho así: **sólo lo veía el que pasaba por el inicio**. Quien abría la aplicación y se iba derecho a una herramienta no se enteraba de que había una versión nueva.
+
+Ahora lo pone `Shell.RefrescarAvisoDeVersion`, con `Fijar`, así que aparece esté el usuario donde esté — y con su botón, "Actualizar" o "Reiniciar ahora" según el caso.
+
+Dos detalles que no son obvios:
+
+- **Se avisa una vez por situación**, y el Shell lo recuerda en `_versionAvisada`. Sin eso, cada chequeo volvería a poner la pastilla que el usuario acababa de cerrar. Cerrarla la cierra de verdad; para volver a ella está Configuraciones, en Actualizaciones.
+- **La acción cierra la pastilla antes de ejecutarse**, porque puede reiniciar la aplicación.
 
 ## 6. Diferencias con la ventana clásica
 

@@ -366,9 +366,11 @@ gh release view v1.2.0
 
 El workflow `.github/workflows/publicar.yml` compila, publica el `.exe` y crea el release. **La etiqueta tiene que coincidir con el `<Version>`**: es el número que queda adentro del ejecutable y con el que cada instalación decide si la de GitHub es más nueva que la suya. Si no coinciden, el workflow falla antes de publicar nada, en vez de dejar un release que nadie va a poder usar para actualizar.
 
-**Del lado de la aplicación**, el armazón pregunta al arrancar —después de los secretos y sin esperar la respuesta— y el inicio lo avisa si hay algo nuevo. En Configuraciones está la versión instalada y el botón para forzar la revisión y para instalar. Mientras no haya nada más nuevo no se muestra nada: no hay por qué anunciar que uno está al día.
+**Del lado de la aplicación**, el armazón pregunta al arrancar —después de los secretos y sin esperar la respuesta— y lo avisa con una **pastilla** abajo a la derecha, con el botón para actualizar. En Configuraciones está la versión instalada y el botón para forzar la revisión y para instalar. Mientras no haya nada más nuevo no se muestra nada: no hay por qué anunciar que uno está al día.
 
-Una vez bajada, el aviso cambia: ya no queda nada por descargar y lo único que falta es reiniciar, así que el botón pasa a ser **Reiniciar ahora**, en el inicio y en Configuraciones. Cierra la ventana y vuelve a abrir el ejecutable, sin que nadie tenga que hacerlo a mano. Quien tenga algo a medio hacer en otra pantalla simplemente no lo toca: la versión nueva ya está puesta y empieza a correr la próxima vez que se abra.
+El aviso estuvo primero como un bloque en el inicio, y por eso se mudó: **ahí sólo lo veía el que pasaba por el inicio**, y quien abría la aplicación y se iba derecho a una herramienta no se enteraba nunca. La pastilla la pone `Shell.RefrescarAvisoDeVersion` y vive en el armazón, así que aparece esté el usuario donde esté. Se avisa una vez por situación: cerrarla la cierra de verdad y no vuelve con el siguiente chequeo, porque para volver a ella está Configuraciones. Los dos canales de aviso —la barra de estado y las pastillas— están comparados en la sección 5.2 de `AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md`.
+
+Una vez bajada, el aviso cambia: ya no queda nada por descargar y lo único que falta es reiniciar, así que el botón pasa a ser **Reiniciar ahora**, en la pastilla y en Configuraciones. Cierra la ventana y vuelve a abrir el ejecutable, sin que nadie tenga que hacerlo a mano. Quien tenga algo a medio hacer en otra pantalla simplemente no lo toca: la versión nueva ya está puesta y empieza a correr la próxima vez que se abra.
 
 El cierre no es inmediato sino diferido con `BeginInvoke`, por el mismo motivo que los diálogos de Windows: se llama desde un clic que el visor todavía está entregando, y destruir el navegador adentro de su propio aviso cierra el proceso de mala manera. Está contado en `DialogosDelSistema`, en el Shell.
 
@@ -384,7 +386,7 @@ El orden importa y está probado: se baja a un temporal primero, y si el segundo
 
 **Para probarlo sin publicar**, la variable de entorno `DEVTOOLS_RELEASES` reemplaza la dirección que se consulta. Sin ella puesta, que es lo normal, se consulta GitHub.
 
-Apuntándola a un servidor local que devuelva este JSON se recorre el camino entero —el aviso en el inicio, la descarga y el reemplazo— sin publicar nada:
+Apuntándola a un servidor local que devuelva este JSON se recorre el camino entero —el aviso, la descarga y el reemplazo— sin publicar nada:
 
 ```json
 {
@@ -396,7 +398,17 @@ Apuntándola a un servidor local que devuelva este JSON se recorre el camino ent
 }
 ```
 
-Hay que compilar dos binarios con versiones distintas: uno viejo que hace de instalado y uno nuevo que el servidor entrega como release.
+**Para ver sólo el aviso** —la pastilla, sin descargar ni reemplazar nada— no hace falta nada de eso. Alcanza con el `bin` de siempre, el JSON de arriba en una carpeta y la variable puesta en la sesión que abre la aplicación:
+
+```powershell
+# en la carpeta con el latest.json, dejar sirviendo:  py -m http.server 8781 --bind 127.0.0.1
+$env:DEVTOOLS_RELEASES = "http://127.0.0.1:8781/latest.json"
+& .\AlgoritmoDevTools.Shell\bin\Debug\net10.0-windows\win-x64\DevTools.exe
+```
+
+Basta con que el `tag_name` sea mayor que el `<Version>` del csproj. La variable vale para esa sesión de PowerShell, así que cerrarla deja todo como estaba; el `assets` tiene que estar igual, aunque no se vaya a descargar: un release sin el ejecutable adentro se descarta y no avisa nada.
+
+**Para probar el camino entero**, en cambio, hay que compilar dos binarios con versiones distintas: uno viejo que hace de instalado y uno nuevo que el servidor entrega como release.
 
 ```bash
 dotnet publish AlgoritmoDevTools.Shell -c Release -p:Version=0.9.0 -o <carpeta-vieja>
