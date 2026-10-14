@@ -34,8 +34,19 @@ public sealed class MainFormBlazor : Form
         _zonaDeArrastre = new ZonaDeArrastre(_arrastre);
 
         Text = "Algoritmo DevTools";
-        ClientSize = new Size(1460, 580);
-        MinimumSize = new Size(1180, 560);
+
+        // El alto sale de lo que necesita el Inicio, que es la pantalla mas alta: con el aviso de
+        // version arriba pide 553, y la ventana suma la barra de titulo, asi que con 640 entra sin
+        // scroll y sobra margen. Mas no conviene: el area util de una pantalla de 1366x768 son 728
+        // y la ventana ya mide 679.
+        //
+        // Lo que no entre con este alto se resuelve adentro de la pantalla y no agrandando la
+        // ventana: el bloque largo de cada una —la salida, la lista de casillas, el listado del
+        // Disk Cleaner— se achica contra el lugar que queda y scrollea solo. Quien hace eso es la
+        // regla ".contenido > .salida, ..." de AlgoritmoDevTools.UI/wwwroot/app.css, que explica
+        // por que el tope no puede estar en vh.
+        ClientSize = new Size(1460, 640);
+        MinimumSize = new Size(1180, 600);
         StartPosition = FormStartPosition.CenterScreen;
 
         using (var iconStream = typeof(MainFormBlazor).Assembly.GetManifestResourceStream("app.ico"))

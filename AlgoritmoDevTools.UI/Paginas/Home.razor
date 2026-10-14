@@ -70,7 +70,8 @@ else if (Actualizaciones.Disponible is { } nueva)
             {
                 <p class="tarjeta-detalle">Perfil <b>@_perfil</b></p>
             }
-            <p class="tarjeta-detalle">
+            @* Acotado: son todos los nombres activos y sin tope la fila crece hasta sacar la tarjeta del disco de la ventana. *@
+            <p class="tarjeta-detalle acotado">
                 @if (_hayYamlGenerado)
                 {
                     @($"Van a levantar: {_nombresActivos}")

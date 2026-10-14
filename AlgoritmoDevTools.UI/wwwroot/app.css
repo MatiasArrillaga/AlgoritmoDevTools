@@ -260,7 +260,46 @@ html, body {
   border-left: 1px solid var(--separador);
   padding: 20px 24px;
   overflow-y: auto;
+
+  /*
+    En columna para que el bloque largo de cada pantalla —la salida, la lista de casillas, el árbol—
+    se mida contra el lugar que queda y no contra la ventana entera. Ver la regla de abajo.
+  */
+  display: flex;
+  flex-direction: column;
 }
+
+/*
+  Los bloques que pueden crecer sin fin van con el tope que les deje el resto de la pantalla.
+
+  Antes cada uno tenía el suyo en vh —46vh la salida, 44vh el árbol, 38vh las casillas— y eso mide
+  contra la ventana, que no es lo mismo que el lugar libre: en Commands Maker, con la confirmación
+  de agregar dominio abierta, el encabezado y los botones se comían 430 de los 572 útiles y la
+  salida seguía pidiendo sus 294, así que la pantalla se pasaba 112 y había que scrollear.
+
+  Al ser items de un contenedor en columna con altura definida, alcanza con dejarlos encoger
+  (min-height: 0, que es lo que un item de flex no hace por su cuenta) y sacarles el tope fijo: se
+  quedan con su alto natural mientras entre, y cuando no entra se achican y scrollean adentro, que
+  es lo que ya hacían. La pantalla no scrollea en ningún caso.
+
+  Sólo los hijos directos: una .salida adentro de una .confirmacion —el `winget install` del
+  convertidor— no es item de este flex y conserva su alto natural.
+*/
+.contenido > .salida,
+.contenido > .lista-chk,
+.contenido > .arbol-caja,
+.contenido > .listado-limpieza {
+  min-height: 0;
+  max-height: none;
+}
+
+/*
+  El listado del Disk Cleaner no tenía tope de ninguna clase: son dos tablas que crecen con lo que
+  se haya encontrado, y con los dos grupos abiertos la pantalla pedía 1040 contra 612 de lugar. Se
+  scrollea acá adentro para que el estado del disco y la barra —que es contra lo que uno decide qué
+  borrar— queden fijos arriba en lugar de irse para arriba con la rueda.
+*/
+.listado-limpieza { overflow-y: auto; }
 
 .barra-estado {
   height: 28px;
@@ -425,6 +464,21 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
   color: var(--texto-2);
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+/*
+  La lista de servicios que van a levantar es el único dato del Inicio sin tope: son los nombres de
+  todos los activos, y con un perfil entero son veinte. La fila del grid crece con ella y termina
+  empujando la tarjeta del disco fuera de la ventana: con veinte nombres el Inicio pedía 639 contra
+  los 580 que daba la ventana, y ni siquiera alcanza con haberla agrandado a 640, porque ahí queda
+  al borde y un nombre más lo vuelve a sacar.
+
+  Se acota a tres líneas y scrollea adentro, igual que .lista-chk y .arbol-caja. Tres y no dos
+  porque con dos no se alcanza a leer ni la mitad de un perfil chico.
+*/
+.tarjeta-detalle.acotado {
+  max-height: 4.35em;
+  overflow-y: auto;
 }
 
 /* Rueda de espera, para lo que tarda lo suficiente como para que parezca que no pasa nada. */

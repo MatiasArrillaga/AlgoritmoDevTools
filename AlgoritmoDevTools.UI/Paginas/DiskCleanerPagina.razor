@@ -218,6 +218,13 @@
         <p class="sub">Si limpiás lo elegido, el libre pasaría a @Tamanos.Legible(_escaneo.Disco.Libre + Elegido()) — es una cuenta, no una medición.</p>
     }
 
+    @*
+        De acá para abajo scrollea solo este bloque y no la pantalla: lo de arriba —el estado del
+        disco y la barra— es justamente lo que hay que seguir viendo mientras se elige qué borrar.
+        El alto se lo da el lugar que queda; está en la regla .listado-limpieza.
+    *@
+    <div class="listado-limpieza">
+
     @foreach (var grupo in _items.GroupBy(i => i.Item.Grupo).OrderBy(g => g.Key))
     {
         var cual = grupo.Key;
@@ -342,4 +349,6 @@
     {
         <p class="sub">No se pudo medir: @string.Join(", ", _escaneo.Fallaron). El resto de lo que ves es correcto.</p>
     }
+
+    </div>
 }
