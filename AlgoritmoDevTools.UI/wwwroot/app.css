@@ -1138,13 +1138,40 @@ select.campo { padding: 0 8px; }
   significa algo: explicacion en gris, simbolos en negrita (vocabulario) y los patrones de los
   ejemplos en el acento (accion, se tocan).
 */
-.ayuda-regex p code {
+.ayuda-regex p code,
+.simbolos-regex code {
   font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
   font-weight: 700;
   color: var(--texto);
   background: color-mix(in srgb, var(--texto-2) 14%, transparent);
   padding: 1px 5px;
   border-radius: 3px;
+}
+
+/*
+  Los simbolos, agrupados por para que sirven. Van en tres renglones y no en una lista sola porque
+  son nueve: en fila se leen como una tabla, y una tabla en un panel de ayuda no la lee nadie.
+
+  Tienen que estar TODOS los que usan los ejemplos de abajo. Con menos, el panel explica cinco
+  simbolos y ofrece ejemplos con nueve: el que no sabe expresiones no puede leer ni lo que se le
+  ofrece.
+*/
+.simbolos-regex {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  color: var(--texto-2);
+  line-height: 1.5;
+}
+
+/* El ancho fijo alinea las tres etiquetas, que es lo que hace que se lean como tres grupos. */
+.simbolos-regex b {
+  display: inline-block;
+  min-width: 102px;
+  color: var(--texto);
+  font-weight: 600;
 }
 
 .ejemplos-regex { display: flex; flex-wrap: wrap; gap: 6px; }

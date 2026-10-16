@@ -26,6 +26,10 @@ public partial class BuscaLocoPagina : IDisposable
     /// </summary>
     private static readonly (string Patron, string QueEncuentra)[] EjemplosDeExpresiones =
     [
+        // El primero es el caso más común de todos: encontrar cómo se usa algo, escrito de las
+        // formas en que suele aparecer. Va primero porque es el que más veces responde la pregunta
+        // con la que alguien abre este panel.
+        ("_?localizer", "Todos los usos, con guión bajo o sin él"),
         ("TipoCotizacion(DTO)?", "La entidad y su DTO a la vez"),
         (@"CreateMap<\w+,\s*\w+DTO>", "Los mapeos escritos a mano"),
         (@"class \w+Factory\b", "Todas las factories"),
@@ -207,7 +211,18 @@ public partial class BuscaLocoPagina : IDisposable
         Sesion.CarpetaDelPreset = preset.CarpetaEnLaRuta;
     }
 
-    private void UsarEjemplo(string patron) => Texto = patron;
+    /// <summary>
+    /// Escribe el patrón del ejemplo en el campo y cierra la ayuda.
+    ///
+    /// Se cierra sola porque el panel ya hizo lo suyo: con los nueve símbolos explicados y seis
+    /// ejemplos, mide poco más de 200 píxeles y deja el listado en 45, o sea tapa justo lo que uno
+    /// vino a mirar. Tocar un ejemplo es la señal de que el usuario ya encontró lo que buscaba ahí.
+    /// </summary>
+    private void UsarEjemplo(string patron)
+    {
+        Texto = patron;
+        _ayudaAbierta = false;
+    }
 
     /// <summary>
     /// El diálogo de Windows va con <c>await</c> por obligación: abrirlo en el acto desde un clic

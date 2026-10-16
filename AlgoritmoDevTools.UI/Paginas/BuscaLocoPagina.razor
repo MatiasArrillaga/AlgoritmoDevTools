@@ -77,12 +77,27 @@
 @if (_ayudaAbierta && TextoEsExpresion)
 {
     <div class="ayuda-regex">
+        @*
+            La leyenda tiene que cubrir TODOS los símbolos que usan los ejemplos de abajo. Con una
+            lista más corta, el panel queda explicando cinco símbolos y mostrando ejemplos con
+            nueve: el que no sabe expresiones no puede leer ni los ejemplos que se le ofrecen.
+
+            Van agrupados por para qué sirven y no en una lista sola: nueve símbolos en fila son una
+            tabla que nadie lee.
+        *@
         <p>
-            Una expresión regular describe un <b>patrón</b>, no un texto exacto.
-            <code>.</code> es cualquier carácter, <code>\w</code> una letra o número,
-            <code>+</code> "uno o más", <code>?</code> "opcional" y <code>|</code> "o".
-            Tocá un ejemplo para escribirlo en el campo:
+            Una expresión regular describe un <b>patrón</b>, no un texto exacto. Lo que no es un
+            símbolo se busca tal cual, así que <code>//</code> son dos barras y nada más.
+            <b>Para buscar una palabra como está, apagá este modo: no hace falta.</b>
         </p>
+
+        <div class="simbolos-regex">
+            <span><b>Qué coincide</b> <code>.</code> cualquier carácter · <code>\w</code> letra o número · <code>\s</code> un espacio</span>
+            <span><b>Cuántas veces</b> <code>*</code> cero o más · <code>+</code> una o más · <code>?</code> opcional</span>
+            <span><b>Dónde y qué</b> <code>^</code> principio de línea · <code>\b</code> borde de palabra · <code>|</code> o esto o aquello</span>
+        </div>
+
+        <p>Tocá un ejemplo para escribirlo en el campo:</p>
 
         <div class="ejemplos-regex">
             @foreach (var ejemplo in EjemplosDeExpresiones)
