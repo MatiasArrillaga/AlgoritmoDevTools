@@ -77,10 +77,17 @@ public sealed class CoincidenciaEnTexto
             // El motor que no puede explotar.
             return new CoincidenciaEnTexto(texto, new Regex(texto, opciones | RegexOptions.NonBacktracking), comparacion, false);
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is NotSupportedException or ArgumentException)
         {
-            // El patrón usa algo que NonBacktracking no soporta —casi siempre un lookaround—. Se cae
-            // al motor de siempre, y ahí el tope de tiempo es lo único que lo separa de un cuelgue.
+            // Dos motivos distintos, y hay que atrapar los dos:
+            //
+            // - NotSupportedException: el patrón está bien escrito pero usa algo que este motor no
+            //   sabe hacer, casi siempre un lookaround. Es el caso normal y hay que seguir.
+            // - ArgumentException: el patrón está mal escrito. Igual se deja pasar al segundo
+            //   intento, que vuelve a fallar y ahí sí se reporta con el mensaje del motor.
+            //
+            // Atrapar sólo ArgumentException —que es lo que uno escribe de memoria— deja escapar la
+            // primera, y entonces un lookaround no da un error en pantalla: tira la aplicación.
         }
 
         try
