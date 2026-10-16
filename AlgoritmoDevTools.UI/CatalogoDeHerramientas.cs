@@ -73,7 +73,13 @@ public static class CatalogoDeHerramientas
             "Disk Cleaner",
             "Muestra qué ocupa el disco, explica el riesgo de cada cosa y limpia sólo lo que elijas.",
             IconosSvg.Limpieza,
-            typeof(Paginas.DiskCleanerPagina))
+            typeof(Paginas.DiskCleanerPagina)),
+
+        new HerramientaUI(
+            "BuscaLoco",
+            "Busca Loco",
+            "Encuentra una palabra adentro de los archivos de una carpeta y sus subcarpetas, o encuentra archivos por su nombre.",
+            IconosSvg.Busqueda)
     };
 }
 
@@ -101,6 +107,14 @@ public static class IconosSvg
 
     public const string Drift =
         """<svg viewBox="0 0 16 16"><circle cx="4.5" cy="4" r="1.8"/><circle cx="11.5" cy="12" r="1.8"/><path d="M4.5 5.8v4.4a1.8 1.8 0 0 0 1.8 1.8h3.4M11.5 10.2V5.8A1.8 1.8 0 0 0 9.7 4H6.3"/></svg>""";
+
+    /// <summary>
+    /// Lupa con dos renglones adentro, no la lupa de siempre: el ícono de Secretos ya es un círculo
+    /// con una línea diagonal saliendo, y a 16 píxeles en una franja de 60 los dos se leen como la
+    /// misma mancha. Los renglones además dicen «texto», que es la mitad de lo que hace.
+    /// </summary>
+    public const string Busqueda =
+        """<svg viewBox="0 0 16 16"><circle cx="6.8" cy="6.8" r="4.3"/><path d="m10 10 4.2 4.2"/><path d="M5 5.8h3.6M5 7.9h2.3"/></svg>""";
 
     /// <summary>Casa: el inicio, con el resumen de lo que hay configurado.</summary>
     public const string Home =
