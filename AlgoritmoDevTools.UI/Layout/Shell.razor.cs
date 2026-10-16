@@ -23,6 +23,10 @@ public partial class Shell : IDisposable
     [Inject]
     private IReinicioDeLaAplicacion _reinicio { get; set; } = default!;
 
+    /// <summary>Con qué pantalla abrir, cuando la abrió el menú del explorador y no una persona.</summary>
+    [Inject]
+    private ArranqueDirecto Arranque { get; set; } = default!;
+
     /// <summary>Qué está mostrando el panel central.</summary>
     private enum Vista { Home, Herramienta, Configuraciones }
 
@@ -61,8 +65,19 @@ public partial class Shell : IDisposable
         Estado.Cambio += OnEstadoCambio;
         Actualizaciones.Cambio += OnActualizacionesCambio;
 
-        // Siempre arranca en el inicio: es el resumen de cómo quedó el entorno, que es justo lo
-        // que se quiere ver al abrir.
+        // Arranca en el inicio, que es el resumen de cómo quedó el entorno y es justo lo que se
+        // quiere ver al abrir. La excepción es cuando la abrió el menú contextual del explorador:
+        // ahí el usuario ya dijo a qué venía, y mandarlo al inicio sería hacerle dar un rodeo.
+        var pedida = Arranque.HerramientaInicial is null
+            ? null
+            : CatalogoDeHerramientas.Todas.FirstOrDefault(h => h.Id == Arranque.HerramientaInicial);
+
+        if (pedida is not null)
+        {
+            Abrir(pedida);
+            return;
+        }
+
         AbrirHome();
     }
 

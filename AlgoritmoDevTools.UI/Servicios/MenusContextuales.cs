@@ -1,5 +1,6 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Tools.BuscaLoco.Services;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
 using AlgoritmoDevTools.Tools.SecretsManager.Services;
@@ -56,6 +57,15 @@ public sealed class MenusContextuales
                 EstaInstalado = MenuContextualSecretos.EstaInstalado,
                 Instalar = () => MenuContextualSecretos.TryInstalar(_conexiones.GetAll()),
                 Quitar = MenuContextualSecretos.TryDesinstalar
+            },
+
+            new MenuDeHerramienta
+            {
+                Herramienta = "Busca Loco",
+                Que = "\"Buscar en esta carpeta\" al hacer clic derecho sobre el fondo de una carpeta.",
+                EstaInstalado = MenuContextualBusqueda.EstaInstalado,
+                Instalar = MenuContextualBusqueda.TryInstalar,
+                Quitar = MenuContextualBusqueda.TryDesinstalar
             },
 
             new MenuDeHerramienta

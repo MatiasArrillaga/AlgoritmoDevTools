@@ -1,4 +1,5 @@
 ﻿using AlgoritmoDevTools.Core.Abstractions;
+using AlgoritmoDevTools.Tools.BuscaLoco.Services;
 using AlgoritmoDevTools.Tools.CommandsMaker;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
 using AlgoritmoDevTools.Tools.MarkdownConverter;
@@ -100,6 +101,12 @@ static class Program
 
             case VerboClasico:
                 Application.Run(new MainForm(CrearHerramientas()));
+                return true;
+
+            // "Buscar en esta carpeta", del clic derecho sobre el fondo de una carpeta. Abre la
+            // ventana ya parada en Busca Loco y apuntada ahi: el usuario ya dijo a que venia.
+            case MenuContextualBusqueda.VerboBuscarAca:
+                Application.Run(new MainFormBlazor(args.Length > 1 ? args[1] : null));
                 return true;
 
             case MenuContextualSecretos.VerboRestaurar:

@@ -30,7 +30,11 @@ public sealed class MainFormBlazor : Form
     private readonly ArchivosArrastrados _arrastre = new();
     private readonly ZonaDeArrastre _zonaDeArrastre;
 
-    public MainFormBlazor()
+    /// <param name="carpetaParaBuscar">
+    /// Con qué carpeta abrir Busca Loco, cuando la ventana la levanta el menú contextual del
+    /// explorador. Null es el arranque normal, que empieza en el inicio.
+    /// </param>
+    public MainFormBlazor(string? carpetaParaBuscar = null)
     {
         _zonaDeArrastre = new ZonaDeArrastre(_arrastre);
 
@@ -74,11 +78,28 @@ public sealed class MainFormBlazor : Form
         servicios.AddBlazorWebViewDeveloperTools();
 #endif
 
+        // Abrir directo en una herramienta es cosa del armazon, que vive del otro lado del visor y
+        // no sabe nada de la linea de comandos: se lo decimos por un servicio.
+        servicios.AddSingleton(new ArranqueDirecto
+        {
+            HerramientaInicial = carpetaParaBuscar is null ? null : "BuscaLoco"
+        });
+
+        var proveedor = servicios.BuildServiceProvider();
+
+        // La carpeta se escribe en la sesion antes de montar la interfaz, asi la pantalla ya abre
+        // apuntada ahi en lugar de verse cambiar despues del primer dibujado.
+        if (carpetaParaBuscar is not null && Directory.Exists(carpetaParaBuscar))
+        {
+            var busqueda = proveedor.GetRequiredService<SesionDeBusqueda>();
+            busqueda.Criterio = busqueda.Criterio with { Raiz = carpetaParaBuscar };
+        }
+
         var vista = new VisorEmbebido
         {
             Dock = DockStyle.Fill,
             HostPage = PaginaDeInicio(),
-            Services = servicios.BuildServiceProvider()
+            Services = proveedor
         };
         vista.RootComponents.Add<Raiz>("#app");
 
