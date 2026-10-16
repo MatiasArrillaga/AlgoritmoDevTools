@@ -79,7 +79,8 @@ public static class CatalogoDeHerramientas
             "BuscaLoco",
             "Busca Loco",
             "Encuentra una palabra adentro de los archivos de una carpeta y sus subcarpetas, o encuentra archivos por su nombre.",
-            IconosSvg.Busqueda)
+            IconosSvg.Busqueda,
+            typeof(Paginas.BuscaLocoPagina))
     };
 }
 

@@ -1,6 +1,7 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
+using AlgoritmoDevTools.Tools.BuscaLoco.Services;
 using AlgoritmoDevTools.Tools.DiskCleaner.Services;
 using AlgoritmoDevTools.Tools.DiskCleaner.Services.Detectores;
 using AlgoritmoDevTools.Tools.MarkdownConverter.Services;
@@ -186,6 +187,12 @@ public sealed class MainFormBlazor : Form
         // Singleton y no por pantalla: es lo que deja seguir analizando despues de cambiar de
         // herramienta, y encontrar lo analizado al volver.
         servicios.AddSingleton<SesionDeLimpieza>();
+
+        // Busca Loco, por el mismo motivo: una busqueda sobre un repositorio entero tarda, y irse a
+        // otra herramienta en el medio no puede cortarla ni perder lo encontrado.
+        servicios.AddSingleton<BuscadorService>();
+        servicios.AddSingleton<SesionDeBusqueda>();
+
         servicios.AddSingleton(new DocumentConverter());
 
         // Los dos toman los repositorios de arriba: uno para armar el archivo que se exporta, el

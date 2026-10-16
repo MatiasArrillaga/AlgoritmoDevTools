@@ -1,0 +1,174 @@
+﻿@using AlgoritmoDevTools.Tools.BuscaLoco.Model
+@using AlgoritmoDevTools.Tools.BuscaLoco.Services
+
+@*
+    Busca Loco: encuentra una palabra adentro de los archivos de una carpeta y sus subcarpetas, o
+    encuentra archivos por su nombre.
+
+    Los dos campos de texto conviven y no hay un interruptor que elija entre uno y otro: vacío
+    significa "no filtres por eso", y llenar los dos es la búsqueda que más se usa —ese texto, pero
+    sólo en los .razor—. Un interruptor obligaría a elegir y perdería esa combinación, que es lo que
+    justifica tener el buscador acá y no usar el de Windows.
+
+    Lo que hace entendible esa regla son los placeholders, no un control más.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Tools.BuscaLoco/README.referencia-tecnica-funcional-busca-loco.md
+*@
+
+<TituloDePagina Texto="Busca Loco" />
+
+<div class="fila">
+    <div class="campo-con-modo @(TextoEsExpresion ? "dos" : "")" style="flex:2">
+        <input class="campo"
+               placeholder="Texto a buscar adentro de los archivos — vacío: no filtra por contenido"
+               aria-label="Texto a buscar"
+               @bind="Texto" @bind:event="oninput" />
+
+        @* El signo de pregunta sólo aparece en modo expresión: es ayuda de eso. *@
+        @if (TextoEsExpresion)
+        {
+            <button type="button" class="modo segundo @(_ayudaAbierta ? "encendido" : "")"
+                    title="Cómo se escriben las expresiones"
+                    aria-label="Ayuda de expresiones regulares"
+                    @onclick="AlternarAyuda">?</button>
+        }
+
+        <button type="button" class="modo @(TextoEsExpresion ? "encendido" : "")"
+                title="Expresión regular"
+                aria-pressed="@TextoEsExpresion.ToString().ToLowerInvariant()"
+                aria-label="Expresión regular"
+                @onclick="AlternarExpresionDelTexto">.*</button>
+    </div>
+
+    @if (Buscando)
+    {
+        <button type="button" class="btn btn-secundario" @onclick="Cancelar">Cancelar</button>
+        <span class="sub"><span class="girando"></span> Buscando…</span>
+    }
+    else
+    {
+        <button type="button" class="btn btn-primario" disabled="@(!SePuedeBuscar)" @onclick="Buscar">Buscar</button>
+    }
+</div>
+
+<div class="fila">
+    <input class="campo" style="flex:3" readonly value="@Raiz" aria-label="Carpeta donde buscar" />
+    <button type="button" class="btn btn-secundario" disabled="@Buscando" @onclick="ElegirCarpeta">Elegir carpeta…</button>
+
+    @*
+        El campo del nombre no es sólo la extensión: acepta también parte del nombre. El placeholder
+        lo dice, y de paso que varias van separadas por coma.
+    *@
+    <div class="campo-con-modo" style="flex:2; min-width:230px">
+        <input class="campo"
+               placeholder="*.cs, *.razor — o parte del nombre. Vacío: todos"
+               aria-label="Nombre o extensión de archivo"
+               @bind="Nombre" @bind:event="oninput" />
+
+        <button type="button" class="modo @(NombreEsExpresion ? "encendido" : "")"
+                title="Expresión regular"
+                aria-pressed="@NombreEsExpresion.ToString().ToLowerInvariant()"
+                aria-label="Expresión regular en el nombre"
+                @onclick="AlternarExpresionDelNombre">.*</button>
+    </div>
+</div>
+
+@if (_ayudaAbierta && TextoEsExpresion)
+{
+    <div class="ayuda-regex">
+        <p>
+            Una expresión regular describe un <b>patrón</b>, no un texto exacto.
+            <code>.</code> es cualquier carácter, <code>\w</code> una letra o número,
+            <code>+</code> "uno o más", <code>?</code> "opcional" y <code>|</code> "o".
+            Tocá un ejemplo para escribirlo en el campo:
+        </p>
+
+        <div class="ejemplos-regex">
+            @foreach (var ejemplo in EjemplosDeExpresiones)
+            {
+                var actual = ejemplo;
+                <button type="button" class="ejemplo-regex" @onclick="() => UsarEjemplo(actual.Patron)">
+                    <code>@actual.Patron</code>
+                    <span>@actual.QueEncuentra</span>
+                </button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Texto))
+        {
+            <p class="estado-patron @(ErrorDelPatron is null ? "estado-exito" : "estado-error")" style="margin-bottom:0">
+                @(ErrorDelPatron ?? "El patrón es válido.")
+            </p>
+        }
+    </div>
+}
+
+@if (PresetsAplican)
+{
+    <div class="presets">
+        <span class="sub" style="margin:0 2px 0 0">De este stack:</span>
+        @foreach (var preset in PresetsDelStack.Todos)
+        {
+            var actual = preset;
+            <button type="button" class="preset" @onclick="() => UsarPreset(actual)">@actual.Nombre</button>
+        }
+    </div>
+}
+
+<TituloDeGrupo Texto="Opciones"
+               Ayuda="Saltear bin, obj, .git y node_modules es por velocidad, no por seguridad: se puede apagar. En este repositorio son casi 450 carpetas de compilados." />
+
+<div class="fila-opciones">
+    <label class="chk"><input type="checkbox" checked="@Subcarpetas" @onchange="AlternarSubcarpetas" /> Buscar en subcarpetas</label>
+    <label class="chk"><input type="checkbox" checked="@DistinguirMayusculas" @onchange="AlternarMayusculas" /> Distinguir mayúsculas</label>
+
+    @*
+        Palabra entera se deshabilita con expresión regular: se implementa envolviendo el patrón en
+        \b…\b, y hacer eso sobre una expresión arbitraria le cambia el significado en silencio.
+    *@
+    <label class="chk">
+        <input type="checkbox" checked="@PalabraEntera" disabled="@TextoEsExpresion" @onchange="AlternarPalabraEntera" />
+        <span style="@(TextoEsExpresion ? "opacity:.5" : "")">Palabra entera</span>
+    </label>
+
+    <label class="chk"><input type="checkbox" checked="@SaltearRuido" @onchange="AlternarRuido" /> Saltear bin, obj, .git y node_modules</label>
+</div>
+
+<TituloDeGrupo Texto="Resultados"
+               Ayuda="Los resultados aparecen mientras la búsqueda avanza, agrupados por archivo."
+               Detalle="@Resumen()" />
+
+@if (Encontrados.Count > 0)
+{
+    <div class="listado-hallazgos">
+        @foreach (var archivo in Encontrados)
+        {
+            <div class="hallazgo-archivo">
+                <span class="hallazgo-nombre">@archivo.Nombre</span>
+                <span class="hallazgo-ruta">@archivo.Carpeta</span>
+                <span class="hallazgo-cuenta">@Cuenta(archivo)</span>
+            </div>
+
+            @foreach (var linea in PorLinea(archivo))
+            {
+                <div class="hallazgo-linea">
+                    <span class="hallazgo-nro">@linea.Numero</span>
+                    <span class="hallazgo-texto">
+                        @foreach (var trozo in Segmentos(linea))
+                        {
+                            if (trozo.EsCoincidencia)
+                            {
+                                <mark class="hit">@trozo.Texto</mark>
+                            }
+                            else
+                            {
+                                @trozo.Texto
+                            }
+                        }
+                    </span>
+                </div>
+            }
+        }
+    </div>
+}

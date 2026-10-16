@@ -288,7 +288,8 @@ html, body {
 .contenido > .salida,
 .contenido > .lista-chk,
 .contenido > .arbol-caja,
-.contenido > .listado-limpieza {
+.contenido > .listado-limpieza,
+.contenido > .listado-hallazgos {
   min-height: 0;
   max-height: none;
 }
@@ -951,3 +952,225 @@ select.campo { padding: 0 8px; }
   border-top-color: transparent;
   opacity: .8;
 }
+
+/* ---------- Busca Loco ---------- */
+
+/*
+  El listado de hallazgos scrollea el, no la pantalla: lo que queda fijo arriba es que se busco y
+  donde, y si eso se va con la rueda uno lee resultados sin saber de que busqueda son. Es la misma
+  decision que tomo el listado del Disk Cleaner.
+
+  El tope lo da la regla de los bloques que crecen, mas arriba: nada de vh, porque abrir la ayuda de
+  expresiones cambia el lugar disponible y con un alto fijo la pantalla pasaria a scrollear.
+*/
+.listado-hallazgos {
+  margin-top: 10px;
+  overflow-y: auto;
+  border: 1px solid var(--borde-campo);
+  background: var(--fondo-campo);
+}
+
+/*
+  El encabezado de cada archivo queda pegado arriba mientras se recorren sus coincidencias: con
+  treinta hits en un archivo largo, a mitad de scroll uno ya no sabe de cual son.
+*/
+.hallazgo-archivo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--separador);
+  position: sticky;
+  top: 0;
+  background: var(--fondo-campo);
+}
+.hallazgo-archivo + .hallazgo-linea { padding-top: 6px; }
+.hallazgo-nombre { font-weight: 600; }
+
+/* Una ruta larga se corta por la izquierda: el final es lo que ubica. */
+.hallazgo-ruta {
+  font-size: 12px;
+  color: var(--texto-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+.hallazgo-cuenta { margin-left: auto; flex: none; font-size: 12px; color: var(--texto-2); }
+
+.hallazgo-linea {
+  display: flex;
+  gap: 12px;
+  padding: 2px 10px;
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+.hallazgo-linea:hover { background: var(--boton-2); }
+.hallazgo-linea:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+.hallazgo-linea:last-child { padding-bottom: 7px; }
+
+/* El numero no se selecciona: copiar un bloque de resultados tiene que dar codigo, no codigo numerado. */
+.hallazgo-nro {
+  flex: none;
+  min-width: 46px;
+  text-align: right;
+  color: var(--texto-2);
+  user-select: none;
+}
+
+/* El body va con user-select:none, igual que hace .salida. */
+.hallazgo-texto {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+/*
+  El resaltado va con el acento en transparencia y no con un amarillo de resaltador: sobre los dos
+  temas oscuros un amarillo fijo deja el texto ilegible.
+*/
+.hit {
+  background: color-mix(in srgb, var(--acento) 30%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Los atajos del stack. Solo aparecen con la raiz adentro de la carpeta de repositorios. */
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.preset {
+  height: 26px;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--boton-2);
+  color: var(--texto-2);
+  border: 1px solid var(--borde-campo);
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color .12s ease;
+}
+.preset:hover { background: var(--boton-2-hover); color: var(--texto); }
+.preset:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* Las casillas de opciones van en una fila, no apiladas: entran. */
+.fila-opciones { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 4px; }
+.fila-opciones .chk { margin: 5px 0; }
+
+/*
+  Boton de la altura de un encabezado de grupo, para la accion que acompana a un titulo y no
+  encabeza la pantalla. El text-transform no es decorativo: vive adentro de un .grupo, que va en
+  mayusculas con letter-spacing, y sin anularlo "Exportar" sale como "E X P O R T A R".
+*/
+.btn.btn-compacto {
+  height: 26px;
+  padding: 0 12px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/*
+  El campo con su boton de modo adentro, al estilo de VS Code. El boton queda PEGADO al campo al que
+  aplica, asi no hay forma de equivocarse de cual es cual, y la fila de opciones se ahorra dos
+  casillas que el listado necesita.
+*/
+.campo-con-modo { position: relative; display: flex; align-items: center; }
+.campo-con-modo .campo { padding-right: 36px; }
+.campo-con-modo.dos .campo { padding-right: 64px; }
+
+.modo {
+  position: absolute;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--texto-2);
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color .12s ease;
+}
+.modo.segundo { right: 32px; }
+.modo:hover { background: var(--boton-2-hover); color: var(--texto); }
+.modo:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+
+/* Encendido: el acento, que es lo que marca lo accionable en toda la aplicacion. */
+.modo.encendido {
+  background: color-mix(in srgb, var(--acento) 18%, transparent);
+  border-color: var(--acento);
+  color: var(--acento);
+  font-weight: 700;
+}
+
+/*
+  La ayuda de expresiones regulares. Existe porque la mitad del equipo no las escribe de memoria, y
+  un campo que solo dice "invalida" no ensena nada. Empuja al listado, que se encoge solo.
+*/
+.ayuda-regex {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--borde-campo);
+  border-left: 3px solid var(--acento);
+  background: var(--fondo-campo);
+}
+.ayuda-regex p { margin: 0 0 8px; font-size: 12.5px; color: var(--texto-2); }
+.ayuda-regex p b { color: var(--texto); font-weight: 600; }
+
+/*
+  Los simbolos van en negrita y con el color del texto principal: son lo unico que hay que leer de
+  ese renglon, y en gris y peso normal se mezclan con la explicacion. Quedan tres niveles y cada uno
+  significa algo: explicacion en gris, simbolos en negrita (vocabulario) y los patrones de los
+  ejemplos en el acento (accion, se tocan).
+*/
+.ayuda-regex p code {
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-weight: 700;
+  color: var(--texto);
+  background: color-mix(in srgb, var(--texto-2) 14%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.ejemplos-regex { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Cada ejemplo escribe su patron en el campo: se aprende usandolo, no leyendo una tabla. */
+.ejemplo-regex {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--borde-campo);
+  background: var(--fondo-principal);
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .12s ease;
+}
+.ejemplo-regex:hover { border-color: var(--acento); }
+.ejemplo-regex:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.ejemplo-regex code {
+  font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--acento);
+}
+.ejemplo-regex span { font-size: 11.5px; color: var(--texto-2); }
+
+/* El estado del patron, en vivo mientras se escribe. */
+.estado-patron { margin-top: 8px; font-size: 12px; }
