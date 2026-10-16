@@ -41,6 +41,11 @@ public sealed record Medicion(long Bytes, int Archivos, int Inaccesibles)
 /// enumera todo y deja filtrar después, con lo cual una carpeta podada igual se recorrería y una
 /// carpeta enorme que alguien excluyó se pagaría igual en tiempo. Recorriendo a mano se poda la
 /// rama entera y el salto de los junctions queda escrito donde se puede leer.
+///
+/// Referencia funcional y técnica, por los dos lados —la diferencia entre las dos podas está en los
+/// dos, porque es lo que explica esta clase—:
+/// AlgoritmoDevTools.Tools.BuscaLoco/README.referencia-tecnica-funcional-busca-loco.md y
+/// AlgoritmoDevTools.Tools.DiskCleaner/README.referencia-tecnica-funcional-limpieza-disco.md
 /// </summary>
 public static class RecorridoSeguro
 {
