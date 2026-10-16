@@ -31,6 +31,17 @@ public partial class TituloDeGrupo
     [Parameter]
     public string? Detalle { get; set; }
 
+    /// <summary>
+    /// Botones que acompañan al título, a la derecha del todo: la acción que es de la sección y no
+    /// de la pantalla, como exportar lo que la sección muestra.
+    ///
+    /// <b>No tiene efecto en un encabezado plegable.</b> Ahí el título entero es un botón, y un
+    /// botón adentro de otro no es HTML válido: el navegador lo saca del medio y el clic termina
+    /// plegando la sección en lugar de ejecutar la acción.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Acciones { get; set; }
+
     /// <summary>Si la sección está plegada. Sólo tiene efecto junto con <see cref="AlAlternar"/>.</summary>
     [Parameter]
     public bool Contraido { get; set; }

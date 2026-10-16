@@ -1,4 +1,5 @@
-﻿using AlgoritmoDevTools.Tools.BuscaLoco.Model;
+﻿using System.Text;
+using AlgoritmoDevTools.Tools.BuscaLoco.Model;
 using AlgoritmoDevTools.Tools.BuscaLoco.Services;
 using AlgoritmoDevTools.UI.Servicios;
 using Microsoft.AspNetCore.Components;
@@ -219,6 +220,76 @@ public partial class BuscaLocoPagina : IDisposable
 
         Cambiar(Sesion.Criterio with { Raiz = elegida });
         Sesion.Olvidar();
+    }
+
+    /// <summary>
+    /// Guarda lo que está en pantalla, en el formato que diga la extensión elegida.
+    ///
+    /// El archivo va en UTF-8 <b>con BOM</b>, y no es un detalle de estilo: sin la marca, Excel lee
+    /// el CSV con la codificación regional y todos los acentos salen rotos. Es el mismo motivo por
+    /// el que los archivos de código del repositorio la llevan.
+    /// </summary>
+    private async Task Exportar()
+    {
+        if (Encontrados.Count == 0) return;
+
+        var sugerido = $"busca-loco-{DateTime.Now:yyyy-MM-dd-HHmm}.csv";
+
+        // Con await por obligación: abrir el diálogo en el acto, desde el clic que el visor todavía
+        // está entregando, cierra la aplicación entera sin dejar rastro.
+        var destino = await Dialogos.ElegirDondeGuardar("Exportar los resultados", ExportadorDeResultados.FiltroDeArchivos, sugerido);
+        if (destino is null) return;
+
+        try
+        {
+            var contenido = ExportadorDeResultados.Armar(Encontrados, destino);
+            await File.WriteAllTextAsync(destino, contenido, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+            Barra.Informar($"Exportado a {Path.GetFileName(destino)}.", "estado-exito");
+        }
+        catch (Exception ex)
+        {
+            Barra.Informar($"No se pudo exportar. {ex.Message}", "estado-error");
+        }
+
+        _avisoDeGuardaPuesto = false;
+    }
+
+    /// <summary>
+    /// Abre el archivo en la línea donde está lo encontrado.
+    ///
+    /// Si no hay un editor que entienda la línea, se abre con el programa asociado: es una
+    /// degradación y no una falla, el archivo igual se abre, sólo que al principio.
+    /// </summary>
+    private void Abrir(string ruta, int linea)
+    {
+        if (AperturaDeArchivos.AbrirEnLaLinea(ruta, linea))
+        {
+            if (!AperturaDeArchivos.HayEditorQueEntiendeLaLinea)
+            {
+                Barra.Informar($"Abierto {Path.GetFileName(ruta)}. Sin Visual Studio Code no se puede ir a la línea.", "estado-advertencia");
+                _avisoDeGuardaPuesto = false;
+            }
+
+            return;
+        }
+
+        Barra.Informar($"No se pudo abrir {Path.GetFileName(ruta)}.", "estado-error");
+        _avisoDeGuardaPuesto = false;
+    }
+
+    /// <summary>
+    /// Muestra el diálogo «Abrir con» de Windows.
+    ///
+    /// Ese diálogo abre el archivo y nada más: <b>pierde la línea</b>. Por eso es el camino del clic
+    /// derecho y no el de todos los días.
+    /// </summary>
+    private void AbrirCon(string ruta)
+    {
+        if (AperturaDeArchivos.AbrirCon(ruta)) return;
+
+        Barra.Informar($"No se pudo abrir el diálogo para {Path.GetFileName(ruta)}.", "estado-error");
+        _avisoDeGuardaPuesto = false;
     }
 
     private string Resumen()

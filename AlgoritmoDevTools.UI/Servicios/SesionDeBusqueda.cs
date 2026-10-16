@@ -32,19 +32,24 @@ namespace AlgoritmoDevTools.UI.Servicios;
 public sealed class SesionDeBusqueda
 {
     private readonly BuscadorService _buscador;
+    private readonly HistorialRepository _historial;
     private readonly BarraDeEstado _barra;
     private readonly Avisos _avisos;
 
     private CancellationTokenSource? _cancelacion;
 
-    public SesionDeBusqueda(BuscadorService buscador, BarraDeEstado barra, Avisos avisos)
+    public SesionDeBusqueda(BuscadorService buscador, HistorialRepository historial, BarraDeEstado barra, Avisos avisos)
     {
         _buscador = buscador;
+        _historial = historial;
         _barra = barra;
         _avisos = avisos;
 
         Criterio = CriterioInicial();
     }
+
+    /// <summary>Las últimas búsquedas y carpetas, para no arrancar en blanco cada vez.</summary>
+    public HistorialRepository Historial => _historial;
 
     /// <summary>
     /// Lo que el usuario pidió. Vive acá y no en la pantalla porque también tiene que sobrevivir a
@@ -92,6 +97,8 @@ public sealed class SesionDeBusqueda
             Cambio?.Invoke();
             return;
         }
+
+        Recordar();
 
         var cancelacion = new CancellationTokenSource();
 
@@ -166,6 +173,25 @@ public sealed class SesionDeBusqueda
     {
         _barra.Informar(texto, clase);
         _avisos.Mostrar(texto, clase);
+    }
+
+    /// <summary>
+    /// Anota la búsqueda y la carpeta en el historial.
+    ///
+    /// Se traga los errores a propósito, igual que el resto de lo que persiste en esta aplicación:
+    /// que el archivo esté tomado o corrupto no puede impedir buscar, que es a lo que el usuario
+    /// vino.
+    /// </summary>
+    private void Recordar()
+    {
+        try
+        {
+            _historial.GuardarBusqueda(Criterio.Texto, Criterio.Nombre, Criterio.TextoEsExpresion);
+            _historial.GuardarRaiz(Criterio.Raiz);
+        }
+        catch
+        {
+        }
     }
 
     /// <summary>Corta el recorrido. Lo que ya se encontró queda a la vista.</summary>

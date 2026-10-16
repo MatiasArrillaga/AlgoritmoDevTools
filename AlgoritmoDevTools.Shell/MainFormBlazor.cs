@@ -190,6 +190,7 @@ public sealed class MainFormBlazor : Form
 
         // Busca Loco, por el mismo motivo: una busqueda sobre un repositorio entero tarda, y irse a
         // otra herramienta en el medio no puede cortarla ni perder lo encontrado.
+        servicios.AddSingleton(new HistorialRepository(new ToolStorage("BuscaLoco")));
         servicios.AddSingleton<BuscadorService>();
         servicios.AddSingleton<SesionDeBusqueda>();
 

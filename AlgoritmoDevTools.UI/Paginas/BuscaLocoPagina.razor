@@ -135,9 +135,20 @@
     <label class="chk"><input type="checkbox" checked="@SaltearRuido" @onchange="AlternarRuido" /> Saltear bin, obj, .git y node_modules</label>
 </div>
 
+@*
+    Exportar acompaña al título del grupo y no a la fila de búsqueda: lo que exporta es esta lista,
+    no la búsqueda. Secundario y compacto, porque la única acción primaria de la pantalla es Buscar.
+*@
 <TituloDeGrupo Texto="Resultados"
-               Ayuda="Los resultados aparecen mientras la búsqueda avanza, agrupados por archivo."
-               Detalle="@Resumen()" />
+               Ayuda="Un clic abre el archivo en el editor, en esa línea. El clic derecho ofrece abrirlo con otro programa."
+               Detalle="@Resumen()">
+    <Acciones>
+        <button type="button" class="btn btn-secundario btn-compacto"
+                style="margin-left:12px"
+                disabled="@(Encontrados.Count == 0 || Buscando)"
+                @onclick="Exportar">Exportar…</button>
+    </Acciones>
+</TituloDeGrupo>
 
 @if (Encontrados.Count > 0)
 {
@@ -152,7 +163,15 @@
 
             @foreach (var linea in PorLinea(archivo))
             {
-                <div class="hallazgo-linea">
+                var ruta = archivo.Ruta;
+                var numero = linea.Numero;
+
+                @* La lambda captura la fila del foreach: es el caso donde no hay otra forma. *@
+                <button type="button" class="hallazgo-linea"
+                        title="@ruta"
+                        @onclick="() => Abrir(ruta, numero)"
+                        @oncontextmenu="() => AbrirCon(ruta)"
+                        @oncontextmenu:preventDefault="true">
                     <span class="hallazgo-nro">@linea.Numero</span>
                     <span class="hallazgo-texto">
                         @foreach (var trozo in Segmentos(linea))
@@ -167,7 +186,7 @@
                             }
                         }
                     </span>
-                </div>
+                </button>
             }
         }
     </div>
