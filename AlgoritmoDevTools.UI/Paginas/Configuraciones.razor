@@ -92,9 +92,37 @@
                            Ayuda="Lo que queda residente es el widget de la bandeja, no esta ventana: al iniciar sesión deja el ícono al lado del reloj, con los secretos y los comandos a mano, sin abrir nada." />
 
             <label class="chk" style="margin-top:4px">
-                <input type="checkbox" checked="@_arrancaConWindows" @onchange="e => CambiarArranque(e.Value is true)" />
+                <input type="checkbox" checked="@ArrancaConWindows" @onchange="e => CambiarArranque(e.Value is true)" />
                 <span>Dejar el widget en la bandeja al iniciar sesión</span>
             </label>
+
+            @if (ApuntaAOtroBinario)
+            {
+                <p class="linea-estado estado-advertencia">Está puesto, pero el que arranca es otro ejecutable.</p>
+                <p class="sub">
+                    <span class="mono">@_arranque.RutaRegistrada</span>
+                </p>
+                <p class="sub">
+                    Es lo esperable mientras abrís esta ventana desde Visual Studio: el que queda en la bandeja
+                    al iniciar sesión es el publicado, no el de la compilación. Destildar y volver a tildar lo
+                    reemplaza por el que está corriendo ahora.
+                </p>
+            }
+
+            @if (_confirmarCompilacion)
+            {
+                <p class="linea-estado estado-advertencia">Este ejecutable corre desde la carpeta de compilación.</p>
+                <p class="sub">
+                    Un widget que queda residente desde <span class="mono">bin\Debug</span> mantiene tomados los
+                    DLL del proyecto, y la siguiente compilación de la solución falla con un error que no lo
+                    nombra. Lo habitual es publicar con <span class="mono">dotnet publish -c Release</span> y
+                    activar el arranque desde el ejecutable publicado.
+                </p>
+
+                <div class="fila" style="margin-top:10px">
+                    <button type="button" class="btn btn-secundario" @onclick="ActivarDesdeCompilacion">Activarlo igual</button>
+                </div>
+            }
 
             @if (_widgetCorriendo)
             {

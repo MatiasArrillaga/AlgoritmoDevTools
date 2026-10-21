@@ -35,14 +35,27 @@ public sealed class ArranqueDelWidget
     public ArranqueDelWidget(string verbo) => _verbo = verbo;
 
     /// <summary>
-    /// Mira también que apunte al ejecutable que está corriendo: publicado en otra carpeta, la
-    /// entrada vieja sigue levantando el binario anterior, y conviene mostrarlo apagado para que
-    /// al prenderlo se regenere.
+    /// Qué dice la clave Run: si el widget arranca con la sesión y, en ese caso, si el que arranca
+    /// es este ejecutable o es otro.
+    ///
+    /// Son tres estados y no dos porque la diferencia importa justo cuando se está desarrollando:
+    /// con el Shell abierto desde Visual Studio, una entrada que apunta al publicado no es lo mismo
+    /// que no tener ninguna, y tratarlas igual hace que prender el tilde pise la buena.
     /// </summary>
-    public bool EstaActivado() => ArranqueConWindows.EstaActivado(NombreEnElArranque);
+    public ArranqueConWindows.ArranqueRegistrado Leer() => ArranqueConWindows.Leer(NombreEnElArranque);
+
+    /// <summary>
+    /// Si el ejecutable que está corriendo ahora sale de una carpeta de compilación. Se pregunta
+    /// antes de ofrecer el arranque automático: un widget residente levantado desde <c>bin\Debug</c>
+    /// mantiene tomados los DLL del proyecto y la siguiente compilación de la solución falla.
+    /// </summary>
+    public static bool CorreDesdeCompilacion() =>
+        ArranqueConWindows.EsRutaDeCompilacion(ShellIntegration.RutaDelEjecutable() ?? string.Empty);
 
     /// <summary>Devuelve null si salió bien, o el mensaje de error.</summary>
-    public string? Activar() => ArranqueConWindows.TryActivar(NombreEnElArranque, _verbo);
+    /// <param name="aunqueCorraDesdeCompilacion">True cuando ya se avisó que el ejecutable sale de la carpeta de compilación y se eligió seguir igual.</param>
+    public string? Activar(bool aunqueCorraDesdeCompilacion = false) =>
+        ArranqueConWindows.TryActivar(NombreEnElArranque, _verbo, aunqueCorraDesdeCompilacion);
 
     /// <summary>Devuelve null si salió bien, o el mensaje de error.</summary>
     public string? Desactivar() => ArranqueConWindows.TryDesactivar(NombreEnElArranque);

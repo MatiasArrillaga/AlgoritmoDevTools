@@ -96,9 +96,28 @@ public partial class Configuraciones : IDisposable
     /// </summary>
     private readonly HashSet<string> _instalados = [];
 
-    private bool _arrancaConWindows;
+    /// <summary>
+    /// Lo que dice la clave Run, con los tres estados: apagado, puesto apuntando a este ejecutable,
+    /// o puesto apuntando a otro. El tercero es el que no se puede confundir con "apagado": pasa
+    /// todo el tiempo al abrir esta ventana desde Visual Studio mientras el widget que arranca con
+    /// la sesión es el publicado.
+    /// </summary>
+    private ArranqueConWindows.ArranqueRegistrado _arranque = new(ArranqueConWindows.EstadoDelArranque.Apagado, null);
+
+    /// <summary>
+    /// Mientras está prendido, el aviso de que este ejecutable sale de la carpeta de compilación
+    /// está a la vista esperando que se confirme o se cancele.
+    /// </summary>
+    private bool _confirmarCompilacion;
+
     private bool _widgetCorriendo;
     private bool _instalando;
+
+    /// <summary>El tilde: está puesto en el arranque, sea este ejecutable o cualquier otro.</summary>
+    private bool ArrancaConWindows => _arranque.EstaPuesto;
+
+    /// <summary>Está puesto, pero el que va a arrancar no es el ejecutable que corre esta ventana.</summary>
+    private bool ApuntaAOtroBinario => _arranque.Estado is ArranqueConWindows.EstadoDelArranque.ApuntaAOtro;
 
     protected override void OnInitialized()
     {
@@ -106,7 +125,7 @@ public partial class Configuraciones : IDisposable
         if (Inicial is { } pedida) _seccion = pedida;
         RevisarCarpeta();
         RevisarMenus();
-        _arrancaConWindows = Arranque.EstaActivado();
+        _arranque = Arranque.Leer();
         _widgetCorriendo = ArranqueDelWidget.EstaCorriendo();
     }
 
@@ -135,12 +154,40 @@ public partial class Configuraciones : IDisposable
     }
 
     /// <summary>
-    /// Pone o saca el widget de los programas que arrancan con la sesión. El tilde se vuelve a leer
-    /// del registro: si la escritura falló, tiene que quedar como estaba y no como se pidió.
+    /// Pone o saca el widget de los programas que arrancan con la sesión.
+    ///
+    /// Prenderlo con el Shell corriendo desde la carpeta de compilación no se hace de una: primero
+    /// se avisa. Un widget residente levantado desde <c>bin\Debug</c> mantiene tomados los DLL del
+    /// proyecto y la próxima compilación muere con un error que no lo nombra; y si ya había una
+    /// entrada apuntando al publicado, prender el tilde la pisaba sin decir nada.
     /// </summary>
     private void CambiarArranque(bool activar)
     {
-        var error = activar ? Arranque.Activar() : Arranque.Desactivar();
+        _confirmarCompilacion = false;
+
+        if (activar && ArranqueDelWidget.CorreDesdeCompilacion())
+        {
+            _confirmarCompilacion = true;
+            return;
+        }
+
+        AplicarArranque(activar);
+    }
+
+    /// <summary>Lo que se eligió en el aviso: registrar igual el ejecutable de la compilación.</summary>
+    private void ActivarDesdeCompilacion()
+    {
+        _confirmarCompilacion = false;
+        AplicarArranque(activar: true, aunqueCorraDesdeCompilacion: true);
+    }
+
+    /// <summary>
+    /// Escribe el cambio y vuelve a leer del registro: si la escritura falló, la pantalla tiene que
+    /// quedar como está el sistema y no como se pidió.
+    /// </summary>
+    private void AplicarArranque(bool activar, bool aunqueCorraDesdeCompilacion = false)
+    {
+        var error = activar ? Arranque.Activar(aunqueCorraDesdeCompilacion) : Arranque.Desactivar();
 
         if (error is not null)
         {
@@ -153,7 +200,7 @@ public partial class Configuraciones : IDisposable
                 : "El widget ya no arranca con Windows.", "estado-exito");
         }
 
-        _arrancaConWindows = Arranque.EstaActivado();
+        _arranque = Arranque.Leer();
     }
 
     private void RevisarMenus()
