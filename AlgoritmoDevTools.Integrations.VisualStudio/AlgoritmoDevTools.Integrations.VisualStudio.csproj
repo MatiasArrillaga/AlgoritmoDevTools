@@ -1,0 +1,55 @@
+﻿<!--
+  Extension de Visual Studio que espeja el menu contextual del Commands Maker dentro del IDE.
+
+  net8.0-windows y no net10.0 como el resto de la solucion: lo fija el SDK de extensibilidad, que
+  hoy publica 17.14 y no tiene build para net10. Por eso este proyecto NO referencia a ninguno de
+  los otros: no puede. Se comunica con ellos como lo hace el explorador, lanzando el ejecutable con
+  un verbo.
+
+  Se compila con `dotnet build` y no necesita la carga de trabajo "Desarrollo de extensiones de
+  Visual Studio": todo el SDK llega por NuGet. El .vsix sale en bin\<config>\net8.0-windows\.
+
+  Referencia funcional y tecnica:
+  AlgoritmoDevTools.Integrations.VisualStudio/README.referencia-tecnica-funcional-menu-visual-studio.md
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AlgoritmoDevTools.Integrations.VisualStudio</RootNamespace>
+
+    <!--
+      La versión que publica el manifiesto, vía ExtensionAssemblyVersion. Hay que subirla en cada
+      cambio que se vaya a instalar: el VS Installer toma la misma versión como "ya instalada" y no
+      reemplaza nada, así que sin subirla se prueba el binario viejo creyendo que es el nuevo.
+    -->
+    <Version>1.6.0</Version>
+
+    <!--
+      CEE0027 pide que los textos del menú salgan de string-resources.json referenciados como
+      %clave%. Acá van literales a propósito: la herramienta es interna y está toda en castellano,
+      igual que el resto de la solución, y ese archivo además es una trampa — si no queda
+      empaquetado, Visual Studio muestra la clave cruda ("%AlgoritmoDevTools.AddMigration...%") en
+      el menú, sin ningún error que lo delate.
+    -->
+    <NoWarn>$(NoWarn);CEE0027</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AlgoritmoDevTools.Integrations.VisualStudio.Test" />
+  </ItemGroup>
+
+  <!--
+    PrivateAssets="all" en los dos: sin eso, las targets del SDK fluyen al proyecto de pruebas y le
+    exigen contribuir su propia clase Extension (error VSEXT0004). Las pruebas sólo necesitan los
+    tipos de este proyecto, no el SDK.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -58,6 +58,7 @@ Transversales:
 
 - [Interfaz HTML](AlgoritmoDevTools.UI/README.referencia-tecnica-funcional-interfaz-html.md) — cómo está armada, qué puede y qué no.
 - [Temas](AlgoritmoDevTools.Core/Theming/README.referencia-tecnica-funcional-temas.md) — las cuatro paletas y cómo se aplican.
+- [El menú dentro de Visual Studio](AlgoritmoDevTools.Integrations.VisualStudio/README.referencia-tecnica-funcional-menu-visual-studio.md) — los comandos del Commands Maker en el clic derecho de la Consola del Administrador de paquetes.
 
 ## Estructura
 

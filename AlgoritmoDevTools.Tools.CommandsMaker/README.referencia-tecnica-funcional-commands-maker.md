@@ -50,6 +50,8 @@ Cuelga del grupo `DevTools` del clic derecho sobre el fondo de una carpeta, con 
 
 El menú es estático: se reescribe solo al agregar, borrar o usar un dominio.
 
+**Este menú es además la fuente del menú de Visual Studio.** La extensión de la Consola del Administrador de paquetes no decide el dominio activo ni sabe armar un comando: lee de estas mismas claves el ejecutable y el dominio, y relanza DevTools con el mismo verbo. Es decir que **si se renombra el grupo `20Comandos`, la clave `10Add` o cualquiera de los cuatro verbos, el menú de Visual Studio deja de funcionar sin que nada lo avise en compilación**. Ver [el menú dentro de Visual Studio](../AlgoritmoDevTools.Integrations.VisualStudio/README.referencia-tecnica-funcional-menu-visual-studio.md).
+
 ## 5. Almacenamiento
 
 `%LOCALAPPDATA%/AlgoritmoDevTools/CommandsMaker/data.db` — tabla `DOMINIOS`.
