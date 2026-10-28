@@ -7,6 +7,21 @@ public class SecretService
     private static readonly Lazy<SecretService> _shared = new(() => new SecretService());
     public static SecretService Shared => _shared.Value;
 
+    /// <summary>
+    /// Serializa el acceso a <see cref="Secrets"/> y <see cref="SecretosNoAdministrados"/>, que son
+    /// diccionarios comunes.
+    ///
+    /// <para>
+    /// Hace falta porque este servicio es <b>uno solo para todo el proceso</b> y lo leen varios
+    /// hilos: las pantallas releen con <c>Task.Run(() =&gt; RefreshSecrets())</c>, y
+    /// <see cref="GetConnectionString"/> relee por su cuenta cuando nadie leyó todavía. Dos de esas
+    /// escrituras a la vez rompen el diccionario, y el síntoma es un
+    /// <c>InvalidOperationException</c> hablando de colecciones no concurrentes, lejos de donde
+    /// está la causa.
+    /// </para>
+    /// </summary>
+    private readonly object _candado = new();
+
     public event EventHandler? SecretsChanged;
 
     /// <summary>
@@ -37,12 +52,22 @@ public class SecretService
     /// </summary>
     public string RefreshSecrets()
     {
-        LastRawOutput = ProcessRunner.RunDotnet(
+        // El proceso corre FUERA del candado a propósito: tarda cerca de un segundo, y lo que hay
+        // que serializar es la escritura de los diccionarios, no la espera. Si dos lecturas se
+        // pisan, la segunda reescribe lo mismo; lo que no puede pasar es que las dos escriban a la
+        // vez.
+        var salida = ProcessRunner.RunDotnet(
             $"user-secrets list --project {Constantes.ServiceProyectName}",
             workingDirectory: GetSolutionRoot());
-        ParseRawOutput(LastRawOutput);
+
+        lock (_candado)
+        {
+            LastRawOutput = salida;
+            ParseRawOutput(salida);
+        }
+
         SecretsChanged?.Invoke(this, EventArgs.Empty);
-        return LastRawOutput;
+        return salida;
     }
 
     /// <summary>
@@ -70,9 +95,18 @@ public class SecretService
     /// </summary>
     public string? GetConnectionString(string secretType)
     {
-        if (Secrets.Count == 0 && string.IsNullOrEmpty(LastRawOutput)) RefreshSecrets();
+        lock (_candado)
+        {
+            if (Secrets.TryGetValue(secretType, out var yaLeido)) return yaLeido;
 
-        return Secrets.TryGetValue(secretType, out var cs) ? cs : null;
+            // Ya se leyó y ese secreto no estaba. Releer no lo va a hacer aparecer, y disparar el
+            // proceso en cada consulta de un secreto ausente sería caro al pedo.
+            if (!string.IsNullOrEmpty(LastRawOutput)) return null;
+        }
+
+        RefreshSecrets();
+
+        lock (_candado) return Secrets.TryGetValue(secretType, out var cs) ? cs : null;
     }
 
     private void ParseRawOutput(string result)
@@ -216,8 +250,11 @@ public class SecretService
     /// </summary>
     private void PreservarSiExiste(Dictionary<string, string> destino, string secretType)
     {
-        if (Secrets.TryGetValue(secretType, out var actual))
-            destino.Add(Constantes.GetSecretKey(secretType), actual);
+        lock (_candado)
+        {
+            if (Secrets.TryGetValue(secretType, out var actual))
+                destino.Add(Constantes.GetSecretKey(secretType), actual);
+        }
     }
 
     /// <summary>
@@ -238,7 +275,10 @@ public class SecretService
     {
         RefreshSecrets();
 
-        if (Secrets.Count == 0 && !LastRawOutput.Contains(Constantes.NoHaySecretosMessage))
+        bool noSePudoLeer;
+        lock (_candado) noSePudoLeer = Secrets.Count == 0 && !LastRawOutput.Contains(Constantes.NoHaySecretosMessage);
+
+        if (noSePudoLeer)
         {
             throw new InvalidOperationException(
                 "No se pudieron leer los secretos actuales, así que no se modificó ninguno " +
@@ -251,8 +291,11 @@ public class SecretService
     private void ApplySecrets(Dictionary<string, string> newSecrets)
     {
         // Las claves ajenas van primero y las administradas después, para que una colisión la gane
-        // siempre el valor recién calculado.
-        var aEscribir = new Dictionary<string, string>(SecretosNoAdministrados);
+        // siempre el valor recién calculado. La copia va bajo candado: copiar es enumerar, y
+        // enumerar mientras otro hilo reescribe el diccionario tira la misma excepción que escribir.
+        Dictionary<string, string> aEscribir;
+        lock (_candado) aEscribir = new Dictionary<string, string>(SecretosNoAdministrados);
+
         foreach (var par in newSecrets) aEscribir[par.Key] = par.Value;
 
         var json = System.Text.Json.JsonSerializer.Serialize(aEscribir);
