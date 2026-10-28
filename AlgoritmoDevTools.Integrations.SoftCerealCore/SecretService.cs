@@ -46,10 +46,34 @@ public class SecretService
     }
 
     /// <summary>
-    /// Devuelve la connection string del ambiente solicitado, o null si no hay secretos cargados.
+    /// Devuelve la connection string del ambiente solicitado, o null si ese secreto no existe.
+    ///
+    /// <para>
+    /// <b>Lee los secretos si todavía nadie los leyó.</b> <see cref="Secrets"/> se llena sólo en
+    /// <see cref="RefreshSecrets"/>, y hasta acá lo llamaban únicamente las pantallas, en su carga.
+    /// Pero quien consulta una cadena no siempre pasó por una pantalla: los verbos del menú
+    /// contextual —el del explorador y el de Visual Studio— levantan el exe, resuelven la acción y
+    /// salen sin abrir ninguna ventana.
+    /// </para>
+    ///
+    /// <para>
+    /// Sin esto, el diccionario nacía vacío y la consulta devolvía null, que el que llama no puede
+    /// distinguir de "ese secreto no está cargado". El síntoma concreto era que el Commands Maker
+    /// armaba sus comandos de migración con la cadena de reserva de
+    /// <c>GeneradorDeComandos</c> (<c>Server=localhost,1433;Database=Algoritmo</c>) en vez de la
+    /// del secreto Development: una base equivocada, en un comando que se pega y se ejecuta.
+    /// </para>
+    ///
+    /// La relectura se intenta una sola vez por proceso —<see cref="LastRawOutput"/> vacío es la
+    /// señal de que nunca se leyó—, porque <c>dotnet user-secrets list</c> tarda y el caso legítimo
+    /// de no tener ningún secreto cargado no tiene por qué pagarlo en cada consulta.
     /// </summary>
     public string? GetConnectionString(string secretType)
-        => Secrets.TryGetValue(secretType, out var cs) ? cs : null;
+    {
+        if (Secrets.Count == 0 && string.IsNullOrEmpty(LastRawOutput)) RefreshSecrets();
+
+        return Secrets.TryGetValue(secretType, out var cs) ? cs : null;
+    }
 
     private void ParseRawOutput(string result)
     {
