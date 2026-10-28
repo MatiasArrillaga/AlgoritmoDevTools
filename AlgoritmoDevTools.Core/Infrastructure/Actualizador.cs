@@ -359,6 +359,89 @@ public static class Actualizador
         }
     }
 
+    /// <summary>
+    /// Busca en el último release el adjunto cuyo nombre empiece con <paramref name="prefijo"/>.
+    ///
+    /// <para>
+    /// <b>Devuelve el nombre, y eso es el punto.</b> El nombre del archivo lleva la versión
+    /// —<c>…VisualStudio.1.6.0.vsix</c>—, así que con esta consulta se sabe qué versión hay
+    /// publicada <b>sin bajar el archivo</b>. La API de GitHub ya lista los adjuntos con su nombre,
+    /// así que averiguarlo no cuesta ni un viaje extra.
+    /// </para>
+    ///
+    /// Por eso la búsqueda es por prefijo y no por nombre exacto: si fuera exacto habría que saber
+    /// de antemano la versión, que es justo lo que se quiere averiguar.
+    /// </summary>
+    /// <returns>El adjunto, o null si el release no trae ninguno que empiece así.</returns>
+    public static async Task<AdjuntoPublicado?> BuscarAdjuntoAsync(string prefijo, CancellationToken cancelacion = default)
+    {
+        try
+        {
+            using var cliente = Cliente();
+
+            var respuesta = await cliente.GetAsync(UrlDelUltimoRelease, cancelacion);
+            if (!respuesta.IsSuccessStatusCode) return null;
+
+            await using var contenido = await respuesta.Content.ReadAsStreamAsync(cancelacion);
+            using var json = await JsonDocument.ParseAsync(contenido, cancellationToken: cancelacion);
+
+            foreach (var adjunto in json.RootElement.GetProperty("assets").EnumerateArray())
+            {
+                var nombre = adjunto.GetProperty("name").GetString();
+                if (nombre is null || !nombre.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var url = adjunto.GetProperty("browser_download_url").GetString();
+                if (url is not null) return new AdjuntoPublicado(nombre, url);
+            }
+
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Baja un adjunto ya ubicado con <see cref="BuscarAdjuntoAsync"/>.
+    ///
+    /// Se baja a un temporal y recién al final se mueve al destino, para que una descarga cortada
+    /// no deje un archivo a medias haciéndose pasar por bueno.
+    /// </summary>
+    /// <returns>Null si salió bien, o el mensaje de error.</returns>
+    public static async Task<string?> DescargarAdjuntoAsync(AdjuntoPublicado adjunto, string destino, CancellationToken cancelacion = default)
+    {
+        var temporal = destino + ".parcial";
+
+        try
+        {
+            using var cliente = Cliente();
+
+            await using (var descarga = await cliente.GetStreamAsync(adjunto.Url, cancelacion))
+            await using (var archivo = File.Create(temporal))
+            {
+                await descarga.CopyToAsync(archivo, cancelacion);
+            }
+
+            File.Move(temporal, destino, overwrite: true);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                if (File.Exists(temporal)) File.Delete(temporal);
+            }
+            catch (Exception)
+            {
+                // Un temporal que no se pudo borrar no cambia nada: el error que importa es el de
+                // arriba, y este archivo se pisa en el próximo intento.
+            }
+
+            return ex.Message;
+        }
+    }
+
     private static HttpClient Cliente()
     {
         var cliente = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
@@ -373,3 +456,13 @@ public static class Actualizador
 /// <param name="UrlDelArchivo">De dónde se baja el ejecutable.</param>
 /// <param name="Notas">Lo que se escribió en el release.</param>
 public sealed record VersionPublicada(Version Numero, string Etiqueta, string UrlDelArchivo, string Notas);
+
+/// <summary>
+/// Un archivo adjunto al último release, de los que no son el ejecutable.
+/// </summary>
+/// <param name="Nombre">
+/// Nombre del archivo tal cual quedó publicado. Importa porque lleva la versión adentro, y es lo
+/// que permite saber qué hay publicado sin bajarlo.
+/// </param>
+/// <param name="Url">De dónde se baja.</param>
+public sealed record AdjuntoPublicado(string Nombre, string Url);
