@@ -67,7 +67,7 @@ proyecto **no puede** referenciar al resto de la solución (net10.0-windows) y s
 DevTools igual que el explorador: lanzando el `.exe` con un verbo y esperando a que termine.
 
 El Shell ya resuelve esos verbos sin abrir ventana, así que acá no se duplica lógica de negocio. Lo
-que **sí** quedó duplicado son los cuatro verbos (`VerbosDelShell`) — ver sección 12.
+que **sí** quedó duplicado son los cuatro verbos (`VerbosDelShell`) — ver sección 15.
 
 ## 5. Dónde se ancla el menú, y por qué ahí
 
@@ -266,7 +266,103 @@ proyecto de pruebas y lo hacen fallar con `VSEXT0004: los proyectos de VisualStu
 deben contribuir con una clase que extienda Extension`, un error que no tiene nada que ver con lo
 que el proyecto de pruebas hace.
 
-## 10. Instalar: hay que cerrar VS y NO puede ser silenciosa
+## 10. Instalar desde DevTools
+
+La forma normal es **Configuraciones → Integración con Visual Studio → Extensiones**.
+
+La pantalla está armada para que haya **más de una extensión**, aunque hoy haya una sola. Cada una
+es una ficha (`.extension` en `app.css`) con la misma información que muestra el administrador de
+extensiones del propio Visual Studio —icono, nombre, versión, para qué sirve, y el estado con su
+acción al pie—, para que lo que se lee acá y lo que se lee en el IDE coincidan. Sumar otra es
+repetir ese bloque con sus textos.
+
+### Saber si hay una versión nueva, sin bajar el paquete
+
+El workflow publica el paquete **con la versión en el nombre**:
+
+```
+AlgoritmoDevTools.Integrations.VisualStudio.1.6.0.vsix
+```
+
+Eso es lo que permite comparar contra lo instalado sin descargar los 3,8 MB: la consulta del
+release ya devuelve los nombres de los adjuntos, así que la versión viene en el mismo viaje que ya
+se hacía. Por eso `Actualizador.BuscarAdjuntoAsync` busca **por prefijo** y no por nombre exacto —
+si fuera exacto habría que saber la versión de antemano, que es justo lo que se quiere averiguar.
+
+Cuando lo publicado es más nuevo, la ficha lo dice y aparece un botón **Actualizar**, que por
+dentro es el mismo instalador: poner una versión nueva encima reemplaza a la vieja.
+
+**Trampa de la comparación: se comparan tres números, no cuatro.** Visual Studio reporta lo
+instalado con cuatro (`1.6.0.0`) y el nombre del adjunto trae tres (`1.6.0`). Comparados tal cual,
+`Version` da que `1.6.0` es **menor** que `1.6.0.0`, porque la revisión ausente vale −1. Sin
+normalizar, la misma versión aparecería como actualización disponible para siempre.
+
+Las alternativas que se descartaron: pedir un pedazo del `.vsix` con HTTP Range (es un ZIP, su
+índice está al final: harían falta tres viajes y parsear el directorio central a mano), y comparar
+por `size` o `updated_at` del adjunto (cambian por motivos que no son una versión nueva).
+
+### Cómo probar todo esto sin publicar un release
+
+`Actualizador` lee la variable de entorno **`DEVTOOLS_RELEASES`**, que reemplaza la dirección del
+release. Con eso se prueba el camino entero contra un servidor local:
+
+1. Una carpeta con el `.vsix` renombrado a la versión que se quiera simular y un `release.json`
+   con la forma que devuelve la API de GitHub (`tag_name`, `body`, `assets[].name`,
+   `assets[].browser_download_url`).
+2. `python -m http.server 8099 --bind 127.0.0.1` en esa carpeta.
+3. Arrancar DevTools con `DEVTOOLS_RELEASES=http://localhost:8099/release.json`.
+
+**El `release.json` tiene que ir sin BOM.** `Set-Content -Encoding utf8` de PowerShell 5.1 se lo
+agrega y el parseo falla; conviene escribirlo con `[System.IO.File]::WriteAllText` y un
+`UTF8Encoding($false)`. El JSON de GitHub no trae BOM, así que es un problema de la simulación y no
+del código.
+
+Dejando el `tag_name` igual a la versión de DevTools, el simulacro no ofrece actualizar la
+aplicación y sólo se prueba lo de la extensión.
+
+### Poner o sacar se ve como si estuviera actualizando Visual Studio
+
+**No se asusten: no lo está actualizando.** En Visual Studio 2026 un cambio de extensiones es una
+*modificación de la instalación*, así que el VS Installer lo muestra con la misma pantalla y la
+misma barra de progreso que usaría para una actualización de verdad — "Visual Studio Community
+2026 · Instalando… Esto puede tardar unos minutos · Finalizando…".
+
+Comprobado sacando la extensión: mientras el instalador decía eso, `vswhere` seguía reportando la
+misma versión del IDE (`18.10.3`) y la extensión ya había desaparecido de los paquetes
+registrados. Lo que estaba aplicando era la desinstalación, nada más.
+
+Es la misma razón por la que `/quiet` no sirve (sección 11): la operación no la hace
+`VSIXInstaller`, la termina haciendo el instalador de Visual Studio.
+
+**Que Visual Studio esté abierto no se avisa de entrada.** Antes había una advertencia fija y los
+botones deshabilitados, y eso obliga a leer un aviso que casi nunca viene al caso. Ahora el botón
+está siempre habilitado: si el IDE está abierto, lo descubre el servicio al intentar y lo dice en
+la barra de estado, que es cuando importa.
+
+El paquete **no viaja adentro de `DevTools.exe`**: se baja del último release, donde lo publica el
+workflow como segundo adjunto (`AlgoritmoDevTools.Integrations.VisualStudio.vsix`). Así el build de
+la aplicación no queda atado al de la extensión, que es net8 y necesita su SDK por NuGet.
+
+Hay un atajo para probar sin publicar: **si existe un `.vsix` con ese nombre al lado del
+ejecutable, se usa ese** en vez de bajarlo. De otro modo, probar un paquete recién compilado
+obligaría a sacar un release.
+
+Las piezas:
+
+| Pieza | Qué resuelve |
+|---|---|
+| `ExtensionDeVisualStudio` (Core) | Detectar Visual Studio con `vswhere`, saber qué versión está instalada, poner y sacar |
+| `Actualizador.DescargarAdjuntoAsync` | Bajar un adjunto del release por nombre, sin comparar versiones |
+| `Configuraciones` → `Seccion.VisualStudio` | La pantalla |
+| `.github/workflows/publicar.yml` | Compila la extensión y la sube al release |
+
+**La pantalla no usa un switch como las otras integraciones**, y no es por estilo: el arranque con
+Windows y los menús del explorador son una clave del registro que se escribe al instante. Esto
+exige cerrar Visual Studio y aceptar el UAC, así que va con botones, avisa cuando el IDE está
+abierto, y relee el estado al terminar en vez de darlo por hecho — el usuario puede haber cancelado
+el instalador.
+
+## 11. Instalar a mano: hay que cerrar VS y NO puede ser silenciosa
 
 ```powershell
 & "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\VSIXInstaller.exe" "<ruta>\AlgoritmoDevTools.Integrations.VisualStudio.vsix"
@@ -300,7 +396,7 @@ y registrada en `%PROGRAMDATA%\Microsoft\VisualStudio\Packages\` y en
 `...\IDE\VSExtensions\HotloadRegistration.txt`. Para verificar que entró, buscar el `.dll` **por
 nombre**: el de la carpeta es aleatorio y cambia en cada instalación.
 
-## 11. Compatibilidad con versiones de Visual Studio
+## 12. Compatibilidad con versiones de Visual Studio
 
 El manifiesto declara `Version="[17.14,)"`: mínimo 17.14 y **sin tope**. Sale de la versión de los
 paquetes del SDK, no de una elección propia — **subir los paquetes sube el mínimo exigido**.
@@ -308,7 +404,7 @@ paquetes del SDK, no de una elección propia — **subir los paquetes sube el m�
 Que no haya tope importa: hay reportes de que un manifiesto con `[17.0, 18.0)` falla con
 `NoApplicableSKUsException` en VS 2026, pese a que la documentación dice que el tope se ignora.
 
-## 12. Piezas
+## 13. Piezas
 
 | Pieza | Qué resuelve |
 |---|---|
@@ -319,13 +415,13 @@ Que no haya tope importa: hay reportes de que un manifiesto con `[17.0, 18.0)` f
 | `ComandoDeMigracion` | Lo común a los tres: el texto con el dominio entre paréntesis |
 | `VerbosDelShell` | Los cuatro verbos, duplicados del Commands Maker |
 
-## 13. Qué tendrían que cubrir las pruebas
+## 14. Qué tendrían que cubrir las pruebas
 
 - `MenuDelExplorador.Interpretar` con la línea real del registro, con rutas con espacios, con un
   dominio con espacios, y con basura — tiene que devolver null y nunca tirar excepción.
 - Que los cuatro verbos de `VerbosDelShell` sigan coincidiendo con `MenuContextualComandos`.
 
-## 14. Deuda conocida
+## 15. Deuda conocida
 
 - **Los verbos están duplicados** (`VerbosDelShell` vs `MenuContextualComandos`) y nada los ata. Si
   uno cambia y el otro no, el síntoma es que el ítem *no hace nada*: el Shell cae en el `switch` sin
@@ -340,7 +436,7 @@ Que no haya tope importa: hay reportes de que un manifiesto con `[17.0, 18.0)` f
   posible con este SDK (sección 8). La única vía realista sería una extensión VSIX clásica
   in-proc, que no se justifica por ahorrar un atajo.
 
-## 15. Qué está verificado y qué no
+## 16. Qué está verificado y qué no
 
 **Verificado en este equipo** (Visual Studio 18.10.3 Community):
 
@@ -375,7 +471,7 @@ Que no haya tope importa: hay reportes de que un manifiesto con `[17.0, 18.0)` f
 ancla el menú, si se podía limitar a la consola y si se podía pegar solo— están resueltas y
 documentadas, las dos últimas en negativo.
 
-## 16. Cuándo actualizar este documento
+## 17. Cuándo actualizar este documento
 
 Cuando cambien los verbos del Commands Maker, la ruta o la forma del grupo en el registro, el
 anclaje del menú, el content type de la consola, o cuando la extensión pase a hacer algo más que

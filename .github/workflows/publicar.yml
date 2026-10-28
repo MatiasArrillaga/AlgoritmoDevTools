@@ -38,9 +38,13 @@ jobs:
           # objeto de la etiqueta, no en el commit: sin el historial completo no se puede leer.
           fetch-depth: 0
 
+      # Dos versiones: la aplicacion es net10 y la extension de Visual Studio es net8, porque se lo
+      # impone el SDK de extensibilidad, que no publica build para net10.
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Verificar que la etiqueta coincida con la versión del proyecto
         shell: pwsh
@@ -58,6 +62,41 @@ jobs:
 
       - name: Publicar
         run: dotnet publish AlgoritmoDevTools.Shell -c Release -o salida
+
+      # El .vsix va como segundo adjunto del release porque es de ahi que lo baja la aplicacion
+      # cuando el usuario instala la extension desde Configuraciones. Si falta, el switch no tiene
+      # de donde sacarlo y avisa que el release no lo trae.
+      #
+      # Se compila aparte y no sale del publish del Shell: son proyectos sin relacion entre si, y
+      # el de la extension no se puede referenciar desde net10.
+      - name: Compilar la extension de Visual Studio
+        run: dotnet build AlgoritmoDevTools.Integrations.VisualStudio -c Release
+
+      # El paquete se publica CON LA VERSION EN EL NOMBRE
+      # (AlgoritmoDevTools.Integrations.VisualStudio.1.6.0.vsix) y eso no es cosmetico: es lo que le
+      # permite a la aplicacion saber que version hay publicada sin bajar los 3,8 MB. La consulta del
+      # release ya devuelve los nombres de los adjuntos, asi que averiguarlo sale gratis.
+      - name: Sumar el paquete de la extension a lo que se publica
+        shell: pwsh
+        run: |
+          $paquete = 'AlgoritmoDevTools.Integrations.VisualStudio/bin/Release/net8.0-windows/AlgoritmoDevTools.Integrations.VisualStudio.vsix'
+
+          if (-not (Test-Path $paquete)) {
+            Write-Error "No se genero el .vsix de la extension. Sin el, el release sale sin la extension y Configuraciones no la va a poder instalar."
+            exit 1
+          }
+
+          $csproj = [xml](Get-Content AlgoritmoDevTools.Integrations.VisualStudio/AlgoritmoDevTools.Integrations.VisualStudio.csproj)
+          $version = $csproj.Project.PropertyGroup.Version | Where-Object { $_ }
+
+          if (-not $version) {
+            Write-Error "El csproj de la extension no declara <Version>. Sin version en el nombre, la aplicacion no puede saber si hay una mas nueva."
+            exit 1
+          }
+
+          $destino = "salida/AlgoritmoDevTools.Integrations.VisualStudio.$version.vsix"
+          Copy-Item $paquete $destino
+          Write-Host "Paquete de la extension: $destino ($([math]::Round((Get-Item $paquete).Length / 1MB, 1)) MB)"
 
       # Lo que se escribe al etiquetar es lo unico que cuenta que cambio en palabras del equipo.
       # generate_release_notes solo no alcanza: arma la lista a partir de los pull requests, y aca
@@ -98,9 +137,11 @@ jobs:
           Set-Content -Path notas.md -Value $notas -Encoding utf8
           Write-Host $notas
 
-      - name: Crear el release con el ejecutable
+      - name: Crear el release con el ejecutable y la extension
         uses: softprops/action-gh-release@v2
         with:
-          files: salida/DevTools.exe
+          files: |
+            salida/DevTools.exe
+            salida/AlgoritmoDevTools.Integrations.VisualStudio.*.vsix
           body_path: notas.md
           generate_release_notes: true

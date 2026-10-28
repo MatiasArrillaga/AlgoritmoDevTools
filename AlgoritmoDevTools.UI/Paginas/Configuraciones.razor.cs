@@ -16,6 +16,7 @@ public enum Seccion
     Repositorios,
     Inicio,
     MenuContextual,
+    VisualStudio,
     ExportarEImportar,
     Actualizaciones
 }
@@ -39,6 +40,7 @@ public partial class Configuraciones : IDisposable
         new(Seccion.Repositorios, "General", "Repositorios"),
         new(Seccion.Inicio, "Integración con Windows", "Inicio con Windows"),
         new(Seccion.MenuContextual, "Integración con Windows", "Menú contextual"),
+        new(Seccion.VisualStudio, "Integración con Visual Studio", "Extensiones"),
         new(Seccion.ExportarEImportar, "Configuración", "Exportar e importar"),
         new(Seccion.Actualizaciones, "Configuración", "Actualizaciones")
     ];
@@ -96,6 +98,27 @@ public partial class Configuraciones : IDisposable
     /// </summary>
     private readonly HashSet<string> _instalados = [];
 
+    /// <summary>
+    /// Estado de la extensión de Visual Studio, releído en <see cref="RevisarLaExtension"/>. Se
+    /// guarda en campos y no se consulta desde el markup porque averiguarlo cuesta —una de las
+    /// consultas corre <c>vswhere</c>— y el markup se evalúa en cada render.
+    /// </summary>
+    private bool _hayVisualStudio;
+
+    private string? _versionDeLaExtension;
+
+    /// <summary>
+    /// Qué versión hay publicada, para poder avisar que la instalada quedó vieja. Se averigua
+    /// leyendo el nombre del adjunto del release, sin bajarlo. Null mientras no se pudo consultar.
+    /// </summary>
+    private string? _versionPublicada;
+
+    private bool _trabajandoEnLaExtension;
+
+    /// <summary>Si lo publicado es más nuevo que lo instalado.</summary>
+    private bool HayExtensionNueva =>
+        ExtensionDeVisualStudio.HayVersionNueva(_versionDeLaExtension, _versionPublicada);
+
     private bool _arrancaConWindows;
     private bool _widgetCorriendo;
     private bool _instalando;
@@ -106,6 +129,7 @@ public partial class Configuraciones : IDisposable
         if (Inicial is { } pedida) _seccion = pedida;
         RevisarCarpeta();
         RevisarMenus();
+        RevisarLaExtension();
         _arrancaConWindows = Arranque.EstaActivado();
         _widgetCorriendo = ArranqueDelWidget.EstaCorriendo();
     }
@@ -154,6 +178,59 @@ public partial class Configuraciones : IDisposable
         }
 
         _arrancaConWindows = Arranque.EstaActivado();
+    }
+
+    /// <summary>
+    /// Relee si hay dónde instalar extensiones y qué versión hay puesta.
+    ///
+    /// No mira si Visual Studio está abierto, a propósito: avisarlo de entrada obliga a leer una
+    /// advertencia que la mayoría de las veces no viene al caso. Que el IDE esté abierto lo
+    /// descubre el servicio al intentar, y recién ahí se dice, que es cuando importa.
+    /// </summary>
+    private void RevisarLaExtension()
+    {
+        _hayVisualStudio = ExtensionDeVisualStudio.HayVisualStudio();
+        _versionDeLaExtension = ExtensionDeVisualStudio.VersionInstalada();
+    }
+
+    private Task InstalarLaExtension() => CambiarLaExtension(instalar: true);
+
+    private Task QuitarLaExtension() => CambiarLaExtension(instalar: false);
+
+    /// <summary>
+    /// Pone o saca la extensión. Al revés que los menús del explorador, esto no es instantáneo: hay
+    /// una descarga y después una ventana del instalador esperando a que el usuario acepte el UAC.
+    /// Por eso los botones quedan deshabilitados mientras tanto, y el estado se relee al terminar en
+    /// vez de darlo por hecho: el usuario puede haber cancelado el instalador.
+    /// </summary>
+    private async Task CambiarLaExtension(bool instalar)
+    {
+        _trabajandoEnLaExtension = true;
+
+        // Pisa lo que hubiera de un intento anterior. Sin esto, mientras corre el nuevo se sigue
+        // leyendo el error del viejo —"hay que cerrar Visual Studio"— aunque ya se haya cerrado, y
+        // parece que falló otra vez. Además hay un rato largo sin novedades: puede haber una
+        // descarga y después una ventana del instalador esperando a que el usuario conteste.
+        Barra.Informar(instalar
+            ? "Instalando la extensión de Visual Studio..."
+            : "Quitando la extensión de Visual Studio...");
+
+        var error = instalar
+            ? await ExtensionDeVisualStudio.TryInstalarAsync()
+            : await ExtensionDeVisualStudio.TryDesinstalarAsync();
+
+        _trabajandoEnLaExtension = false;
+        RevisarLaExtension();
+
+        if (error is not null)
+        {
+            var que = instalar ? "instalar" : "quitar";
+            Barra.Informar($"No se pudo {que} la extensión de Visual Studio: {error}", "estado-error");
+            return;
+        }
+
+        var hecho = instalar ? "instalada" : "quitada";
+        Barra.Informar($"Extensión de Visual Studio {hecho}.", "estado-exito");
     }
 
     private void RevisarMenus()
@@ -275,6 +352,15 @@ public partial class Configuraciones : IDisposable
         if (_seleccion is not null)
         {
             await JS.InvokeVoidAsync("devtools.sincronizarParciales");
+        }
+
+        // Después del primer dibujo y no en OnInitialized: esto sale a internet, y la pantalla no
+        // tiene por qué esperarlo para mostrarse. Si no hay red, se queda sin saber qué hay
+        // publicado y no pasa nada más.
+        if (primeraVez && _hayVisualStudio)
+        {
+            _versionPublicada = await ExtensionDeVisualStudio.VersionPublicadaAsync();
+            StateHasChanged();
         }
     }
 

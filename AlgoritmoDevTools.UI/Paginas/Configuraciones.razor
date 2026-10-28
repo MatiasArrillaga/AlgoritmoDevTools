@@ -1,4 +1,4 @@
-@using AlgoritmoDevTools.Core.Infrastructure
+﻿@using AlgoritmoDevTools.Core.Infrastructure
 @using AlgoritmoDevTools.UI.Componentes
 @using AlgoritmoDevTools.UI.Servicios
 
@@ -137,6 +137,99 @@
                     @("Windows dibuja los primeros y descarta el resto sin avisar: sacá algo antes de seguir.")
                 }
             </p>
+        }
+
+        else if (_seccion is Seccion.VisualStudio)
+        {
+            <TituloDeGrupo Texto="Extensiones de Visual Studio"
+                           Ayuda="Qué agrega DevTools adentro de Visual Studio. Las pone y las saca el propio IDE, no DevTools: por eso hace falta cerrarlo y dar permiso de administrador." />
+
+            <p class="sub" style="margin-top:4px">
+                Poner o sacar una abre la ventana del instalador de Visual Studio, y Windows pide permiso de
+                administrador. No se puede hacer en silencio: sin ese permiso el instalador termina con error.
+            </p>
+
+            @if (!_hayVisualStudio)
+            {
+                <p class="sub estado-advertencia">
+                    No se encontró Visual Studio en esta máquina, así que no hay dónde instalarlas.
+                </p>
+            }
+            else
+            {
+                @* Una por ficha. Sumar otra extensión es repetir este bloque con sus propios textos. *@
+                <div class="extension">
+                    <span class="extension-icono" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="1.5" />
+                            <path d="M3 9h18" />
+                            <path d="M9 9v11" />
+                        </svg>
+                    </span>
+
+                    <div class="extension-cuerpo">
+                        <p class="extension-nombre">
+                            <span>Commands Maker en la consola</span>
+                            @if (_versionDeLaExtension is { } version)
+                            {
+                                <span class="extension-version">@version</span>
+                            }
+                        </p>
+
+                        <p class="extension-que">
+                            Deja los comandos de migración en el clic derecho de la Consola del Administrador de
+                            paquetes, que es donde terminan pegándose. El dominio lo lee del mismo lugar que el
+                            menú del explorador, así que los dos muestran siempre lo mismo.
+                        </p>
+
+                        <div class="extension-pie">
+                            <span class="extension-estado">
+                                @if (_versionDeLaExtension is null)
+                                {
+                                    <text>No instalada</text>
+                                }
+                                else if (HayExtensionNueva)
+                                {
+                                    <text>Instalada &mdash; hay una más nueva, la @_versionPublicada</text>
+                                }
+                                else
+                                {
+                                    <text>Instalada</text>
+                                }
+                            </span>
+
+                            <div class="acciones">
+                                @if (_versionDeLaExtension is null)
+                                {
+                                    <button type="button" class="btn btn-primario"
+                                            disabled="@_trabajandoEnLaExtension"
+                                            @onclick="InstalarLaExtension">
+                                        @(_trabajandoEnLaExtension ? "Instalando..." : "Instalar")
+                                    </button>
+                                }
+                                else
+                                {
+                                    @if (HayExtensionNueva)
+                                    {
+                                        @* El mismo instalador: poner una versión nueva encima reemplaza a la vieja. *@
+                                        <button type="button" class="btn btn-primario"
+                                                disabled="@_trabajandoEnLaExtension"
+                                                @onclick="InstalarLaExtension">
+                                            @(_trabajandoEnLaExtension ? "Actualizando..." : "Actualizar")
+                                        </button>
+                                    }
+
+                                    <button type="button" class="btn btn-secundario"
+                                            disabled="@_trabajandoEnLaExtension"
+                                            @onclick="QuitarLaExtension">
+                                        @(_trabajandoEnLaExtension ? "Quitando..." : "Quitar")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         }
 
         else if (_seccion is Seccion.Actualizaciones)
