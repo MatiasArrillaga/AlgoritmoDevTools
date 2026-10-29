@@ -6,7 +6,9 @@
     Selector de Servicios (Tye): elige qué microservicios levanta el entorno local y escribe el
     tye.devtools.yaml a partir del tye.yaml maestro, que nunca se modifica.
 
-    El servicio de seguridad no se puede destildar: sin él no levanta ninguno de los demás.
+    'seguridad' y 'ui' no se pueden destildar, y 'orquestador' se propone tildado cada vez que la
+    pantalla arma la selección entera. La regla vive en el code-behind (ServiciosObligatorios y
+    ServicioSugerido) y está duplicada en Views/TyeServiceSelectorView.cs, la ventana clásica.
 *@
 
 <TituloDePagina Texto="Selector de Servicios (Tye)" Ayuda="Genera tye.devtools.yaml con los servicios que elijas. El maestro no se toca." />
@@ -63,7 +65,7 @@
         @foreach (var servicio in _servicios)
         {
             var actual = servicio;
-            <label class="chk" title="@(EsObligatorio(actual.Nombre) ? "Sin este servicio no levanta ninguno de los demás." : actual.Nombre)">
+            <label class="chk" title="@TituloDe(actual.Nombre)">
                 <input type="checkbox" checked="@actual.Activo" disabled="@EsObligatorio(actual.Nombre)"
                        @onchange="e => Alternar(actual, e)" />
                 <span>@actual.Nombre</span>

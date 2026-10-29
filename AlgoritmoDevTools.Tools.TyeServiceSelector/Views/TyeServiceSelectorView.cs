@@ -10,8 +10,26 @@ public partial class TyeServiceSelectorView : UserControl
 {
     private const string SinPerfil = "(sin perfil)";
 
-    /// <summary>Servicio que siempre queda tildado y no se puede destildar.</summary>
-    private const string ServicioObligatorio = "seguridad";
+    /// <summary>
+    /// Servicios que siempre quedan tildados, con el motivo que se muestra en el tooltip.
+    /// La pantalla HTML (<c>TyeServiceSelectorPagina.razor.cs</c>) tiene su propia copia.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> ServiciosObligatorios =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["seguridad"] = "Sin este servicio no levanta ninguno de los demás.",
+            ["ui"] = "Es el front: sin él no hay pantalla desde donde usar lo que se levante.",
+        };
+
+    /// <summary>
+    /// Servicio que se vuelve a tildar cada vez que se arma la selección entera —"Desmarcar todos",
+    /// aplicar un perfil—. A diferencia de los obligatorios se puede destildar a mano.
+    /// </summary>
+    private const string ServicioSugerido = "orquestador";
+
+    /// <summary>Los obligatorios listados para un texto al usuario: <c>'seguridad' y 'ui'</c>.</summary>
+    private static string ObligatoriosEnTexto =>
+        "'" + string.Join("' y '", ServiciosObligatorios.Keys) + "'";
 
     /// <summary>Cantidad de columnas en las que se reparte la grilla de servicios.</summary>
     private const int ColumnasServicios = 3;
@@ -42,8 +60,8 @@ public partial class TyeServiceSelectorView : UserControl
 
         _tips.SetToolTip(RefrescarBtn, "Vuelve a leer el tye.yaml y refleja qué servicios están activos según el archivo generado.");
         _tips.SetToolTip(MarcarTodosBtn, "Tilda todos los servicios.");
-        _tips.SetToolTip(DesmarcarTodosBtn, "Destilda todos los servicios.");
-        _tips.SetToolTip(ServicesPanel, $"Tildá los microservicios que querés levantar. '{ServicioObligatorio}' siempre queda activo. Cada uno arrastra su sidecar Dapr. El master tye.yaml no se modifica.");
+        _tips.SetToolTip(DesmarcarTodosBtn, $"Destilda todos los servicios, salvo {ObligatoriosEnTexto} y '{ServicioSugerido}'.");
+        _tips.SetToolTip(ServicesPanel, $"Tildá los microservicios que querés levantar. {ObligatoriosEnTexto} siempre quedan activos y '{ServicioSugerido}' viene tildado. Cada uno arrastra su sidecar Dapr. El master tye.yaml no se modifica.");
         _tips.SetToolTip(ProfilesCombo, "Elegí un perfil guardado para tildar automáticamente sus servicios.");
         _tips.SetToolTip(GuardarPerfilBtn, "Guarda la selección actual como un perfil con nombre (o sobrescribe el existente).");
         _tips.SetToolTip(EliminarPerfilBtn, "Elimina el perfil seleccionado.");
@@ -138,9 +156,11 @@ public partial class TyeServiceSelectorView : UserControl
 
                 // El handler se engancha después de fijar Checked para no disparar el veto al armar la grilla.
                 check.CheckedChanged += ServiceCheck_CheckedChanged;
-                _tips.SetToolTip(check, obligatorio
-                    ? $"'{servicio.Name}' siempre se levanta: el resto de los microservicios no arranca sin él."
-                    : $"Levantar el microservicio '{servicio.Name}' junto con su sidecar Dapr.");
+                _tips.SetToolTip(check, MotivoObligatorio(servicio.Name) is { } motivo
+                    ? $"'{servicio.Name}' siempre se levanta. {motivo}"
+                    : EsSugerido(servicio.Name)
+                        ? $"Sugerido: casi todo circuito termina pasando por '{servicio.Name}'. Se puede destildar."
+                        : $"Levantar el microservicio '{servicio.Name}' junto con su sidecar Dapr.");
 
                 _serviceChecks.Add(check);
                 ServicesPanel.Controls.Add(check, i / filas, i % filas);
@@ -152,7 +172,7 @@ public partial class TyeServiceSelectorView : UserControl
         }
     }
 
-    /// <summary>Veta el destildado del servicio obligatorio (clicks, "Desmarcar todos", aplicar perfil).</summary>
+    /// <summary>Veta el destildado de los servicios obligatorios (clicks, "Desmarcar todos", aplicar perfil).</summary>
     private void ServiceCheck_CheckedChanged(object? sender, EventArgs e)
     {
         if (sender is not CheckBox check) return;
@@ -162,7 +182,14 @@ public partial class TyeServiceSelectorView : UserControl
     private static string NombreDe(CheckBox check) => (string)check.Tag!;
 
     private static bool EsObligatorio(string serviceName)
-        => string.Equals(serviceName, ServicioObligatorio, StringComparison.OrdinalIgnoreCase);
+        => ServiciosObligatorios.ContainsKey(serviceName);
+
+    /// <summary>Por qué el servicio no se puede destildar, o <c>null</c> si sí se puede.</summary>
+    private static string? MotivoObligatorio(string serviceName)
+        => ServiciosObligatorios.TryGetValue(serviceName, out var motivo) ? motivo : null;
+
+    private static bool EsSugerido(string serviceName)
+        => string.Equals(serviceName, ServicioSugerido, StringComparison.OrdinalIgnoreCase);
 
     private void RefrescarBtn_Click(object? sender, EventArgs e) => LoadServices();
 
@@ -170,10 +197,14 @@ public partial class TyeServiceSelectorView : UserControl
 
     private void DesmarcarTodosBtn_Click(object? sender, EventArgs e) => SetAllChecked(false);
 
+    /// <summary>
+    /// Al desmarcar sobreviven los obligatorios y el sugerido: la lista entera en blanco no es un
+    /// punto de partida útil para ninguna combinación.
+    /// </summary>
     private void SetAllChecked(bool value)
     {
         foreach (var check in _serviceChecks)
-            check.Checked = value || EsObligatorio(NombreDe(check));
+            check.Checked = value || EsObligatorio(NombreDe(check)) || EsSugerido(NombreDe(check));
     }
 
     // --- Perfiles -----------------------------------------------------------
@@ -214,11 +245,18 @@ public partial class TyeServiceSelectorView : UserControl
         foreach (var check in _serviceChecks)
         {
             var servicio = NombreDe(check);
-            check.Checked = enabled.Contains(servicio) || EsObligatorio(servicio);
+            check.Checked = enabled.Contains(servicio) || EsObligatorio(servicio) || EsSugerido(servicio);
         }
 
+        // Un perfil guardado sin el sugerido igual lo recibe. Se avisa para que la diferencia
+        // entre lo guardado y lo tildado no se lea como un perfil mal guardado.
+        bool porSugerencia = _serviceChecks.Any(c => EsSugerido(NombreDe(c))) && !enabled.Contains(ServicioSugerido);
         int activos = _serviceChecks.Count(c => c.Checked);
-        SetStatus($"Perfil '{name}' aplicado — {activos} servicio(s) tildado(s). Tocá 'Generar y guardar' para escribir el archivo.", ColoresDeEstado.Informacion);
+        SetStatus(
+            $"Perfil '{name}' aplicado — {activos} servicio(s) tildado(s)."
+            + (porSugerencia ? $" '{ServicioSugerido}' quedó tildado por sugerencia." : string.Empty)
+            + " Tocá 'Generar y guardar' para escribir el archivo.",
+            ColoresDeEstado.Informacion);
     }
 
     private void GuardarPerfilBtn_Click(object? sender, EventArgs e)

@@ -35,9 +35,19 @@ Hasta el commit `0dd570fa5` de AlgoritmoCore (02/10/2026) los sidecars los deriv
 
 **Las dos mitades sueltas fallan**: un servicio sin sidecar no puede invocar a nadie, y un sidecar sin servicio queda esperando para siempre una aplicación que no va a arrancar.
 
-### El servicio de seguridad no se puede destildar
+### Hay servicios que no se pueden destildar
 
-Sin él no levanta ninguno de los demás. La casilla está deshabilitada a propósito.
+`seguridad` y `ui`. La casilla está deshabilitada a propósito y cada una explica su motivo al pasar el mouse: sin `seguridad` no levanta ninguno de los demás, y sin `ui` no hay pantalla desde donde usar lo que se levante.
+
+La lista es `ServiciosObligatorios`, **duplicada en las dos pantallas** (`TyeServiceSelectorPagina.razor.cs` y `Views/TyeServiceSelectorView.cs`): sumar un servicio es agregarlo con su motivo en los dos lados.
+
+### `orquestador` viene tildado, pero se puede destildar
+
+Casi todo circuito termina pasando por él, así que la pantalla lo vuelve a tildar cada vez que arma la selección entera —"Desmarcar todos" y aplicar un perfil—, aunque el perfil no lo traiga. Cuando lo agrega por sugerencia lo dice en la barra de estado, para que la diferencia con lo guardado no se lea como un perfil mal guardado.
+
+Es una sugerencia, no una regla: destildarlo a mano se respeta, y **al refrescar manda el archivo generado**. Si quedó comentado en el `tye.devtools.yaml`, la casilla aparece destildada; re-tildarla ahí pisaría una decisión ya tomada, por el mismo motivo por el que el perfil vigente no se reaplica al abrir (§4).
+
+`orquestadorscheduler` es otro servicio y queda afuera de la sugerencia.
 
 ### El toggle es por comentarios de línea
 
@@ -74,7 +84,8 @@ La raíz del repositorio sale de `RutasDeTrabajo.AlgoritmoCore`, o sea de la car
 
 - Una variable de `env:` nunca aparece como servicio.
 - Tildar un servicio activa también su sidecar; destildarlo comenta los dos.
-- El servicio de seguridad queda activo aunque se pida desmarcar todos.
+- Los obligatorios (`seguridad`, `ui`) quedan activos aunque se pida desmarcar todos, y su casilla no responde al clic.
+- `orquestador` queda tildado al desmarcar todos y al aplicar un perfil que no lo incluye; destildarlo a mano funciona, y refrescar respeta lo que diga el archivo generado.
 - Un bloque que ya estaba como corresponde se copia sin tocar, con sus comentarios a mano.
 - Volver a tildar un servicio comentado restituye su definición completa.
 - Generar deja registrado el perfil; elegirlo del combo no.
@@ -89,4 +100,4 @@ La raíz del repositorio sale de `RutasDeTrabajo.AlgoritmoCore`, o sea de la car
 
 ---
 
-**Este documento debe actualizarse** cuando cambie el formato del `tye.yaml` maestro, la convención de los sidecars, el esquema de perfiles o la regla del servicio obligatorio.
+**Este documento debe actualizarse** cuando cambie el formato del `tye.yaml` maestro, la convención de los sidecars, el esquema de perfiles, la lista de servicios obligatorios o la del sugerido.

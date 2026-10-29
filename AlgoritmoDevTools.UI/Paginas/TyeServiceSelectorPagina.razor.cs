@@ -23,8 +23,24 @@ public partial class TyeServiceSelectorPagina : IDisposable
 
     private const string SinPerfil = "(sin perfil)";
 
-    /// <summary>Sin seguridad no levanta ninguno de los demás, así que no se puede destildar.</summary>
-    private const string ServicioObligatorio = "seguridad";
+    /// <summary>
+    /// Servicios que siempre quedan tildados, con el motivo que se muestra al pasar el mouse. La
+    /// casilla va deshabilitada: destildarlos deja un entorno que no sirve para nada. Sumar uno
+    /// nuevo es agregarlo acá y en <c>Views/TyeServiceSelectorView.cs</c>, que tiene su propia copia.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> ServiciosObligatorios =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["seguridad"] = "Sin este servicio no levanta ninguno de los demás.",
+            ["ui"] = "Es el front: sin él no hay pantalla desde donde usar lo que se levante.",
+        };
+
+    /// <summary>
+    /// Servicio que la pantalla vuelve a tildar cada vez que arma la selección entera —"Desmarcar
+    /// todos", aplicar un perfil—, porque casi todo circuito termina pasando por él. A diferencia
+    /// de los obligatorios se puede destildar a mano, y al refrescar manda el archivo generado.
+    /// </summary>
+    private const string ServicioSugerido = "orquestador";
 
     private sealed class ServicioElegible
     {
@@ -97,8 +113,21 @@ public partial class TyeServiceSelectorPagina : IDisposable
             "estado-neutro");
     }
 
-    private static bool EsObligatorio(string nombre) =>
-        string.Equals(nombre, ServicioObligatorio, StringComparison.OrdinalIgnoreCase);
+    private static bool EsObligatorio(string nombre) => ServiciosObligatorios.ContainsKey(nombre);
+
+    /// <summary>Por qué el servicio no se puede destildar, o <c>null</c> si sí se puede.</summary>
+    private static string? MotivoObligatorio(string nombre) =>
+        ServiciosObligatorios.TryGetValue(nombre, out var motivo) ? motivo : null;
+
+    private static bool EsSugerido(string nombre) =>
+        string.Equals(nombre, ServicioSugerido, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Texto que se muestra al pasar el mouse por la casilla del servicio.</summary>
+    private static string TituloDe(string nombre) =>
+        MotivoObligatorio(nombre)
+        ?? (EsSugerido(nombre)
+            ? $"Sugerido: casi todo circuito termina pasando por '{nombre}'. Se puede destildar."
+            : nombre);
 
     private void Alternar(ServicioElegible servicio, ChangeEventArgs e)
     {
@@ -106,11 +135,15 @@ public partial class TyeServiceSelectorPagina : IDisposable
         servicio.Activo = e.Value is true;
     }
 
+    /// <summary>
+    /// Al desmarcar sobreviven los obligatorios y el sugerido: la lista entera en blanco no es un
+    /// punto de partida útil para ninguna combinación.
+    /// </summary>
     private void MarcarTodos(bool valor)
     {
         foreach (var servicio in _servicios)
         {
-            servicio.Activo = valor || EsObligatorio(servicio.Nombre);
+            servicio.Activo = valor || EsObligatorio(servicio.Nombre) || EsSugerido(servicio.Nombre);
         }
     }
 
@@ -138,11 +171,20 @@ public partial class TyeServiceSelectorPagina : IDisposable
 
         foreach (var servicio in _servicios)
         {
-            servicio.Activo = delPerfil.Contains(servicio.Nombre) || EsObligatorio(servicio.Nombre);
+            servicio.Activo = delPerfil.Contains(servicio.Nombre)
+                || EsObligatorio(servicio.Nombre)
+                || EsSugerido(servicio.Nombre);
         }
 
+        // Un perfil guardado sin el sugerido igual lo recibe. Se avisa para que la diferencia
+        // entre lo guardado y lo tildado no se lea como un perfil mal guardado.
+        var porSugerencia = _servicios.Any(s => EsSugerido(s.Nombre)) && !delPerfil.Contains(ServicioSugerido);
         var activos = _servicios.Count(s => s.Activo);
-        Informar($"Perfil '{nombre}' aplicado — {activos} servicio(s) tildado(s). Tocá 'Generar y guardar' para escribir el archivo.", "estado-neutro");
+        Informar(
+            $"Perfil '{nombre}' aplicado — {activos} servicio(s) tildado(s)."
+            + (porSugerencia ? $" '{ServicioSugerido}' quedó tildado por sugerencia." : string.Empty)
+            + " Tocá 'Generar y guardar' para escribir el archivo.",
+            "estado-neutro");
     }
 
     /// <summary>
