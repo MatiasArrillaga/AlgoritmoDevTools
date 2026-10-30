@@ -33,6 +33,33 @@ public sealed class ConfiguracionDevTools
     public string? UltimoPerfilDeTye { get; set; }
 
     /// <summary>
+    /// Con qué conexión se levantó el entorno local: servidor, base y cuándo, separados por barra
+    /// vertical. Vacío significa que no hay entorno levantado desde acá.
+    ///
+    /// Se guarda porque la conexión no se puede averiguar mirando el entorno: cada servicio la lee
+    /// de los user-secrets al arrancar y se la queda. Si alguien la cambia después, los que ya están
+    /// corriendo siguen con la anterior y no hay forma de notarlo salvo recordando con cuál arrancaron.
+    /// </summary>
+    public string? SelloDeConexion { get; set; }
+
+    /// <summary>
+    /// Proceso de tye que lanzó DevTools, para poder cerrar su consola al frenar. Vacío significa
+    /// que el entorno no lo levantamos nosotros —lo arrancó el usuario desde su propia consola— y
+    /// entonces esa ventana no es nuestra para cerrarla.
+    /// </summary>
+    public int? PidDeTye { get; set; }
+
+    /// <summary>
+    /// Dónde dejó el usuario la barra del entorno, como "x,y". Vacío la pone arriba a la derecha.
+    /// </summary>
+    public string? PosicionDeLaBarra { get; set; }
+
+    /// <summary>
+    /// Ancho que el usuario le dejó a la barra del entorno. Vacío significa el de fábrica.
+    /// </summary>
+    public int? AnchoDeLaBarra { get; set; }
+
+    /// <summary>
     /// Carpeta que contiene los repositorios. Vacía significa la predeterminada, que es la de
     /// siempre: la carpeta source/repos del perfil del usuario. Ver <see cref="RutasDeTrabajo"/>.
     /// </summary>

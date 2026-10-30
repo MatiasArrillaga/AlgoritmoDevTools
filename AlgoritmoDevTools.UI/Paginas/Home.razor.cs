@@ -5,6 +5,7 @@ using AlgoritmoDevTools.Tools.DiskCleaner.Model;
 using AlgoritmoDevTools.Tools.DiskCleaner.Services;
 using AlgoritmoDevTools.Tools.ModelDriftChecker.Services;
 using AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
+using AlgoritmoDevTools.Tools.TyeServiceSelector.Services.Entorno;
 using AlgoritmoDevTools.UI;
 using AlgoritmoDevTools.UI.Componentes;
 using AlgoritmoDevTools.UI.Servicios;
@@ -43,6 +44,7 @@ public partial class Home : IDisposable
     private int _serviciosActivos;
     private int _totalDeServicios;
     private bool _haySecreto;
+    private string? _entornoConOtraBase;
 
     /// <summary>
     /// La lectura de secretos la dispara el armazón al arrancar y tarda alrededor de un segundo,
@@ -124,6 +126,12 @@ public partial class Home : IDisposable
         _servidor = partes.GetValueOrDefault("Server", "-");
         _baseDeDatos = partes.GetValueOrDefault("Database", "-");
         _haySecreto = true;
+
+        // Si el entorno se levantó con otra base, los servicios siguen con aquélla: la leen al
+        // arrancar y no vuelven a mirarla. Mostrar sólo la configurada haría creer que es la que
+        // está en uso.
+        var (estado, sello, _) = SelloDeConexion.Comparar();
+        _entornoConOtraBase = estado == EstadoDelSello.Difiere ? sello?.Base : null;
     }
 
     private void LeerServicios()

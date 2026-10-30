@@ -1,5 +1,7 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
+using AlgoritmoDevTools.Tools.TyeServiceSelector.Services.Entorno;
+using AlgoritmoDevTools.UI.Servicios;
 using Microsoft.Win32;
 using AlgoritmoDevTools.Integrations.SoftCerealCore;
 using AlgoritmoDevTools.Tools.CommandsMaker.Services;
@@ -87,6 +89,8 @@ internal sealed class WidgetContext : ApplicationContext
 
         // El arranque con Windows no está acá: se maneja desde Configuraciones, que es donde está
         // todo lo demás que la aplicación deja puesto en el sistema.
+        menu.Items.Add("Mostrar la barra del entorno", null, (_, _) => MostrarLaBarra());
+        menu.Items.Add("Limpiar restos del entorno", null, async (_, _) => await LimpiarRestos());
         menu.Items.Add("Abrir DevTools", null, (_, _) => AbrirShell());
         menu.Items.Add("Salir", null, (_, _) => Salir());
 
@@ -237,7 +241,14 @@ internal sealed class WidgetContext : ApplicationContext
         if (cs is null) return "Secreto Development no configurado";
 
         var partes = ConnectionStringParser.Parse(cs);
-        return $"Server: {partes.GetValueOrDefault("Server", "-")}   —   Base: {partes.GetValueOrDefault("Database", "-")}";
+        var texto = $"Server: {partes.GetValueOrDefault("Server", "-")}   —   Base: {partes.GetValueOrDefault("Database", "-")}";
+
+        // El entorno que está corriendo puede haber arrancado con otra: avisarlo acá es barato y es
+        // lo primero que se mira cuando algo no cuadra con los datos.
+        var (estado, sello, _) = SelloDeConexion.Comparar();
+        if (estado == EstadoDelSello.Difiere) texto += $"   (el entorno corre en {sello?.Base})";
+
+        return texto;
     }
 
     /// <summary>
@@ -282,6 +293,40 @@ internal sealed class WidgetContext : ApplicationContext
         // Sin argumentos abre la ventana normal; el widget sigue corriendo aparte.
         Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
     }
+
+    /// <summary>
+    /// Barre lo que haya quedado de entornos anteriores. Está acá y no en la barra porque es
+    /// justamente cuando no hay entorno —y por lo tanto no hay barra— que uno lo necesita.
+    /// </summary>
+    private static async Task LimpiarRestos()
+    {
+        var limpiador = new LimpiadorDelEntorno(new ProveedorTye());
+        var restos = await limpiador.RevisarAsync();
+
+        if (!restos.HayAlgo)
+        {
+            MessageBox.Show("No quedó nada colgado.", "Algoritmo DevTools",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var detalle = $"{restos.Sidecars.Count} sidecar(s), {restos.Contenedores.Count} contenedor(es) y {restos.Redes.Count} red(es)."
+            + Environment.NewLine + Environment.NewLine
+            + "Los contenedores de dapr init no se tocan. ¿Limpio?";
+
+        if (MessageBox.Show(detalle, "Algoritmo DevTools", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        var limpiadas = await limpiador.LimpiarAsync();
+        MessageBox.Show($"Se limpiaron {limpiadas} cosa(s).", "Algoritmo DevTools",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    /// <summary>
+    /// Abre la barra del entorno. Es otro proceso: el widget sólo la lanza y no vuelve a saber de
+    /// ella, igual que con la ventana principal.
+    /// </summary>
+    private static void MostrarLaBarra() => new ArranqueDeLaBarra(Program.VerboBarra).Lanzar();
 
     private void Salir()
     {

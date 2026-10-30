@@ -14,3 +14,17 @@ window.devtools.sincronizarParciales = function () {
         casilla.indeterminate = casilla.getAttribute('data-parcial') === 'true';
     });
 };
+
+
+// La barra del entorno no tiene marco, asi que arrastrarla no lo hace Windows solo. Tampoco sirve
+// el hit-test del formulario: el visor ocupa toda la ventana y se queda con el mouse. Entonces la
+// pagina avisa que se empezo a arrastrar desde la zona de puntos y el host se encarga del resto,
+// que es el mismo camino que usa la franja de archivos arrastrados.
+document.addEventListener('mousedown', function (evento) {
+    if (evento.button !== 0) return;
+    if (!evento.target.closest('.barra-agarre')) return;
+
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage('barra:mover');
+    }
+});

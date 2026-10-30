@@ -64,6 +64,12 @@ static class Program
     public const string VerboWidget = "--widget";
 
     /// <summary>
+    /// Levanta la barra del entorno local. Proceso aparte por lo mismo que el widget: la barra
+    /// tiene que seguir mientras siga el entorno, y la ventana se cierra mucho antes que eso.
+    /// </summary>
+    public const string VerboBarra = "--barra";
+
+    /// <summary>
     /// Abre la ventana clasica de Windows Forms. Sigue siendo la unica que tiene las herramientas
     /// completas mientras cada una no tenga su pantalla en HTML.
     /// </summary>
@@ -83,6 +89,10 @@ static class Program
         {
             case VerboWidget:
                 EjecutarWidget();
+                return true;
+
+            case VerboBarra:
+                EjecutarBarra();
                 return true;
 
             // Esta es la mitad elevada de la limpieza de disco: la aplicacion se relanza a si misma
@@ -160,6 +170,22 @@ static class Program
 
         // El mutex se libera al salir del using, no antes: mientras el widget corre, tiene que
         // seguir tomado para que el proximo intento lo vea.
+        GC.KeepAlive(mutex);
+    }
+
+    /// <summary>
+    /// Corre la barra del entorno, una sola por usuario. Si ya hay una, sale sin decir nada: la
+    /// barra está a la vista, así que un cartel avisando que ya está sobra.
+    /// </summary>
+    private static void EjecutarBarra()
+    {
+        using var mutex = new Mutex(initiallyOwned: true, ArranqueDeLaBarra.MutexDeInstanciaUnica, out var esLaPrimera);
+        if (!esLaPrimera) return;
+
+        Application.Run(new Barra.BarraDeEntorno());
+
+        // El mutex se libera al salir del using, no antes: mientras la barra corre, tiene que
+        // seguir tomado para que el próximo intento la vea.
         GC.KeepAlive(mutex);
     }
 

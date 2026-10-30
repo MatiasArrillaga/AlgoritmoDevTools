@@ -3,12 +3,18 @@
 @using AlgoritmoDevTools.UI.Servicios
 
 @*
-    Selector de Servicios (Tye): elige qué microservicios levanta el entorno local y escribe el
-    tye.devtools.yaml a partir del tye.yaml maestro, que nunca se modifica.
+    Selector de Servicios (Tye): elige qué microservicios levanta el entorno local, escribe el
+    tye.devtools.yaml a partir del tye.yaml maestro —que nunca se modifica— y arranca tye.
+
+    Antes de arrancar muestra un pre-vuelo con los servicios elegidos, contra qué base van a
+    levantar y qué le falta al entorno: darse cuenta después cuesta el ciclo completo.
 
     'seguridad' y 'ui' no se pueden destildar, y 'orquestador' se propone tildado cada vez que la
     pantalla arma la selección entera. La regla vive en el code-behind (ServiciosObligatorios y
     ServicioSugerido) y está duplicada en Views/TyeServiceSelectorView.cs, la ventana clásica.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Tools.TyeServiceSelector/README.referencia-tecnica-funcional-selector-de-servicios.md.
 *@
 
 <TituloDePagina Texto="Selector de Servicios (Tye)" Ayuda="Genera tye.devtools.yaml con los servicios que elijas. El maestro no se toca." />
@@ -74,7 +80,56 @@
     </div>
 }
 
+@if (_revision is not null)
+{
+    <p class="grupo">Entorno</p>
+
+    <div class="fila" style="margin-top:0">
+        @if (HayQueControlar)
+        {
+            <span>Ya hay un entorno corriendo. <b>Controlar</b> engancha la barra a esa instancia; no se levanta nada ni se cambia la base.</span>
+        }
+        else if (_revision.ErrorDeConexion is not null)
+        {
+            <span class="estado-error">@_revision.ErrorDeConexion</span>
+        }
+        else
+        {
+            <span>Va a levantar contra <b>@_revision.BaseDeDatos</b> en <span class="mono">@_revision.Servidor</span>.</span>
+        }
+    </div>
+
+    @foreach (var faltante in _revision.Prerrequisitos.Faltantes)
+    {
+        var actual = faltante;
+        <div class="fila" style="margin-top:0">
+            <span class="estado-error">@actual.Que</span>
+            @if (actual.NecesitaElevacion)
+            {
+                <button type="button" class="btn btn-secundario" disabled="@_ocupado"
+                        @onclick="() => Destrabar(actual)">
+                    Destrabar (pide permisos de administrador)
+                </button>
+            }
+            else if (!string.IsNullOrWhiteSpace(actual.Remedio))
+            {
+                <span class="mono">@actual.Remedio</span>
+            }
+        </div>
+    }
+
+    @foreach (var aviso in _revision.Prerrequisitos.Avisos)
+    {
+        <p class="estado-advertencia">@aviso</p>
+    }
+}
+
 <div class="acciones">
-    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Generar">Generar y guardar</button>
-    <button type="button" class="btn btn-secundario" @onclick="CopiarComando">Copiar comando run</button>
+    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Levantar"
+            title="@(HayQueControlar
+                ? "Ya hay un entorno corriendo: abre la barra enganchada a esa instancia"
+                : "Genera el archivo, arranca tye y abre la barra")">
+        @(HayQueControlar ? "Controlar" : "Levantar")
+    </button>
+    <button type="button" class="btn btn-secundario" disabled="@_ocupado" @onclick="Generar">Generar y guardar</button>
 </div>

@@ -39,6 +39,12 @@
         {
             <p class="tarjeta-valor">@_baseDeDatos</p>
             <p class="tarjeta-detalle">en <span class="mono">@_servidor</span></p>
+            @if (_entornoConOtraBase is not null)
+            {
+                <p class="tarjeta-detalle estado-advertencia">
+                    El entorno levantado sigue en <b>@_entornoConOtraBase</b>. Reiniciá los servicios para que tomen ésta.
+                </p>
+            }
         }
         else
         {

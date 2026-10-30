@@ -59,6 +59,7 @@ public sealed class MainFormBlazor : Form
         RegistrarServiciosDeHerramientas(servicios);
         servicios.AddSingleton<IDialogosDelSistema>(new DialogosDelSistema(this));
         servicios.AddSingleton<IReinicioDeLaAplicacion>(new ReinicioDeLaAplicacion(this));
+        servicios.AddSingleton<IVentanaPrincipal>(new VentanaPrincipal(this));
         servicios.AddSingleton<IArchivosArrastrados>(_arrastre);
         servicios.AddSingleton<IZonaDeArrastre>(_zonaDeArrastre);
         servicios.AddSingleton<BarraDeEstado>();
@@ -195,6 +196,7 @@ public sealed class MainFormBlazor : Form
 
         // El verbo lo pone el Shell, que es el que conoce su propia línea de comandos.
         servicios.AddSingleton(new ArranqueDelWidget(Program.VerboWidget));
+        servicios.AddSingleton(new ArranqueDeLaBarra(Program.VerboBarra));
         servicios.AddSingleton<ServicioDeActualizaciones>();
     }
 }

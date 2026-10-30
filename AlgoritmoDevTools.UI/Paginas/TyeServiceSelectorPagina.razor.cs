@@ -1,12 +1,12 @@
 ﻿using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
 using AlgoritmoDevTools.Tools.TyeServiceSelector.Services;
+using AlgoritmoDevTools.Tools.TyeServiceSelector.Services.Entorno;
 using AlgoritmoDevTools.UI;
 using AlgoritmoDevTools.UI.Componentes;
 using AlgoritmoDevTools.UI.Servicios;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 
 namespace AlgoritmoDevTools.UI.Paginas;
 
@@ -19,7 +19,10 @@ public partial class TyeServiceSelectorPagina : IDisposable
     private BarraDeEstado Barra { get; set; } = default!;
 
     [Inject]
-    private IJSRuntime JS { get; set; } = default!;
+    private IVentanaPrincipal Ventana { get; set; } = default!;
+
+    [Inject]
+    private ArranqueDeLaBarra BarraDelEntorno { get; set; } = default!;
 
     private const string SinPerfil = "(sin perfil)";
 
@@ -53,6 +56,8 @@ public partial class TyeServiceSelectorPagina : IDisposable
     private string _perfilElegido = SinPerfil;
     private string _nombreNuevoPerfil = string.Empty;
     private bool _ocupado;
+    private RevisionDelEntorno? _revision;
+    private CancellationTokenSource? _vigia;
     private bool _guardandoPerfil;
     private bool _eliminandoPerfil;
 
@@ -70,6 +75,8 @@ public partial class TyeServiceSelectorPagina : IDisposable
             _perfilElegido = ultimo;
         }
     }
+
+    protected override async Task OnInitializedAsync() => await Revisar();
 
     /// <summary>
     /// Deja registrado con qué perfil quedó generado el archivo, para que el inicio lo muestre y
@@ -249,32 +256,161 @@ public partial class TyeServiceSelectorPagina : IDisposable
         Informar($"Perfil '{nombre}' eliminado.", "estado-neutro");
     }
 
-    // --- Generación ---------------------------------------------------------
+    // --- Levantar el entorno ------------------------------------------------
 
+    /// <summary>
+    /// Cómo está el entorno ahora: contra qué base se va a levantar y qué le falta. Se muestra en
+    /// la pantalla, sin pedir confirmación: el dato sirve para enterarse, no para frenar a nadie.
+    /// </summary>
+    private sealed record RevisionDelEntorno(
+        string? Servidor,
+        string? BaseDeDatos,
+        string? ErrorDeConexion,
+        ResultadoDePrerrequisitos Prerrequisitos);
+
+    /// <summary>
+    /// Mira contra qué base se va a levantar y qué le falta al entorno. Corre sola al abrir la
+    /// pantalla y después de destrabar algo: el dato está a la vista antes de apretar nada, que es
+    /// lo que evita el ciclo completo cuando la conexión apuntaba a otro lado.
+    /// </summary>
+    private async Task Revisar()
+    {
+        try
+        {
+            // Las dos consultas levantan procesos (docker, netsh, dotnet user-secrets), así que
+            // van fuera del hilo de la interfaz.
+            var conexion = await Task.Run(ChequeoDePrerrequisitos.ConexionConfigurada);
+            var prerrequisitos = await Task.Run(() => new ChequeoDePrerrequisitos().Revisar());
+
+            _revision = new RevisionDelEntorno(conexion.Servidor, conexion.Base, conexion.Error, prerrequisitos);
+        }
+        catch (Exception ex)
+        {
+            Informar($"No se pudo revisar el entorno: {ex.Message}", "estado-error");
+        }
+
+        StateHasChanged();
+        Vigilar();
+    }
+
+    /// <summary>
+    /// Mientras falte algo —o mientras haya un entorno corriendo—, vuelve a mirar sola cada cinco
+    /// segundos.
+    ///
+    /// <para>
+    /// El remedio de casi todos los faltantes pasa por afuera de esta pantalla —abrir Docker
+    /// Desktop y esperar a que arranque es el caso de todos los días—, así que una revisión que
+    /// corre una sola vez al abrir deja el cartel viejo colgado: el usuario arregla lo que había
+    /// que arreglar y la pantalla le sigue diciendo que está roto.
+    /// </para>
+    ///
+    /// <para>
+    /// Sólo mira mientras hay algo que mirar: cuando no falta nada se apaga, porque cada vuelta
+    /// levanta un <c>docker ps</c>, un <c>netsh</c> y los user-secrets.
+    /// </para>
+    /// </summary>
+    private void Vigilar()
+    {
+        // Mientras falte algo, porque el remedio pasa por afuera de esta pantalla; y mientras haya
+        // entorno corriendo, porque si no se frena desde la barra el botón se queda diciendo
+        // «Controlar» para siempre.
+        var hayQueSeguirMirando = _revision is not null
+            && (!_revision.Prerrequisitos.Listo || _revision.Prerrequisitos.HayEntornoCorriendo);
+
+        if (!hayQueSeguirMirando)
+        {
+            Parar();
+            return;
+        }
+
+        // Ya hay una mirando: Revisar() vuelve a pasar por acá en cada vuelta.
+        if (_vigia is not null) return;
+
+        _vigia = new CancellationTokenSource();
+        var corte = _vigia.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var reloj = new PeriodicTimer(TimeSpan.FromSeconds(5));
+                while (await reloj.WaitForNextTickAsync(corte))
+                {
+                    await InvokeAsync(Revisar);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Se apagó porque ya no falta nada, o porque se cerró la pantalla.
+            }
+        }, corte);
+    }
+
+    private void Parar()
+    {
+        _vigia?.Cancel();
+        _vigia?.Dispose();
+        _vigia = null;
+    }
+
+    /// <summary>
+    /// Corre el remedio del faltante con permisos de administrador y vuelve a revisar. El caso real
+    /// es el de los puertos que Windows le reserva a Hyper-V: sin elevar, el comando contesta
+    /// «Error de sistema 5» y el contenedor sigue sin arrancar.
+    /// </summary>
+    private async Task Destrabar(FaltanteDelEntorno faltante)
+    {
+        _ocupado = true;
+        Informar("Pidiendo permisos de administrador...", "estado-neutro");
+        StateHasChanged();
+
+        try
+        {
+            var resultado = await Task.Run(() => ArregloElevado.Ejecutar(faltante.Remedio));
+
+            Informar(resultado switch
+            {
+                ResultadoDelArreglo.Hecho => "Listo. Revisando de nuevo...",
+                ResultadoDelArreglo.Cancelado => "Se canceló el permiso, no se tocó nada.",
+                _ => "El arreglo no funcionó. Probalo a mano en una consola de administrador."
+            }, resultado == ResultadoDelArreglo.Hecho ? "estado-exito" : "estado-advertencia");
+
+            if (resultado != ResultadoDelArreglo.Hecho) return;
+        }
+        finally
+        {
+            _ocupado = false;
+        }
+
+        await Revisar();
+    }
+
+    /// <summary>
+    /// Escribe el archivo y nada más, para quien prefiera arrancar tye por su cuenta desde una
+    /// consola. No es el camino principal —para eso está Levantar— pero el comando no desapareció y
+    /// hay quien lo usa así.
+    /// </summary>
     private async Task Generar()
     {
         var seleccion = _servicios.ToDictionary(s => s.Nombre, s => s.Activo, StringComparer.Ordinal);
-
-        if (seleccion.Count == 0 || seleccion.Values.All(v => !v))
+        if (seleccion.Values.All(activo => !activo))
         {
             Informar("Tildá al menos un servicio antes de generar.", "estado-advertencia");
             return;
         }
 
         _ocupado = true;
-        Informar("Generando archivo...", "estado-neutro");
         StateHasChanged();
 
         try
         {
             await Task.Run(() => TyeServiceToggler.GenerateSelection(seleccion));
-
-            // Recién acá queda registrado el perfil: es el momento en que se escribe el archivo, y
-            // el archivo es lo que de verdad va a levantar. Elegir uno sin generar no cuenta.
             RecordarPerfil(PerfilActual());
 
-            var activos = seleccion.Values.Count(v => v);
-            Informar($"{TyeServiceToggler.GeneratedFileName} generado — {activos} servicio(s) activo(s). Corré: {TyeServiceToggler.RunCommand}", "estado-exito");
+            var activos = seleccion.Values.Count(activo => activo);
+            Informar(
+                $"{TyeServiceToggler.GeneratedFileName} generado — {activos} servicio(s) activo(s). Corré: {TyeServiceToggler.RunCommand}",
+                "estado-exito");
         }
         catch (Exception ex)
         {
@@ -286,21 +422,129 @@ public partial class TyeServiceSelectorPagina : IDisposable
         }
     }
 
-    private async Task CopiarComando()
+    /// <summary>
+    /// Abre la barra, escribe el archivo, deja registrado con qué base se levanta y arranca tye en
+    /// su propia consola. La ventana se minimiza recién cuando el panel contesta: antes de eso no se sabe si
+    /// arrancó, y minimizar una ventana para que el usuario descubra solo que falló sería peor que
+    /// no minimizarla.
+    /// </summary>
+    private async Task Levantar()
     {
+        // Un segundo tye con los mismos servicios se pelea por los puertos y se pisa los
+        // contenedores. Si ya hay uno, no se levanta nada: la barra se engancha al que está. Se
+        // vuelve a preguntar acá en vez de confiar en el rótulo, porque entre el render y el clic
+        // el entorno pudo haberse frenado.
+        if (LanzadorDeTye.HayTyeCorriendo())
+        {
+            Controlar();
+            return;
+        }
+
+        var seleccion = _servicios.ToDictionary(s => s.Nombre, s => s.Activo, StringComparer.Ordinal);
+        if (seleccion.Values.All(activo => !activo))
+        {
+            Informar("Tildá al menos un servicio antes de levantar.", "estado-advertencia");
+            return;
+        }
+
+        _ocupado = true;
+        Informar("Generando el archivo y arrancando tye...", "estado-neutro");
+        StateHasChanged();
+
+        // La barra sale con el clic, antes de generar nada: es lo único que el usuario tiene para
+        // mirar mientras tye compila, y apareciendo al final el botón parece no haber hecho nada.
+        // Si después algo falla, la barra dice «Sin entorno», que es la verdad.
+        var errorDeLaBarra = BarraDelEntorno.Lanzar();
+
         try
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", TyeServiceToggler.RunCommand);
-            Informar($"Comando copiado: {TyeServiceToggler.RunCommand}", "estado-exito");
+            await Task.Run(() => TyeServiceToggler.GenerateSelection(seleccion));
+
+            // Recién acá queda registrado el perfil: es el momento en que se escribe el archivo, y
+            // el archivo es lo que de verdad va a levantar. Elegir uno sin levantar no cuenta.
+            RecordarPerfil(PerfilActual());
+            SelloDeConexion.Escribir(_revision?.Servidor, _revision?.BaseDeDatos);
+
+            var proceso = new LanzadorDeTye().Levantar(
+                TyeServiceToggler.GeneratedFileName,
+                EntornoCompleto.PuertoPrincipal,
+                sinCompilar: false);
+
+            if (proceso is null)
+            {
+                Informar("No se pudo arrancar tye. ¿Está instalado como herramienta global de dotnet?", "estado-error");
+                return;
+            }
+
+            if (errorDeLaBarra is not null)
+            {
+                // Que la barra no abra no impide que el entorno levante, pero hay que decirlo: si
+                // se calla, parece que no pasó nada.
+                Informar($"Tye arrancando, pero no se pudo abrir la barra: {errorDeLaBarra}", "estado-advertencia");
+                return;
+            }
+
+            Informar("Tye arrancando en su propia consola. Seguilo en la barra.", "estado-exito");
+            Ventana.Minimizar();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Si el portapapeles no está disponible, al menos que el comando quede a la vista.
-            Informar($"No se pudo copiar. El comando es: {TyeServiceToggler.RunCommand}", "estado-advertencia");
+            Informar($"Error al levantar: {ex.Message}", "estado-error");
         }
+        finally
+        {
+            _ocupado = false;
+        }
+    }
+
+    /// <summary>
+    /// Hay un entorno corriendo, así que el botón controla en vez de levantar. Sale de la última
+    /// revisión, que es lo que alcanza para el rótulo; la decisión de verdad la toma
+    /// <see cref="Levantar"/> en el momento del clic.
+    /// </summary>
+    private bool HayQueControlar => _revision?.Prerrequisitos.HayEntornoCorriendo == true;
+
+    /// <summary>
+    /// Engancha la barra al entorno que ya está corriendo, sin tocar nada más.
+    ///
+    /// <para>
+    /// No hace falta nada del otro lado: la barra lee el estado de la API del panel y no de quien
+    /// la lanzó, así que controla cualquier tye que conteste —reiniciar, bajar y subir servicios,
+    /// frenar—. Engancharse es, literalmente, no levantar otro y abrirla.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>No se genera el yaml, no se registra el perfil y no se escribe el sello de conexión.</b>
+    /// Ese entorno lo levantó otro —otra sesión de DevTools, o el usuario desde su consola— y con
+    /// qué base arrancó no nos consta. Escribir el sello de la conexión configurada ahora sería
+    /// afirmar algo que no sabemos, y la barra quedaría comparando contra un dato inventado: diría
+    /// que la base está al día, o que cambió, sin fundamento.
+    /// </para>
+    ///
+    /// <para>
+    /// La consola de tye tampoco es nuestra, así que <c>PidDeTye</c> queda como esté. Al frenar la
+    /// cierra igual el barrido por nombre, que es el caso que ese código ya contempla.
+    /// </para>
+    /// </summary>
+    private void Controlar()
+    {
+        var error = BarraDelEntorno.Lanzar();
+
+        if (error is not null)
+        {
+            Informar($"No se pudo abrir la barra: {error}", "estado-error");
+            return;
+        }
+
+        Informar("Enganchada al entorno que ya estaba corriendo. Controlalo desde la barra.", "estado-exito");
+        Ventana.Minimizar();
     }
 
     private void Informar(string texto, string clase) => Barra.Informar(texto, clase);
 
-    public void Dispose() => Barra.Limpiar();
+    public void Dispose()
+    {
+        Parar();
+        Barra.Limpiar();
+    }
 }

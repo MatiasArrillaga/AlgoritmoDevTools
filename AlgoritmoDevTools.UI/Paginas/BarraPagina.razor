@@ -1,0 +1,144 @@
+﻿@using AlgoritmoDevTools.Tools.TyeServiceSelector.Services.Entorno
+
+@*
+    La barra del entorno local.
+
+    Vive en su propia ventana sin marco, en un proceso aparte, pero es HTML como el resto de la
+    aplicación y usa el mismo app.css: por eso se ve igual y sigue el tema sin repintar nada.
+
+    El tema cuelga de .shell y no de :root, así que el envoltorio va con data-tema sí o sí.
+
+    Referencia funcional y técnica:
+    AlgoritmoDevTools.Tools.TyeServiceSelector/README.referencia-tecnica-funcional-selector-de-servicios.md.
+*@
+
+<div class="shell @(Ventana.SolapaContra is not null ? "en-solapa" : null)" data-tema="@_temas.Actual.Id" style="min-height:0">
+    @* Escondida y sin el mouse encima, la ventana es del tamaño de la solapa: se ve sólo la flecha. *@
+    <div class="barra-solapa" title="Pasá el mouse para ver la barra">@FlechaDeLaSolapa()</div>
+
+    <div class="barra">
+        <div class="barra-agarre" title="Arrastrá desde acá para mover la barra"></div>
+
+        <span class="barra-luz @ClaseDeLaLuz()"></span>
+
+        <div class="barra-identidad">
+            <strong class="@(_recienListo ? "listo" : null)">@Titulo()</strong>
+            <small class="@(_desfasada ? "desfasada" : null)">@Detalle()</small>
+        </div>
+
+        <div class="barra-sep"></div>
+
+        <div class="barra-acciones">
+            <button class="barra-accion" disabled="@(!PuedeMirar)" title="Ver los servicios que están corriendo"
+                    @onclick="VerLosServicios">&#xE700;</button>
+            <button class="barra-accion" disabled="@(!HayEntorno)" title="Agregar al entorno un servicio que no está levantado"
+                    @onclick="VerLosQueFaltan">&#xE710;</button>
+            <button class="barra-accion @(_desfasada ? "destacado" : null)" disabled="@(!HayEntorno)"
+                    title="@(_desfasada ? "La base cambió: reiniciá para que los servicios la tomen" : "Reiniciar todos los servicios sin bajar el entorno")"
+                    @onclick="ReiniciarTodo">&#xE72C;</button>
+            <button class="barra-accion frenar" disabled="@(!HayEntorno)" title="Frenar el entorno"
+                    @onclick="Frenar">&#xE71A;</button>
+        </div>
+
+        <div class="barra-sep"></div>
+
+        <button class="barra-base @(_desfasada ? "desfasada" : null)" disabled="@_levantando"
+                title="Cambiar la base de datos" @onclick="VerLasBases">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <ellipse cx="12" cy="6" rx="8" ry="3" />
+                <path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6" />
+                <path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+            </svg>
+            <span>@(_baseQueMuestra ?? "sin base")</span>
+        </button>
+
+        <div class="barra-derecha">
+            <button class="barra-accion" disabled="@(!HayEntorno)" title="Abrir el panel de tye en el navegador"
+                    @onclick="AbrirElPanel">&#xE8A7;</button>
+            <button class="barra-accion" title="@(Ventana.EstaReplegada ? "Dejar la barra a la vista" : "Esconder la barra contra el borde")"
+                    @onclick="Replegar">@((MarkupString)(Ventana.EstaReplegada ? "&#xE70D;" : "&#xE70E;"))</button>
+        </div>
+    </div>
+
+    @if (_desplegado != Desplegable.Nada)
+    {
+        <div class="barra-panel">
+            @if (_desplegado == Desplegable.Bases)
+            {
+                @if (_servidores.Count == 0)
+                {
+                    <p class="barra-vacio">No hay conexiones guardadas. Cargalas desde el Secrets Manager.</p>
+                }
+                else
+                {
+                    <div class="barra-conexion">
+                        <label>
+                            Servidor
+                            <select value="@_servidorElegido" @onchange="CambiarDeServidor" disabled="@(_enCurso is not null)">
+                                @foreach (var servidor in _servidores)
+                                {
+                                    <option value="@servidor">@servidor</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label>
+                            Base de datos
+                            <select value="@_baseElegida" @onchange="CambiarDeBase" disabled="@(_cargandoBases || _enCurso is not null)">
+                                @if (_cargandoBases)
+                                {
+                                    <option>buscando...</option>
+                                }
+                                else
+                                {
+                                    @foreach (var baseDeDatos in _basesDelServidor)
+                                    {
+                                        <option value="@baseDeDatos">@baseDeDatos</option>
+                                    }
+                                }
+                            </select>
+                        </label>
+
+                        <button disabled="@(_cargandoBases || _enCurso is not null || !HayQueCambiar)" @onclick="AplicarLaConexion">
+                            @(_enCurso is not null ? "aplicando..." : "Conectar")
+                        </button>
+
+                        @if (_errorDeBases is not null)
+                        {
+                            <span class="error">@_errorDeBases</span>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                @if (_filas.Count == 0)
+                {
+                    <p class="barra-vacio">
+                        @(_desplegado == Desplegable.Agregar ? "Están todos levantados." : "No hay servicios corriendo.")
+                    </p>
+                }
+                @foreach (var fila in _filas)
+                {
+                    var actual = fila;
+                    <div class="barra-fila">
+                        <span class="barra-luz @ClaseDeLaFila(actual)" title="@AyudaDeLaFila(actual)"></span>
+                        <span class="nombre">@actual.Nombre</span>
+                        <span class="puerto">@actual.Puerto</span>
+                        @if (EstaVolviendo(actual))
+                        {
+                            <span class="barra-esperando"><span class="barra-rueda"></span>@TextoDeLaEspera(actual)</span>
+                        }
+                        else
+                        {
+                            <button disabled="@(_enCurso is not null)" @onclick="() => Accionar(actual)">
+                                @(_enCurso == actual.Nombre ? actual.Gerundio : actual.Accion)
+                            </button>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>

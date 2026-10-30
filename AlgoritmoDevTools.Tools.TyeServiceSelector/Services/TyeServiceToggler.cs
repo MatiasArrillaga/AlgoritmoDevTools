@@ -118,6 +118,48 @@ public static class TyeServiceToggler
         File.WriteAllLines(GeneratedYamlPath, lines);
     }
 
+    /// <summary>
+    /// Las líneas del maestro que definen un servicio, tal cual están escritas.
+    ///
+    /// Lo usa el generador del yaml suelto, que arma un derivado con un servicio solo: copiar el
+    /// bloque en vez de volver a escribirlo es lo que garantiza que el servicio agregado arranque
+    /// con los mismos puertos y las mismas variables que si lo hubiera levantado el entorno entero.
+    /// </summary>
+    public static IReadOnlyList<string>? BloqueDelMaestro(string nombre)
+    {
+        if (!File.Exists(MasterYamlPath)) return null;
+
+        var lineas = File.ReadAllLines(MasterYamlPath);
+        var bloque = FindServiceBlocks(lineas)
+            .FirstOrDefault(b => string.Equals(b.Name, nombre, StringComparison.OrdinalIgnoreCase));
+
+        if (bloque.Name is null) return null;
+
+        return lineas[bloque.Start..bloque.End]
+            .Reverse()
+            .SkipWhile(string.IsNullOrWhiteSpace)
+            .Reverse()
+            .ToList();
+    }
+
+    /// <summary>
+    /// El puerto que el maestro le asigna al servicio, para poder mostrarlo antes de levantarlo.
+    /// Sale del primer <c>- port:</c> de su bloque, que es el binding de la aplicación.
+    /// </summary>
+    public static int? PuertoDelMaestro(string nombre)
+    {
+        var bloque = BloqueDelMaestro(nombre);
+        if (bloque is null) return null;
+
+        foreach (var linea in bloque)
+        {
+            var puerto = Regex.Match(linea, @"^\s*-\s*port:\s*(\d+)");
+            if (puerto.Success && int.TryParse(puerto.Groups[1].Value, out var numero)) return numero;
+        }
+
+        return null;
+    }
+
     // --- Servicios y sus sidecars -------------------------------------------
 
     private static HashSet<string> Declarados(IEnumerable<string> names)

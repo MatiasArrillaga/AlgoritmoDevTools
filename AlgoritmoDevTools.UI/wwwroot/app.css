@@ -998,3 +998,240 @@ select.campo { padding: 0 8px; }
   margin-top: 12px;
 }
 .extension-estado { font-size: 12px; color: var(--texto-2); }
+
+
+/* ------------------------------------------------------------------------------------------------
+   Barra del entorno local
+
+   La ventana flotante que gobierna tye. Vive en su propio proceso y en su propia ventana sin marco,
+   pero usa este mismo archivo y estas mismas variables: es lo que hace que se vea como el resto de
+   la aplicacion sin tener que repintar nada a mano.
+
+   El alto de la ventana lo maneja el host de Windows Forms, que la agranda cuando se despliega el
+   panel de abajo. Por eso aca no hay posiciones: solo flujo.
+   ------------------------------------------------------------------------------------------------ */
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 66px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  background: var(--fondo-principal);
+  color: var(--texto);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+}
+
+/* Escondida contra un borde, la ventana se achica a una solapa y lo unico que se ve es la flecha
+   hacia donde sale. La barra sigue montada y reaparece al pasar el mouse. */
+.barra-solapa {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: var(--fondo-principal);
+  color: var(--texto);
+  font-family: "Segoe MDL2 Assets";
+  font-size: 13px;
+  user-select: none;
+}
+.shell.en-solapa > .barra,
+.shell.en-solapa > .barra-panel { display: none; }
+.shell.en-solapa > .barra-solapa { display: flex; }
+
+/* Los puntos de los que se agarra la barra para moverla. El host los reconoce por la clase y le
+   dice a Windows que esa zona es la barra de titulo, asi el arrastre lo hace el sistema. */
+.barra-agarre {
+  width: 10px;
+  height: 22px;
+  flex: none;
+  background-image: radial-gradient(var(--texto-2) 1.2px, transparent 1.3px);
+  background-size: 5px 7px;
+  opacity: .65;
+  cursor: move;
+}
+
+.barra-luz {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--advertencia);
+}
+.barra-luz.listo { background: var(--exito); }
+.barra-luz.sin-entorno { background: var(--texto-2); }
+
+/* En la lista de servicios el color es el estado: verde arriba, rojo abajo y amarillo mientras se
+   esta haciendo algo con el. */
+.barra-luz.abajo { background: var(--error); }
+.barra-luz.enproceso { background: var(--advertencia); }
+
+/* El reinicio queda resaltado cuando la base configurada ya no es con la que se levanto: hace
+   falta reiniciar para que los servicios la tomen, y conviene que se note sin leer nada. */
+.barra-accion.destacado { color: var(--advertencia); border-color: var(--advertencia); background: var(--boton-2); }
+
+/* Mientras se reinicia todo, los servicios caidos muestran una rueda en lugar del boton: estan
+   volviendo solos. Es la misma rueda de la luz, en chico. */
+.barra-esperando {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 92px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+.barra-rueda {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--acento);
+  border-right-color: transparent;
+  animation: barra-girar .9s linear infinite;
+}
+
+/* Mientras arranca no hay nada que contar: lo que corresponde es mostrar que algo esta pasando. */
+.barra-luz.levantando {
+  background: transparent;
+  border: 2px solid var(--acento);
+  border-right-color: transparent;
+  animation: barra-girar .9s linear infinite;
+}
+
+@keyframes barra-girar { to { transform: rotate(360deg); } }
+
+.barra-identidad {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 150px;
+  flex: 1 1 auto;
+}
+.barra-identidad strong { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-identidad small { font-size: 12px; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-identidad strong.listo { color: var(--exito); }
+.barra-identidad small.desfasada { color: var(--advertencia); }
+
+.barra-sep { width: 1px; height: 28px; background: var(--separador); flex: none; }
+
+.barra-acciones { display: flex; gap: 6px; flex: none; }
+
+.barra-accion {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--borde-campo);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font-family: "Segoe MDL2 Assets";
+  font-size: 15px;
+  cursor: pointer;
+}
+.barra-accion:hover:not(:disabled) { background: var(--boton-2-hover); }
+.barra-accion:disabled { color: var(--texto-2); border-color: var(--separador); opacity: .5; cursor: default; }
+.barra-accion.frenar { color: var(--error); border-color: var(--error); }
+.barra-accion.frenar:disabled { color: var(--texto-2); border-color: var(--separador); }
+
+/* La base de datos: es un boton, porque se toca para cambiarla. */
+.barra-base {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: 280px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.barra-base:hover:not(:disabled) { background: var(--boton-2-hover); }
+.barra-base:disabled { cursor: default; }
+.barra-base span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-base.desfasada { color: var(--advertencia); }
+.barra-base .ico { flex: none; width: 15px; height: 15px; color: var(--texto-2); }
+.barra-base.desfasada .ico { color: var(--advertencia); }
+
+.barra-derecha { display: flex; gap: 6px; margin-left: auto; flex: none; }
+
+/* ---------- El panel que cuelga de la barra ---------- */
+
+.barra-panel {
+  border-top: 1px solid var(--separador);
+  background: var(--fondo-principal);
+  padding: 10px 14px 14px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.barra-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--separador);
+}
+.barra-fila:last-child { border-bottom: 0; }
+.barra-fila .nombre { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-fila .puerto { font-size: 13px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.barra-fila .servidor { font-size: 13px; color: var(--texto-2); }
+
+.barra-fila button {
+  min-width: 92px;
+  padding: 6px 12px;
+  border: 1px solid var(--borde-campo);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.barra-fila button:hover:not(:disabled) { background: var(--boton-2-hover); }
+.barra-fila button:disabled { color: var(--texto-2); border-color: var(--separador); cursor: default; }
+
+.barra-vacio { font-size: 13px; color: var(--texto-2); padding: 10px 4px; }
+
+/* ---------- Cambiar la base desde la barra ---------- */
+
+.barra-conexion {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 4px 4px 2px;
+  flex-wrap: wrap;
+}
+.barra-conexion label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--texto-2); }
+.barra-conexion select {
+  min-width: 220px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--borde-campo);
+  border-radius: 8px;
+  background: var(--fondo-campo);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 14px;
+}
+.barra-conexion button {
+  height: 34px;
+  min-width: 110px;
+  padding: 0 14px;
+  border: 1px solid var(--acento);
+  border-radius: 8px;
+  background: var(--acento);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.barra-conexion button:disabled { background: var(--boton-2); border-color: var(--separador); color: var(--texto-2); cursor: default; }
+.barra-conexion .error { color: var(--error); font-size: 12px; width: 100%; }

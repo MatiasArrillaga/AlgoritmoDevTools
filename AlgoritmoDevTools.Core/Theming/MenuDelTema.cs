@@ -132,8 +132,11 @@ public static class MenuDelTema
         menu.Region = new Region(contorno);
     }
 
-    /// <summary>Rectángulo con las cuatro esquinas redondeadas.</summary>
-    internal static GraphicsPath Contorno(Rectangle area, int radio)
+    /// <summary>
+    /// Rectángulo con las cuatro esquinas redondeadas. Lo usan el menú del widget y la barra del
+    /// entorno, que es una ventana sin marco y tiene que recortarse sola.
+    /// </summary>
+    public static GraphicsPath Contorno(Rectangle area, int radio)
     {
         var diametro = radio * 2;
         var camino = new GraphicsPath();
