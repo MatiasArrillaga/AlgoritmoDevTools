@@ -12,12 +12,12 @@
     AlgoritmoDevTools.Tools.TyeServiceSelector/README.referencia-tecnica-funcional-selector-de-servicios.md.
 *@
 
-<div class="shell @(Ventana.SolapaContra is not null ? "en-solapa" : null)" data-tema="@_temas.Actual.Id" style="min-height:0">
-    @* Escondida y sin el mouse encima, la ventana es del tamaño de la solapa: se ve sólo la flecha. *@
-    <div class="barra-solapa" title="Pasá el mouse para ver la barra">@FlechaDeLaSolapa()</div>
+<div class="shell @(Ventana.EstaReplegada ? "en-solapa" : null) @(Ventana.ApoyadaALaDerecha ? "apoyo-derecha" : null)" data-tema="@_temas.Actual.Id" style="min-height:0">
+    @* Colapsada, la ventana es del tamaño de la pestaña: se ve sólo el icono, y el clic la despliega. *@
+    <div class="barra-solapa" title="Clic para desplegar la barra, o arrastrala para moverla">@IconoDeLaSolapa()</div>
 
     <div class="barra">
-        <div class="barra-agarre" title="Arrastrá desde acá para mover la barra"></div>
+        <div class="barra-agarre" title="Arrastrá desde acá para mover la barra">@((MarkupString)Agarre)</div>
 
         <span class="barra-luz @ClaseDeLaLuz()"></span>
 
@@ -56,8 +56,8 @@
         <div class="barra-derecha">
             <button class="barra-accion" disabled="@(!HayEntorno)" title="Abrir el panel de tye en el navegador"
                     @onclick="AbrirElPanel">&#xE8A7;</button>
-            <button class="barra-accion" title="@(Ventana.EstaReplegada ? "Dejar la barra a la vista" : "Esconder la barra contra el borde")"
-                    @onclick="Replegar">@((MarkupString)(Ventana.EstaReplegada ? "&#xE70D;" : "&#xE70E;"))</button>
+            <button class="barra-accion" title="@(Ventana.EsTemporal ? "Fijar la barra para que no se contraiga sola" : "Colapsar la barra a su pestaña")"
+                    @onclick="Replegar">@((MarkupString)(Ventana.EsTemporal ? ChinchetaInclinada : Chincheta))</button>
         </div>
     </div>
 

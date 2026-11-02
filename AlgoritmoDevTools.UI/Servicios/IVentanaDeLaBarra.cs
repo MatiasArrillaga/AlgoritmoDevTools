@@ -17,20 +17,37 @@ public interface IVentanaDeLaBarra
     /// </summary>
     void AjustarAlto(int alto);
 
-    /// <summary>Si está escondida contra un borde. La barra lo usa para saber hacia dónde apunta su flecha.</summary>
+    /// <summary>
+    /// Si está colapsada: la ventana es sólo la pestaña, y la barra dibuja únicamente su icono.
+    /// </summary>
     bool EstaReplegada { get; }
 
     /// <summary>
-    /// El borde contra el que está escondida mientras la ventana es sólo la solapa, o null cuando se
-    /// ve la barra entera —a la vista o asomando con el mouse encima—. La barra lo usa para dibujar
-    /// únicamente la flecha y para saber hacia dónde apunta.
+    /// Si está desplegada pero sin clavar, de las que se contraen en cuanto el mouse se va. La
+    /// barra lo usa para dibujar el pin: inclinado mientras no está clavada, derecho cuando sí.
     /// </summary>
-    string? SolapaContra { get; }
+    bool EsTemporal { get; }
+
+    /// <summary>
+    /// Si la pestaña se apoya contra el lateral derecho. La barra lo usa para llevar la zona de
+    /// agarre a ese lado: así el icono queda en el mismo punto desplegada que en pestaña, y al
+    /// colapsar no salta de una punta a la otra.
+    /// </summary>
+    bool ApoyadaALaDerecha { get; }
 
     /// <summary>Avisa que la ventana pasó de barra a solapa o al revés, para que la barra se redibuje.</summary>
     event EventHandler? AspectoCambiado;
 
-    /// <summary>Esconde la barra contra el borde más cercano, o la devuelve si ya estaba escondida.</summary>
+    /// <summary>
+    /// Avisa que alguien de afuera pidió frenar el entorno —el Selector, al cancelar un levantado—.
+    /// El puente va en este sentido porque frenar lo sabe hacer la barra, no la ventana.
+    /// </summary>
+    event EventHandler? FrenadoPedido;
+
+    /// <summary>
+    /// Colapsa la barra sobre su extremo izquierdo, o la despliega hacia la derecha si ya estaba
+    /// colapsada. El origen es el mismo en los dos casos, así que no se mueve de lugar.
+    /// </summary>
     void AlternarElRepliegue();
 
     /// <summary>Cierra la barra. Se usa cuando el entorno terminó de frenarse.</summary>

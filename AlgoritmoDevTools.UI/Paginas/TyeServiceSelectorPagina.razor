@@ -125,11 +125,7 @@
 }
 
 <div class="acciones">
-    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Levantar"
-            title="@(HayQueControlar
-                ? "Ya hay un entorno corriendo: abre la barra enganchada a esa instancia"
-                : "Genera el archivo, arranca tye y abre la barra")">
-        @(HayQueControlar ? "Controlar" : "Levantar")
-    </button>
+    <button type="button" class="btn btn-primario" disabled="@_ocupado" @onclick="Accionar"
+            title="@AyudaDelPrincipal">@TextoDelPrincipal</button>
     <button type="button" class="btn btn-secundario" disabled="@_ocupado" @onclick="Generar">Generar y guardar</button>
 </div>

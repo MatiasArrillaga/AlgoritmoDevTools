@@ -13,4 +13,10 @@ public interface IVentanaPrincipal
     /// y lo que sigue pasa en la consola de tye y en la barra flotante, así que estorba.
     /// </summary>
     void Minimizar();
+
+    /// <summary>
+    /// La cierra. Es lo que ofrece el Selector cuando el entorno ya está arriba: acá no queda nada
+    /// por hacer y lo que sigue pasa en la barra.
+    /// </summary>
+    void Cerrar();
 }

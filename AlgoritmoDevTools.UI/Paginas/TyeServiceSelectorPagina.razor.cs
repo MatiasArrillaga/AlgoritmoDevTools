@@ -58,6 +58,22 @@ public partial class TyeServiceSelectorPagina : IDisposable
     private bool _ocupado;
     private RevisionDelEntorno? _revision;
     private CancellationTokenSource? _vigia;
+
+    private readonly IProveedorDeEntorno _entorno = new ProveedorTye();
+
+    /// <summary>Se tocó Levantar y el entorno todavía es asunto de esta pantalla.</summary>
+    private bool _levantando;
+
+    /// <summary>El panel contesta y no queda ninguno abajo: ya no hay nada que cancelar.</summary>
+    private bool _todosArriba;
+
+    private CancellationTokenSource? _miraElArranque;
+
+    /// <summary>
+    /// Si la barra está abierta, o sea si ya se está controlando el entorno desde ella. Sale del
+    /// mutex de instancia única, el mismo que impide que se abra una segunda.
+    /// </summary>
+    private bool _barraAbierta;
     private bool _guardandoPerfil;
     private bool _eliminandoPerfil;
 
@@ -282,6 +298,10 @@ public partial class TyeServiceSelectorPagina : IDisposable
             var conexion = await Task.Run(ChequeoDePrerrequisitos.ConexionConfigurada);
             var prerrequisitos = await Task.Run(() => new ChequeoDePrerrequisitos().Revisar());
 
+            // Barato: abre el mutex y lo cierra. Decide si el botón ofrece controlar o dejar de
+            // hacerlo, así que se mira en cada vuelta de la revisión.
+            _barraAbierta = ArranqueDeLaBarra.EstaCorriendo();
+
             _revision = new RevisionDelEntorno(conexion.Servidor, conexion.Base, conexion.Error, prerrequisitos);
         }
         catch (Exception ex)
@@ -485,7 +505,12 @@ public partial class TyeServiceSelectorPagina : IDisposable
             }
 
             Informar("Tye arrancando en su propia consola. Seguilo en la barra.", "estado-exito");
-            Ventana.Minimizar();
+
+            // La ventana ya no se minimiza sola. Mientras arranca, el botón ofrece cancelar, y eso
+            // no sirve de nada con la ventana en la barra de tareas; cuando están todos arriba pasa
+            // a «Cerrar» y se va cuando el usuario quiere.
+            _levantando = true;
+            MirarElArranque();
         }
         catch (Exception ex)
         {
@@ -514,11 +539,19 @@ public partial class TyeServiceSelectorPagina : IDisposable
     /// </para>
     ///
     /// <para>
-    /// <b>No se genera el yaml, no se registra el perfil y no se escribe el sello de conexión.</b>
+    /// <b>No se genera el yaml ni se registra el perfil</b>, y <b>el sello de conexión se borra</b>.
     /// Ese entorno lo levantó otro —otra sesión de DevTools, o el usuario desde su consola— y con
-    /// qué base arrancó no nos consta. Escribir el sello de la conexión configurada ahora sería
-    /// afirmar algo que no sabemos, y la barra quedaría comparando contra un dato inventado: diría
-    /// que la base está al día, o que cambió, sin fundamento.
+    /// qué base arrancó no nos consta. Escribir el de la conexión configurada ahora sería afirmar
+    /// lo que no sabemos; dejar el que había es peor todavía, porque es de otro momento y puede
+    /// describir un entorno que ya no existe.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>El caso que lo puso en evidencia</b>: se levantó contra una base, después se cambió a
+    /// otra y se reiniciaron los servicios, y al cerrar y volver a abrir DevTools el Controlar
+    /// heredaba el sello de la primera. La barra arrancaba en ámbar avisando de un desfase que ya
+    /// estaba resuelto. Sin sello no hay nada que comparar: la barra muestra la base configurada
+    /// sin afirmar que es contra la que corre el entorno, que es exactamente lo que sabemos.
     /// </para>
     ///
     /// <para>
@@ -528,6 +561,8 @@ public partial class TyeServiceSelectorPagina : IDisposable
     /// </summary>
     private void Controlar()
     {
+        SelloDeConexion.Borrar();
+
         var error = BarraDelEntorno.Lanzar();
 
         if (error is not null)
@@ -540,11 +575,151 @@ public partial class TyeServiceSelectorPagina : IDisposable
         Ventana.Minimizar();
     }
 
+    /// <summary>
+    /// Qué ofrece el botón principal, que depende del momento: levantar, controlar lo que ya está
+    /// corriendo, cancelar lo que se está levantando, o cerrar cuando terminó y acá no queda nada
+    /// por hacer.
+    /// </summary>
+    private enum Principal { Levantar, Controlar, DejarDeControlar, Cancelar, Cerrar }
+
+    private Principal QueOfrece =>
+        _levantando ? (_todosArriba ? Principal.Cerrar : Principal.Cancelar)
+        : HayQueControlar ? (_barraAbierta ? Principal.DejarDeControlar : Principal.Controlar)
+        : Principal.Levantar;
+
+    private string TextoDelPrincipal => QueOfrece switch
+    {
+        Principal.Controlar => "Controlar",
+        Principal.DejarDeControlar => "Dejar de controlar",
+        Principal.Cancelar => "Cancelar",
+        Principal.Cerrar => "Cerrar",
+        _ => "Levantar"
+    };
+
+    private string AyudaDelPrincipal => QueOfrece switch
+    {
+        Principal.Controlar => "Ya hay un entorno corriendo: abre la barra enganchada a esa instancia",
+        Principal.DejarDeControlar => "Cierra la barra. El entorno sigue corriendo: no se frena ningún servicio",
+        Principal.Cancelar => "Frena lo que se está levantando y cierra la barra",
+        Principal.Cerrar => "El entorno está arriba: cierra esta ventana y seguilo desde la barra",
+        _ => "Genera el archivo, arranca tye y abre la barra"
+    };
+
+    private async Task Accionar()
+    {
+        switch (QueOfrece)
+        {
+            case Principal.DejarDeControlar:
+                DejarDeControlar();
+                break;
+
+            case Principal.Cancelar:
+                Cancelar();
+                break;
+
+            case Principal.Cerrar:
+                Ventana.Cerrar();
+                break;
+
+            default:
+                await Levantar();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Cierra la barra sin tocar el entorno.
+    ///
+    /// <para>
+    /// Es la salida del modo «controlar»: se dejó de mirar, pero los servicios siguen corriendo.
+    /// Hace falta que el botón lo diga, porque con el entorno arriba y la barra ya abierta lo único
+    /// que ofrecía era «Controlar», que es lo que ya estaba hecho.
+    /// </para>
+    /// </summary>
+    private void DejarDeControlar()
+    {
+        if (!ArranqueDeLaBarra.Cerrar())
+        {
+            Informar("No se encontró la barra para cerrarla.", "estado-advertencia");
+            return;
+        }
+
+        _barraAbierta = false;
+        Informar("Se cerró la barra. El entorno sigue corriendo.", "estado-neutro");
+    }
+
+    /// <summary>
+    /// Aborta el levantado pidiéndole a la barra que frene, que es la que sabe hacerlo bien:
+    /// espera a que bajen los servicios, cierra la consola de tye, barre los huérfanos y se cierra.
+    /// Reimplementarlo acá sería tener dos frenados que se separan con el tiempo.
+    /// </summary>
+    private void Cancelar()
+    {
+        if (!ArranqueDeLaBarra.PedirQueFrene())
+        {
+            Informar("No se encontró la barra para frenar el entorno. Frenalo desde ella.", "estado-advertencia");
+            return;
+        }
+
+        DejarDeMirarElArranque();
+        Informar("Frenando el entorno. La barra muestra el avance y se cierra al terminar.", "estado-neutro");
+    }
+
+    /// <summary>
+    /// Mientras se levanta, mira el panel cada tres segundos para saber cuándo están todos arriba:
+    /// es lo que hace que el botón pase de «Cancelar» a «Cerrar».
+    ///
+    /// <para>
+    /// Va por su cuenta y no colgado de <see cref="Revisar"/> porque son dos cosas de costo muy
+    /// distinto: esto es un GET a localhost, y la revisión levanta un <c>docker ps</c>, un
+    /// <c>netsh</c> y los user-secrets.
+    /// </para>
+    /// </summary>
+    private void MirarElArranque()
+    {
+        if (_miraElArranque is not null) return;
+
+        _miraElArranque = new CancellationTokenSource();
+        var corte = _miraElArranque.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var reloj = new PeriodicTimer(TimeSpan.FromSeconds(3));
+                while (await reloj.WaitForNextTickAsync(corte))
+                {
+                    var estado = await _entorno.ObtenerEstadoAsync(corte);
+                    var todos = estado.Vivo && estado.Servicios.Count > 0 && estado.Listos == estado.Servicios.Count;
+
+                    if (todos == _todosArriba) continue;
+
+                    _todosArriba = todos;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Se apagó porque el levantado terminó, se canceló, o se cerró la pantalla.
+            }
+        }, corte);
+    }
+
+    private void DejarDeMirarElArranque()
+    {
+        _miraElArranque?.Cancel();
+        _miraElArranque?.Dispose();
+        _miraElArranque = null;
+        _levantando = false;
+        _todosArriba = false;
+    }
+
     private void Informar(string texto, string clase) => Barra.Informar(texto, clase);
 
     public void Dispose()
     {
         Parar();
+        DejarDeMirarElArranque();
         Barra.Limpiar();
     }
 }

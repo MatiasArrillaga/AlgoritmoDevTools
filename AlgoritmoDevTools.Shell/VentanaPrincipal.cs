@@ -17,4 +17,7 @@ public sealed class VentanaPrincipal : IVentanaPrincipal
     /// termina mal.
     /// </summary>
     public void Minimizar() => _ventana.BeginInvoke(() => _ventana.WindowState = FormWindowState.Minimized);
+
+    /// <inheritdoc />
+    public void Cerrar() => _ventana.BeginInvoke(_ventana.Close);
 }

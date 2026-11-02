@@ -191,13 +191,32 @@ html, body {
   fill: none;
   transition: stroke .12s ease;
 }
+/* Los iconos de Bootstrap son siluetas rellenas, no trazos: se les da vuelta fill y stroke para
+   que sigan el mismo color que los trazados a mano segun el estado del item.
+
+   El stroke se apaga en TODOS los estados y no solo en el de reposo: `.nav-item:hover svg` tiene
+   exactamente la misma especificidad que `.nav-item svg.ico-bi` y viene despues en el archivo, asi
+   que al pasar el mouse le devolvia el trazo. Silueta rellena mas contorno se ve engrosada, como
+   si el icono pasara a negrita. */
+.nav-item svg.ico-bi,
+.nav-item:hover svg.ico-bi,
+.nav-item.activo svg.ico-bi,
+.nav-item.activo:hover svg.ico-bi { stroke: none; }
+
+.nav-item svg.ico-bi { fill: var(--texto-2); transition: fill .12s ease, transform .12s ease; }
+
 .nav-item:hover { background: var(--boton-2-hover); }
 .nav-item:hover svg { stroke: var(--texto); }
+
+/* Sin trazo que engrosar, el realce del hover es apenas de tamano. */
+.nav-item:hover svg.ico-bi { fill: var(--texto); transform: scale(1.12); }
 
 /* El acento se usa sólo acá: es lo único de la franja que tiene que saltar a la vista. */
 .nav-item.activo { background: var(--acento); }
 .nav-item.activo svg,
 .nav-item.activo:hover svg { stroke: #fff; }
+.nav-item.activo svg.ico-bi,
+.nav-item.activo:hover svg.ico-bi { fill: #fff; }
 .nav-item.activo:hover { background: var(--acento-hover); }
 
 .nav-item.pie { margin-top: auto; }
@@ -239,6 +258,9 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .nav-item, .nav-item svg, .nav-item::after { transition: none; }
+
+  /* Sin transicion, el crecimiento del hover es un salto: mejor que no pase. El color alcanza. */
+  .nav-item:hover svg.ico-bi { transform: none; }
 }
 
 /*
@@ -1033,25 +1055,63 @@ select.campo { padding: 0 8px; }
   justify-content: center;
   background: var(--fondo-principal);
   color: var(--texto);
-  font-family: "Segoe MDL2 Assets";
   font-size: 13px;
   user-select: none;
+
+  /* El mismo padding lateral que la barra: con eso el icono cae en el mismo punto desplegada que
+     en pestana, y al colapsar no se mueve. */
+  padding: 0 14px;
+  box-sizing: border-box;
+  justify-content: flex-start;
 }
+
+/* Apoyada a la derecha, el icono va de ese lado en los dos estados: la zona de agarre se corre al
+   final de la barra con `order` y la pestana alinea a la derecha. Si no, al colapsar el icono
+   saltaria de una punta a la otra. */
+.shell.apoyo-derecha > .barra-solapa { justify-content: flex-end; }
+.shell.apoyo-derecha .barra-agarre { order: 99; }
 .shell.en-solapa > .barra,
 .shell.en-solapa > .barra-panel { display: none; }
+.barra-solapa .ico-bi { width: 18px; height: 18px; }
+
+/* Exactamente el mismo tamano y la misma caja que en la zona de agarre: el colapso tiene que
+   percibirse como un cambio de color del icono, no como que ademas se achica.
+
+   El `flex: none` no es de mas: la pestana es flex, y sin el el icono se encoge para entrar en el
+   espacio que deja el padding. Era lo que lo hacia verse mas chico aunque midiera lo mismo. */
+.barra-solapa .ico-bi { width: 20px; height: 20px; margin: 0 1px; flex: none; }
+
+/* La pestana se despliega con un clic y se arrastra para moverla: el cursor de mover es el que
+   describe las dos cosas, igual que en la zona de agarre de la barra. */
+.barra-solapa { cursor: move; }
+
 .shell.en-solapa > .barra-solapa { display: flex; }
 
 /* Los puntos de los que se agarra la barra para moverla. El host los reconoce por la clase y le
    dice a Windows que esa zona es la barra de titulo, asi el arrastre lo hace el sistema. */
 .barra-agarre {
-  width: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
   height: 22px;
   flex: none;
-  background-image: radial-gradient(var(--texto-2) 1.2px, transparent 1.3px);
-  background-size: 5px 7px;
-  opacity: .65;
   cursor: move;
 }
+
+.barra-agarre .ico-bi { width: 20px; height: 20px; }
+
+/* El icono del entorno lleva el color del tema cuando el aspecto es claro, donde el acento
+   contrasta bien contra el fondo; en los oscuros va blanco, porque el acento oscuro se apaga
+   demasiado. Vale para los dos estados -barra y pestana-, que son el mismo icono.
+
+   Los temas oscuros se reconocen por el sufijo del id, que es la convencion de ServicioDeTemas:
+   `verde-esperanza` y `verde-esperanza-oscuro`. */
+.barra-agarre .ico-bi,
+.barra-solapa .ico-bi { color: var(--acento); }
+
+[data-tema$="-oscuro"] .barra-agarre .ico-bi,
+[data-tema$="-oscuro"] .barra-solapa .ico-bi { color: #fff; }
 
 .barra-luz {
   width: 11px;
@@ -1132,6 +1192,10 @@ select.campo { padding: 0 8px; }
   font-size: 15px;
   cursor: pointer;
 }
+/* Los iconos de Bootstrap vienen en grilla de 16 y rellenos, al reves que los trazados a mano
+   del resto de la aplicacion. Solo hay que darles tamano: el boton ya los centra. */
+.barra-accion .ico-bi { width: 16px; height: 16px; }
+
 .barra-accion:hover:not(:disabled) { background: var(--boton-2-hover); }
 .barra-accion:disabled { color: var(--texto-2); border-color: var(--separador); opacity: .5; cursor: default; }
 .barra-accion.frenar { color: var(--error); border-color: var(--error); }

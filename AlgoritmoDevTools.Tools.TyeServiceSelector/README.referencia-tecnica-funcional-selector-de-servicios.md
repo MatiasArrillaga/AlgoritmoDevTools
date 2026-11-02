@@ -91,6 +91,28 @@ Al frenar desde la barra esa consola **se cierra sola** (`LanzadorDeTye.CerrarLa
 
 Cerrar el proceso cierra su consola, y con ella los procesos que heredaron esa consola — verificado: un hijo lanzado con `-NoNewWindow` muere junto con la ventana.
 
+### El botón principal cambia con el momento
+
+Es uno solo y ofrece cuatro cosas distintas según dónde esté parado el usuario (`QueOfrece`):
+
+| Momento | Dice | Qué hace |
+|---|---|---|
+| No hay entorno | **Levantar** | Genera el archivo, arranca tye y abre la barra |
+| Ya hay un tye corriendo | **Controlar** | Engancha la barra a esa instancia, sin levantar otra |
+| Ya hay un tye corriendo **y la barra abierta** | **Dejar de controlar** | Cierra la barra. **El entorno sigue corriendo**: no se frena ningún servicio |
+| Se tocó Levantar y todavía no están todos | **Cancelar** | Le pide a la barra que frene |
+| El panel contesta con todos arriba | **Cerrar** | Cierra esta ventana; lo que sigue pasa en la barra |
+
+**La ventana ya no se minimiza sola al levantar.** Lo hacía porque «ya cumplió», pero con eso el botón de cancelar no se ve: habría que restaurarla desde la barra de tareas para usarlo, que es más trabajo que frenar desde la barra flotante. Ahora se queda, y se va cuando el usuario toca Cerrar. `IVentanaPrincipal.Minimizar()` sigue existiendo aunque esta pantalla no lo use.
+
+**«Dejar de controlar» cierra la barra y nada más.** Hace falta porque con el entorno arriba y la barra ya abierta, el botón ofrecía «Controlar», que es lo que ya estaba hecho. Son dos cosas distintas y conviene que los nombres no se confundan: `ArranqueDeLaBarra.Cerrar()` manda `WM_CLOSE` a la barra y deja los servicios corriendo, mientras que `PedirQueFrene()` baja el entorno. El tooltip lo dice explícito, porque un botón que diga «dejar de controlar» se puede leer como «frenar».
+
+Si la barra está abierta sale del mismo mutex de instancia única que impide abrir una segunda (`EstaCorriendo`), y se mira en cada vuelta de la revisión: abrir y cerrar un mutex es barato.
+
+**Cancelar no reimplementa el frenado**: manda `AlgoritmoDevTools.Barra.Frenate` —un mensaje registrado, igual que `Mostrate`— y la barra corre su propio `Frenar()`. Ella ya espera a que bajen los servicios, cierra la consola de tye, barre los huérfanos y se cierra. Dos frenados distintos se separan con el tiempo, y el que quedaría peor atendido es éste, que se usa mucho menos. El puente de vuelta —ventana → página— es el evento `FrenadoPedido` de `IVentanaDeLaBarra`, porque el único que había iba en el sentido contrario.
+
+**El paso de Cancelar a Cerrar sale de un sondeo propio** (`MirarElArranque`, cada 3 s, sólo mientras se está levantando). No va colgado de `Revisar()` porque son de costo muy distinto: esto es un GET a localhost y aquélla levanta un `docker ps`, un `netsh` y los user-secrets.
+
 ### Con un tye ya corriendo, el botón dice «Controlar»
 
 Un segundo tye con los mismos servicios se pelea por los puertos y se pisa los contenedores. Antes eso figuraba como faltante —«Ya hay una instancia de tye corriendo», con el remedio de frenarla—, pero el faltante **no deshabilitaba el botón**: se podía tocar Levantar igual y arrancar el segundo. Y además el remedio estaba mal planteado: lo que uno quiere no es frenar el entorno que está, sino manejarlo.
@@ -123,7 +145,9 @@ El pre-vuelo modal se descartó por pedido: interrumpe cada arranque para decir 
 
 ## 6. La barra del entorno
 
-Una barra flotante sin marco, siempre encima, en **su propio proceso** (`DevTools.exe --barra`). Es un proceso aparte a propósito: la barra tiene que seguir mientras siga el entorno, y la ventana principal se cierra mucho antes que eso. Es el mismo argumento que ya estaba escrito para el widget de bandeja, y evita IPC — cada proceso lee el estado de la API de tye.
+Una barra flotante sin marco, siempre encima, en **su propio proceso** (`DevTools.exe --barra`). Es un proceso aparte para no depender del ciclo de vida de la ventana principal y para evitar IPC: cada proceso lee el estado de la API de tye por su cuenta.
+
+**Pero ya no le sobrevive**: `MainFormBlazor.OnFormClosed` la cierra. El diseño original la dejaba viva —el entorno sigue arriba mucho después de que DevTools se cierre—, y se cambió por pedido: una barra flotando sin la aplicación detrás sorprende más de lo que ayuda. Para mirar el entorno sin tener la ventana abierta está el widget de bandeja. **Cerrar la barra no frena nada**: los servicios siguen corriendo y se la vuelve a abrir desde el Selector con «Controlar».
 
 ### Es HTML, como el resto de la aplicación
 
@@ -140,18 +164,63 @@ A cambio, el aspecto deja de ser algo que haya que imitar a mano: la barra usa e
 | Tamaño | **920 × 66** lógicos; ancho guardado entre 620 y 1400 |
 | Arrastre | La página manda `postMessage('barra:mover')` desde `.barra-agarre` y el host responde con `ReleaseCapture()` + `WM_NCLBUTTONDOWN`/`HTCAPTION` |
 | Estirado | Franja de **6 px** a la derecha, dejada libre con `Padding`: es lo único que el hit-test del formulario puede ver, porque el visor se queda con el mouse |
-| Repliegue | Se esconde contra el borde más cercano y queda sólo una **solapa de 44 px** con la flecha hacia donde sale; con el mouse encima asoma contra ese mismo borde, y queda fija si se hace clic en el chevron |
-| Al volver | Contra el borde por el que se escondió y **centrada en el otro eje** — no donde estaba antes, y es el mismo lugar venga del mouse o de la flecha |
+| Colapso | Queda una **pestaña de 50 px de ancho, con el mismo alto**, pegada al **borde más cercano** de tres: los dos laterales y el de arriba |
+| Al volver | **Desde la pestaña hacia adentro**: apoyada a la derecha crece hacia la izquierda; en los otros dos lados, hacia la derecha |
 | Posición | Se guarda, y **se acota a la pantalla al restaurarla**: una barra arrastrada fuera del área visible no se podía recuperar, porque no tiene botón en la barra de tareas |
 
-**La posición de vuelta se calcula una sola vez**, en `Replegar`, con `PosicionPegadaAlBorde(borde)`, y de ahí la leen las tres cosas que la necesitan: dónde va la solapa, dónde asoma con el mouse encima y dónde queda al fijarla con la flecha. Tiene que ser una sola y contra el borde, por dos razones distintas:
+**La pestaña vive siempre contra un borde** (`PegarLaPestaniaAlLateral`, el más cercano de los tres), conservando el otro eje. Suelta en medio de la pantalla es un recuadro flotando sin relación con nada, y además el despliegue necesita saber hacia qué lado crecer.
 
-- Mientras el hover la pegaba al borde y la flecha la devolvía a `_posicionDesplegada`, fijarla la hacía **saltar** de un lugar al otro.
-- Asomar en el lugar viejo tampoco sirve: la barra cae lejos de la solapa, el cursor queda afuera de `Bounds` y el vigilante la esconde al instante.
+**La barra se despliega desde la pestaña hacia adentro**, así que el lateral que toca la pantalla es el mismo en los dos estados: apoyada a la izquierda crece hacia la derecha, y apoyada a la derecha hacia la izquierda (`MostrarLaBarra` resta el ancho). Mover la barra sigue siendo mover la pestaña: al colapsar se pega al lateral que le haya quedado más cerca, y puede cambiar de lado.
 
-No vuelve a donde estaba porque esconderla es decir que ahí molesta: devolverla al mismo lugar es devolver el estorbo, encima tapando lo que el usuario haya puesto ahí mientras no estaba.
+**Antes se escondía contra el borde más cercano**, con tres variantes, y volvía al pasarle el mouse por encima. Eso tenía dos problemas encadenados:
 
-**El otro eje va al centro, no al extremo.** Se probó anclarla a la esquina y queda mal: la solapa se va contra el vértice de la pantalla, lejos de donde uno la busca. Centrada, la solapa cae en el medio del borde superior tirada a la derecha, que es donde termina la barra y donde vive el botón de esconder.
+- La pestaña quedaba siempre en un borde, y si molestaba justo ahí **no había forma de correrla**: acercar el mouse para agarrarla la desplegaba.
+- El retorno necesitaba una posición calculada —pegada al borde, centrada en el otro eje— que las tres entradas (la solapa, el hover, la flecha) tenían que compartir, porque cualquier desacuerdo entre ellas hacía saltar la barra de un lugar a otro.
+
+Con el colapso en el lugar se fueron los tres bordes, el centrado, el `Asomar` y `ReplegarSiQuedoPegada`. **El despliegue es por clic y nunca por hover**: con la pestaña en cualquier parte de la pantalla, el mouse la abriría sola cada vez que el cursor pasara cerca.
+
+### Los tres estados, como los paneles de Windows
+
+| Estado | Pin | Qué pasa |
+|---|---|---|
+| Colapsada | — (no se ve) | Clic en la pestaña → se despliega **sin clavar** |
+| | | El icono **alterna**: desplegada sin clavar, el clic la vuelve a cerrar. Clavada no, que es para lo que se clava |
+| Desplegada sin clavar | `pin-angle` | Se contrae sola cuando el mouse sale. Clic en el pin → la clava |
+| Desplegada y clavada | `pin` | Se queda. Clic en el pin → se colapsa a la pestaña |
+
+El pin **muestra el estado** y el tooltip dice la acción, igual que en los paneles acoplables de Windows.
+
+**El vigilante del mouse sigue existiendo, pero sólo para contraer** (`VigilarElMouse`, cada 250 ms, y sólo mientras `_temporal`). Se vigila con un reloj y no con `MouseEnter`/`MouseLeave` porque el visor ocupa toda la ventana y se queda con esos eventos: entrar a él contaría como salir de la ventana.
+
+**Quién despliega decide si queda clavada**: el clic en la pestaña la deja sin clavar —es un vistazo—, y `Mostrarse()` o `AjustarAlto` la clavan, porque ahí alguien pidió ver algo y no es cuestión de que se le cierre en la cara.
+
+### La pestaña
+
+**Conserva el alto de la barra**: sólo cambia el ancho, de 920 a 44. Achicarla también de alto hacía un salto raro; así lo único que se percibe es que la barra se encoge hacia la izquierda y el icono cambia de relleno.
+
+**Se puede arrastrar**, y por eso el clic que la despliega se decide en el host: `PrepararElArrastre` guarda la posición antes de pasarle el arrastre a Windows y, al volver, si la ventana no se movió, lo trata como un clic. No se usa un `@onclick` en la página porque el arrastre lo maneja Windows con su propio bucle modal —se queda con el botón del mouse— y no hay garantía de que el clic llegue después al visor.
+
+**Sin redondeo contra la pantalla.** `Redondear()` arma el contorno esquina por esquina en vez de usar `MenuDelTema.Contorno`, que redondea las cuatro: un vértice redondeado contra el borde deja ver el escritorio por el hueco y se nota el recorte.
+
+| Apoyo | Redondeadas | Rectas |
+|---|---|---|
+| Derecha | las dos izquierdas | las dos derechas |
+| Izquierda | las dos derechas | las dos izquierdas |
+| Arriba, o sin apoyo | las dos inferiores | las dos superiores |
+
+**El caso «sin apoyo» no es decorativo**: `_lado` es nullable y arranca en null, porque recién abierta la barra está donde la dejaron y no se apoya en nada. Con un enum sin nullable arrancaba en su valor por defecto —izquierda— y se dibujaba con esos dos vértices rectos apoyada contra nada. Vuelve a null al arrastrarla: movida a mano deja de apoyarse, y el apoyo se decide de nuevo al colapsar.
+
+Flotando se dibuja igual que apoyada arriba —abajo redondeada, arriba recta—, que es el aspecto que tiene la barra cuando nace.
+
+**El icono no se mueve ni cambia de tamaño al colapsar**: la idea es que lo único que se perciba sea que pasa de contorno a relleno. Eso tuvo tres trampas, y las tres valen para cualquier otro icono que se sume:
+
+1. **La zona de agarre vive a la izquierda de la barra**, así que con la pestaña apoyada a la derecha el icono saltaba de una punta a la otra. Con la clase `apoyo-derecha`, el CSS corre la zona de agarre al final (`order: 99`) y alinea la pestaña a ese lado.
+2. **El icono se encogía aunque el CSS dijera 20 px.** La pestaña es un contenedor flex, y con 44 px de ancho y 14 de padding a cada lado quedaban 16 de espacio: el flex lo achicaba para hacerlo entrar. Se arregla con `flex: none` **y** con una pestaña lo bastante ancha (14 + 22 + 14 = 50).
+3. **La pestaña se medía en unidades distintas que su contenido.** `AnchoDeLaPestania` está en las unidades del HTML, donde se definen el margen y el icono, pero `Bounds` se asigna en píxeles de pantalla: en un monitor al 125% la ventana quedaba más angosta que su propio contenido y el icono se comía el margen derecho. Por eso `AnchoDeLaPestaniaEnPantalla` lo convierte con `DeviceDpi / 96`. El alto no lo necesita porque sale de `Size`, que ya viene en píxeles reales.
+
+**El color sale del tema**: `var(--acento)` en los aspectos claros —verde o azul según cuál esté puesto— y blanco en los oscuros, que se reconocen por el sufijo `-oscuro` del `data-tema`. El acento oscuro se apaga demasiado contra ese fondo.
+
+**La animación de colapso se descartó.** El tamaño lo define la ventana nativa, así que animarla es redimensionar el `BlazorWebView` una decena de veces en pocos cuadros, y cada paso es un relayout del documento: se ve con tirones, peor que el salto.
 
 ### Mostrarla desde afuera
 
@@ -161,6 +230,29 @@ El Selector al levantar y el menú de la bandeja llaman a `ArranqueDeLaBarra.Lan
 - **Le pide a la barra que se despliegue**, con `PostMessage` de un mensaje registrado por nombre (`AlgoritmoDevTools.Barra.Mostrate`, vía `RegisterWindowMessage`, así los dos procesos llegan al mismo número sin compartir nada más). La barra lo atiende en su `WndProc` y llama a `Mostrarse()`. Hace falta porque desplegarse es algo que sólo ella puede hacer, y ponerla encima de todo sin desplegarla no muestra nada útil.
 
 Y **la barra sale con el clic**, antes de generar el yaml y de arrancar tye: es lo único que el usuario tiene para mirar mientras compila. Si algo falla después, la barra dice «Sin entorno», que es la verdad.
+
+### Los iconos
+
+Casi todos son caracteres de **`Segoe MDL2 Assets`**, la fuente de iconos que trae Windows: la barra los escribe como entidades (`&#xE72C;` es el reinicio). No hace falta instalar nada y pesan cero.
+
+**Los de Bootstrap Icons** (MIT) son por ahora cuatro, y marcan la dirección: la idea es ir reemplazando el resto.
+
+| Dónde | Icono |
+|---|---|
+| Botón del pin, según el estado | `pin` / `pin-angle` |
+| La zona de arrastre de la barra | `hdd-rack` |
+| La pestaña, con la barra colapsada | `hdd-rack-fill` |
+| El Selector en el menú lateral (`IconosSvg.Servicios`) | `hdd-rack` |
+
+**La pestaña mostraba antes una flecha por borde** apuntando hacia donde iba a salir la barra. El rack dice mejor qué hay detrás, y es el mismo icono del entorno que usa el Selector en el menú: colapsada o no, la barra se reconoce por él.
+
+**La zona de arrastre volvió a los puntos y después al rack.** Se probó con `grip-vertical`, el icono que Bootstrap tiene para eso, y se veía chico: sus puntos ocupan 7 de los 16 de ancho del dibujo y 14 de alto, así que a tamaño nominal quedan mucho más chicos que la grilla que hacía el `radial-gradient`, y agrandarlo los deja apretados en vez de espaciados. **No todo icono de Bootstrap es reemplazo directo de lo que hay.**
+
+**El par de chinchetas vale por los tres estados de arriba**: el icono dice si está clavada y el tooltip qué pasa al tocarlo.
+
+**Van como SVG embebido, no como fuente de iconos.** Unos pocos iconos no justifican sumar un `woff2` y su hoja de estilos, y así la aplicación sigue sin pedirle nada a la red —cosa que importa, porque corre en máquinas de desarrollo con el entorno a medio levantar—. Es además lo que ya hace el resto de la aplicación (`.icono-grupo svg`, `.extension-icono svg`). Los paths están como constantes en `BarraPagina.razor.cs` y en `CatalogoDeHerramientas.cs`, copiados de `twbs/icons`.
+
+**La trampa al sumar los que faltan: los de Bootstrap son siluetas rellenas y los de acá son trazos.** El CSS de la aplicación pinta los SVG con `stroke: currentColor; fill: none` (`.nav-item svg`, `.icono-grupo svg`, `.extension-icono svg`), y con esas reglas un icono de Bootstrap se ve **vacío**. Por eso todos llevan la clase `ico-bi`, que da vuelta las dos propiedades sin tocar a los demás: `.nav-item svg.ico-bi` lo hace para el menú —incluidos el hover y el ítem activo, que cambian de color— y `.barra-accion .ico-bi` y `.barra-solapa .ico-bi` sólo les dan el tamaño, porque ahí el contenedor ya los centra y el color se hereda. **Si algún día se reemplazan todos, conviene revisar esta decisión**: a partir de cierta cantidad, la fuente o un componente que centralice los paths sale más barato que repetir SVG.
 
 ### Qué dice
 
@@ -291,7 +383,14 @@ La barra compara el sello contra la conexión configurada ahora:
 
 El cambio de base **no reinicia solo**: lo decide el usuario, que puede estar a mitad de algo. La barra lo señala y espera.
 
-**Al terminar el reinicio el sello se reescribe** con la conexión vigente, porque los servicios que volvieron ya la leyeron. Sin eso la barra seguiría en ámbar avisando de una diferencia que el reinicio acaba de resolver.
+**El sello se reescribe cuando ya no queda ningún servicio con el PID que tenía al cambiar la base** (`_pidsConLaBaseAnterior`): si todos volvieron a arrancar, todos leyeron la conexión nueva. Sin eso la barra seguiría en ámbar avisando de una diferencia que ya no existe.
+
+**Mira el resultado y no el camino, y eso importa.** La primera versión lo reescribía en un solo lugar: al terminar un reinicio general, y dentro del tope de tres minutos. Quedaba colgado en ámbar para siempre en dos casos que pasan seguido:
+
+- **Reiniciar los servicios de a uno** —o bajarlos y volver a subirlos—, porque ese camino no setea el cronómetro del reinicio general y nadie tocaba el sello.
+- **Un reinicio general que tarde más de tres minutos**, porque al vencer el tope se limpia el cronómetro sin reescribirlo. Con recompilación completa es fácil llegar: entre el primer servicio que vuelve y el último puede haber dos minutos.
+
+El tope de tres minutos sigue existiendo, pero ahora sólo gobierna la rueda de los servicios que están volviendo.
 
 `Comparar()` devuelve la base configurada **aunque no haya sello**: la barra tiene que poder mostrar contra qué base se va a levantar antes de que exista entorno.
 

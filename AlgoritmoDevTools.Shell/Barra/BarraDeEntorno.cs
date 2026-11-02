@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 using AlgoritmoDevTools.Core.Infrastructure;
 using AlgoritmoDevTools.Core.Theming;
@@ -46,25 +47,68 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
     private const int BordeParaEstirar = 6;
 
     /// <summary>
-    /// El lado de la solapa que queda a la vista cuando está escondida contra un borde: el de un
-    /// botón de la barra más su margen, así la flecha se ve como uno más. Es lo que recibe el mouse
-    /// para traerla de vuelta.
+    /// El ancho de la pestaña que queda cuando la barra está colapsada. Sale de las medidas del
+    /// icono: los 14 px de margen lateral que usa la barra a cada lado, más los 22 de la caja del
+    /// icono. Con menos, el visor lo encogía para hacerlo entrar y la pestaña mostraba un icono más
+    /// chico que el de la barra, justo lo que no tiene que pasar.
+    ///
+    /// <para>
+    /// <b>El alto no cambia</b>: la pestaña queda tan alta como la barra. Achicarla también de alto
+    /// hacía un salto raro a la vista; conservándolo, lo único que se percibe es que la barra se
+    /// encoge hacia la izquierda y el icono cambia de color.
+    /// </para>
     /// </summary>
-    private const int LadoDeLaSolapa = 44;
+    private const int AnchoDeLaPestania = 50;
+
+    /// <summary>
+    /// El ancho de la pestaña en píxeles de pantalla.
+    ///
+    /// <para>
+    /// <b>La constante está en las unidades del HTML</b>, que es donde se definen el margen y el
+    /// tamaño del icono, y la ventana se mide en píxeles reales. Sin convertir, en una pantalla al
+    /// 125% la pestaña queda más angosta que su propio contenido: el icono se come el margen de la
+    /// derecha y queda descentrado. El alto no necesita esto porque sale de <c>Size</c>, que ya
+    /// viene en píxeles reales.
+    /// </para>
+    /// </summary>
+    private int AnchoDeLaPestaniaEnPantalla => (int)Math.Round(AnchoDeLaPestania * DeviceDpi / 96.0);
 
     private readonly ServicioDeTemas _temas = ServicioDeTemas.Instancia;
     private readonly System.Windows.Forms.Timer _vigilante = new() { Interval = 250 };
     private readonly System.Windows.Forms.Timer _siempreEncima = new() { Interval = 3000 };
     private readonly VisorEmbebido _visor;
 
-    private string? _replegadaEn;
-    private bool _asomando;
+    private bool _colapsada;
 
     /// <summary>
-    /// Dónde vuelve a la vista mientras está escondida. Al replegarse deja de ser el lugar donde
-    /// estaba y pasa a ser el centro del borde: ver <see cref="PosicionPegadaAlBorde"/>.
+    /// Desplegada por un clic en la pestaña y no clavada: se contrae sola en cuanto el mouse se va.
+    /// Es el auto-ocultamiento de los paneles de Windows, y por eso el pin muestra si está clavada.
     /// </summary>
-    private Point _posicionDesplegada;
+    private bool _temporal;
+
+    /// <summary>
+    /// Dónde está la pestaña, que siempre vive pegada a un lateral de la pantalla. La barra se
+    /// despliega desde ahí hacia adentro, así que el borde que toca la pantalla es el mismo en los
+    /// dos estados.
+    /// </summary>
+    private Point _pestania;
+
+    /// <summary>Contra qué borde de la pantalla se apoya la pestaña.</summary>
+    private enum Lado { Izquierda, Derecha, Arriba }
+
+    /// <summary>
+    /// Contra qué borde está apoyada, o null si no se apoya en ninguno. Define hacia dónde se
+    /// despliega la barra y qué esquinas van rectas: las que dan contra la pantalla no se
+    /// redondean.
+    ///
+    /// <para>
+    /// <b>Null mientras flota.</b> Recién abierta, la barra está donde la dejaron la última vez y
+    /// no se apoya en ningún borde: se dibuja con las de abajo redondeadas y las de arriba rectas,
+    /// igual que apoyada arriba. Sin el nullable arrancaba con el valor por defecto del enum
+    /// —izquierda— y se dibujaba con los dos vértices de ese lado rectos, apoyada contra nada.
+    /// </para>
+    /// </summary>
+    private Lado? _lado;
 
     private Size _tamanoDesplegado;
 
@@ -119,11 +163,15 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
 
     // --- Lo que la barra le pide a la ventana --------------------------------
 
-    public bool EstaReplegada => _replegadaEn is not null;
+    public bool EstaReplegada => _colapsada;
 
-    public string? SolapaContra => _asomando ? null : _replegadaEn;
+    public bool EsTemporal => _temporal;
+
+    public bool ApoyadaALaDerecha => _lado == Lado.Derecha;
 
     public event EventHandler? AspectoCambiado;
+
+    public event EventHandler? FrenadoPedido;
 
     public void AjustarAlto(int alto)
     {
@@ -133,8 +181,9 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
             return;
         }
 
-        // Desplegar algo con la barra escondida no tendría dónde mostrarse.
-        if (_replegadaEn is not null) AlternarElRepliegue();
+        // Desplegar algo con la barra colapsada no tendría dónde mostrarse. Queda clavada: se
+        // pidió ver algo, no echarle un vistazo.
+        if (_colapsada) Desplegar(temporal: false);
 
         ClientSize = new Size(ClientSize.Width, alto);
         Redondear();
@@ -147,9 +196,16 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
     }
 
     /// <summary>
-    /// El botón de esconder fija la decisión: con la barra a la vista la esconde contra el borde más
-    /// cercano, y estando escondida la deja desplegada para siempre —centrada en ese borde, igual
-    /// que cuando asoma—. Pasarle el mouse sólo la hace asomar mientras esté encima.
+    /// La barra se colapsa sobre su extremo izquierdo y se despliega hacia la derecha desde ahí,
+    /// sin moverse de lugar.
+    ///
+    /// <para>
+    /// <b>Antes se escondía contra el borde de la pantalla más cercano</b>, con tres variantes, y
+    /// volvía al pasarle el mouse por encima. Eso dejaba la pestaña siempre en un borde y, si
+    /// molestaba justo ahí, no había forma de correrla: pasarle el mouse para agarrarla la
+    /// desplegaba. Colapsándose en el lugar, mover la barra es mover la pestaña, y se fueron con
+    /// ello los tres bordes, el centrado, el vigilante del mouse y el asomar.
+    /// </para>
     /// </summary>
     public void AlternarElRepliegue()
     {
@@ -159,17 +215,89 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
             return;
         }
 
-        if (_replegadaEn is null)
-        {
-            Replegar(BordeMasCercano());
-            return;
-        }
+        // Clavada, el pin la despincha y se va a la pestaña. Despinchada —desplegada por un clic,
+        // de las que se contraen solas—, el pin la clava y se queda. Es el orden de los paneles
+        // acoplables de Windows.
+        if (_colapsada) Desplegar(temporal: false);
+        else if (_temporal) Clavar();
+        else Colapsar();
+    }
 
-        _replegadaEn = null;
-        _asomando = false;
+    private void Colapsar()
+    {
+        _tamanoDesplegado = Size;
+        PegarLaPestaniaAlLateral();
+        _colapsada = true;
+        _temporal = false;
         _vigilante.Stop();
-        MostrarLaBarra(_posicionDesplegada);
+        MostrarLaSolapa();
         Recordar();
+    }
+
+    /// <param name="temporal">
+    /// True cuando la desplegó un clic en la pestaña: se contrae en cuanto el mouse se va. False
+    /// cuando se la clavó con el pin o la pidió alguien de afuera, y entonces se queda.
+    /// </param>
+    private void Desplegar(bool temporal)
+    {
+        _colapsada = false;
+        _temporal = temporal;
+        MostrarLaBarra();
+        Recordar();
+
+        if (temporal) _vigilante.Start();
+        else _vigilante.Stop();
+    }
+
+    /// <summary>
+    /// Deja la pestaña contra el borde más cercano de los tres —los dos laterales y el de arriba—,
+    /// conservando el otro eje. Siempre pegada a un margen: suelta en medio de la pantalla es un
+    /// recuadro flotando sin relación con nada, y además el despliegue necesita saber hacia qué
+    /// lado crecer.
+    /// </summary>
+    private void PegarLaPestaniaAlLateral()
+    {
+        var pantalla = Screen.FromControl(this).WorkingArea;
+
+        var aIzquierda = Location.X - pantalla.Left;
+        var aDerecha = pantalla.Right - Right;
+        var arriba = Location.Y - pantalla.Top;
+
+        _lado = arriba <= aIzquierda && arriba <= aDerecha ? Lado.Arriba
+            : aIzquierda <= aDerecha ? Lado.Izquierda
+            : Lado.Derecha;
+
+        _pestania = _lado switch
+        {
+            Lado.Izquierda => new Point(pantalla.Left, Location.Y),
+            Lado.Derecha => new Point(pantalla.Right - AnchoDeLaPestaniaEnPantalla, Location.Y),
+            _ => new Point(Location.X, pantalla.Top)
+        };
+    }
+
+    /// <summary>La deja fija: deja de mirarse el mouse y el pin pasa a mostrarse clavado.</summary>
+    private void Clavar()
+    {
+        _temporal = false;
+        _vigilante.Stop();
+        AspectoCambiado?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Mientras está desplegada sin clavar, se contrae en cuanto el mouse sale de la ventana.
+    ///
+    /// <para>
+    /// El mouse se vigila con un reloj y no con <c>MouseEnter</c>/<c>MouseLeave</c>: el visor ocupa
+    /// toda la ventana y se queda con esos eventos, así que entrar a él contaría como salir de la
+    /// ventana y la barra se contraería con el mouse encima.
+    /// </para>
+    /// </summary>
+    private void VigilarElMouse()
+    {
+        if (_colapsada || !_temporal) return;
+        if (Bounds.Contains(Cursor.Position)) return;
+
+        Colapsar();
     }
 
     // --- Arrastrar y estirar sin marco ---------------------------------------
@@ -192,6 +320,9 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
     /// tiempo.
     /// </summary>
     private static readonly uint Mostrate = ArranqueDeLaBarra.MensajeParaMostrarse();
+
+    /// <summary>El mensaje con el que otro proceso le pide a la barra que frene el entorno.</summary>
+    private static readonly uint Frenate = ArranqueDeLaBarra.MensajeParaFrenar();
     private const int EnLaBarraDeTitulo = 2;
     private const int EnElBordeDerecho = 11;
 
@@ -212,15 +343,48 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
         {
             if (mensaje.TryGetWebMessageAsString() != "barra:mover") return;
 
+            var antesDeArrastrar = Location;
+
             ReleaseCapture();
             SendMessage(Handle, AlApretarElMarco, EnLaBarraDeTitulo, IntPtr.Zero);
 
-            // Al soltar, la ventana puede haber quedado afuera de la pantalla o pegada a un borde.
+            // Al soltar, la ventana puede haber quedado afuera de la pantalla.
             BeginInvoke(() =>
             {
+                // Colapsada, un arrastre que no movió nada es un clic, y el clic despliega. Se
+                // decide acá y no con un onclick en la página porque el arrastre lo maneja Windows
+                // con su propio bucle modal: se queda con el botón del mouse y no hay garantía de
+                // que el clic llegue después al visor.
+                // Sin movimiento fue un clic sobre el icono, y el icono alterna: colapsada la
+                // despliega, desplegada la vuelve a cerrar. Clavada no, porque para eso está el
+                // pin: clavarla es justamente pedir que no se cierre sola ni de un clic al pasar.
+                if (Location == antesDeArrastrar)
+                {
+                    if (_colapsada) Desplegar(temporal: true);
+                    else if (_temporal) Colapsar();
+
+                    return;
+                }
+
+                if (_colapsada)
+                {
+                    // Arrastrada: vuelve a pegarse al borde, que puede ser otro.
+                    PegarLaPestaniaAlLateral();
+                    MostrarLaSolapa();
+                    Recordar();
+                    return;
+                }
+
                 Location = AcotarALaPantalla(Location);
+                _pestania = Location;
+
+                // Movida a mano, la barra vuelve a flotar: deja de apoyarse donde estaba y
+                // recupera las cuatro esquinas redondeadas. El apoyo se decide de nuevo al
+                // colapsar, con el borde que le haya quedado más cerca.
+                _lado = null;
+                Redondear();
+
                 Recordar();
-                ReplegarSiQuedoPegada();
             });
         };
     };
@@ -235,7 +399,13 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
             return;
         }
 
-        if (mensaje.Msg != DondeEstaElMouse || SolapaContra is not null) return;
+        if (Frenate != 0 && mensaje.Msg == Frenate)
+        {
+            FrenadoPedido?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (mensaje.Msg != DondeEstaElMouse || _colapsada) return;
 
         var enPantalla = new Point(mensaje.LParam.ToInt32() & 0xFFFF, (mensaje.LParam.ToInt32() >> 16) & 0xFFFF);
         if (PointToClient(enPantalla).X >= ClientSize.Width - BordeParaEstirar) mensaje.Result = EnElBordeDerecho;
@@ -245,9 +415,10 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
     {
         base.OnResizeEnd(e);
 
-        if (_replegadaEn is not null) return;
+        if (_colapsada) return;
 
         Location = AcotarALaPantalla(Location);
+        _pestania = Location;
         Recordar();
         Redondear();
     }
@@ -256,8 +427,8 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
 
     /// <summary>
     /// Alguien de afuera —la pantalla del Selector al levantar, el menú de la bandeja— pide que la
-    /// barra se vea. Si está escondida se despliega: dejarla replegada y sólo ponerla encima deja a
-    /// la vista una solapa de 44 px perdida en el borde, que es como no mostrar nada.
+    /// barra se vea. Si está colapsada se despliega: dejarla así y sólo ponerla encima deja a la
+    /// vista una pestaña de 44 px, que es como no mostrar nada.
     /// </summary>
     private void Mostrarse()
     {
@@ -267,7 +438,7 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
             return;
         }
 
-        if (_replegadaEn is not null) AlternarElRepliegue();
+        if (_colapsada) Desplegar(temporal: false);
         AsegurarQueEsteEncima();
     }
 
@@ -284,153 +455,39 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
         SetWindowPos(Handle, SiempreEncima, 0, 0, 0, 0, SinMover | SinRedimensionar | SinActivar);
     }
 
-    // --- Esconderse contra un borde ------------------------------------------
+    // --- Colapsarse sobre el extremo izquierdo -------------------------------
 
     /// <summary>
-    /// El mouse se vigila con un reloj y no con <c>MouseEnter</c>/<c>MouseLeave</c>: el visor se
-    /// queda con esos eventos, así que entrar a él contaría como salir de la ventana y la barra se
-    /// escondería con el mouse encima.
-    /// </summary>
-    private void VigilarElMouse()
-    {
-        if (_replegadaEn is null) return;
-
-        if (Bounds.Contains(Cursor.Position)) Asomar();
-        else Esconder();
-    }
-
-    private void Asomar()
-    {
-        if (_asomando || _replegadaEn is null) return;
-
-        _asomando = true;
-        MostrarLaBarra(_posicionDesplegada);
-        AsegurarQueEsteEncima();
-    }
-
-    private void Esconder()
-    {
-        if (!_asomando || _replegadaEn is null) return;
-
-        _asomando = false;
-        MostrarLaSolapa();
-    }
-
-    private void Replegar(string borde)
-    {
-        _posicionDesplegada = PosicionPegadaAlBorde(borde);
-        _tamanoDesplegado = Size;
-        _replegadaEn = borde;
-        _asomando = false;
-        MostrarLaSolapa();
-        _vigilante.Start();
-        Recordar();
-    }
-
-    /// <summary>
-    /// Escondida, la ventana se achica a la solapa: sin el mínimo de ancho, que no la dejaría bajar
-    /// del de la barra, y sin la franja para estirar, que se comería la mitad de la flecha.
+    /// Colapsa la ventana a la pestaña, en el mismo punto donde empieza la barra: sin el mínimo de
+    /// ancho, que no la dejaría bajar del de la barra, y sin la franja para estirar, que se comería
+    /// parte del icono.
     /// </summary>
     private void MostrarLaSolapa()
     {
         MinimumSize = Size.Empty;
         Padding = Padding.Empty;
-        Bounds = LugarDeLaSolapa(_replegadaEn!);
+        Bounds = new Rectangle(_pestania, new Size(AnchoDeLaPestaniaEnPantalla, _tamanoDesplegado.Height));
         Redondear();
         AspectoCambiado?.Invoke(this, EventArgs.Empty);
     }
 
-    private void MostrarLaBarra(Point donde)
+    /// <summary>
+    /// Despliega la barra hacia la derecha desde donde está la pestaña, que es su mismo origen.
+    /// </summary>
+    private void MostrarLaBarra()
     {
         MinimumSize = new Size(AnchoMinimo, BarraPagina.AltoDeLaBarra);
         Padding = new Padding(0, 0, BordeParaEstirar, 0);
-        Bounds = new Rectangle(donde, _tamanoDesplegado);
+        // Apoyada a la derecha se despliega hacia la izquierda: el borde que toca la pantalla es
+        // el mismo antes y después, y la barra crece hacia adentro. En los otros dos lados crece
+        // hacia la derecha desde donde está la pestaña.
+        var x = _lado == Lado.Derecha
+            ? _pestania.X + AnchoDeLaPestaniaEnPantalla - _tamanoDesplegado.Width
+            : _pestania.X;
+
+        Bounds = new Rectangle(new Point(x, _pestania.Y), _tamanoDesplegado);
         Redondear();
         AspectoCambiado?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void ReplegarSiQuedoPegada()
-    {
-        const int Pegada = 12;
-
-        // Contra el borde del escritorio entero y no el de esta pantalla: si no, arrastrarla de un
-        // monitor al otro la esconde a mitad de camino y nunca llega.
-        var escritorio = SystemInformation.VirtualScreen;
-
-        if (Location.X <= escritorio.Left + Pegada) Replegar("Izquierda");
-        else if (Right >= escritorio.Right - Pegada) Replegar("Derecha");
-        else if (Location.Y <= escritorio.Top + Pegada) Replegar("Arriba");
-    }
-
-    /// <summary>
-    /// La solapa queda donde termina la barra, que es de donde va a salir: a los costados, a la
-    /// altura de la franja; arriba, sobre su extremo derecho, que es donde está el botón de
-    /// esconder. Con la barra centrada eso cae en el medio del borde superior, tirado a la derecha.
-    /// </summary>
-    private Rectangle LugarDeLaSolapa(string borde)
-    {
-        var pantalla = PantallaDeLaBarra();
-        var alturaDeLaFranja = _posicionDesplegada.Y + (BarraPagina.AltoDeLaBarra - LadoDeLaSolapa) / 2;
-
-        var donde = borde switch
-        {
-            "Izquierda" => new Point(pantalla.Left, alturaDeLaFranja),
-            "Derecha" => new Point(pantalla.Right - LadoDeLaSolapa, alturaDeLaFranja),
-            _ => new Point(_posicionDesplegada.X + _tamanoDesplegado.Width - LadoDeLaSolapa, pantalla.Top)
-        };
-
-        return new Rectangle(donde, new Size(LadoDeLaSolapa, LadoDeLaSolapa));
-    }
-
-    /// <summary>
-    /// Dónde queda la barra cada vez que vuelve a la vista: contra el borde por el que se escondió
-    /// y centrada en el otro eje. Se calcula una sola vez, al replegarse.
-    ///
-    /// <para>
-    /// No vuelve a donde estaba porque esconderla es decir que ahí molesta: traerla de vuelta al
-    /// mismo lugar es traer de vuelta el estorbo, y encima tapando lo que el usuario haya puesto
-    /// ahí mientras no estaba.
-    /// </para>
-    ///
-    /// <para>
-    /// Que sea una sola posición es lo que mantiene coherentes las tres cosas que la leen: la
-    /// solapa se ubica a partir de ella, el mouse encima la hace asomar ahí —cayendo debajo de la
-    /// solapa, así el cursor sigue adentro y no se esconde al instante— y la flecha la fija en ese
-    /// mismo lugar. Antes el hover la pegaba al borde y la flecha la mandaba de vuelta a donde
-    /// estaba, así que fijarla la hacía saltar.
-    /// </para>
-    /// </summary>
-    private Point PosicionPegadaAlBorde(string borde)
-    {
-        var pantalla = Screen.FromControl(this).WorkingArea;
-
-        // El eje que no es el del borde va al centro. Dejarlo donde estaba hace que la barra
-        // reaparezca en medio del escritorio, que es de donde se la quiso sacar; mandarlo al
-        // extremo la pega contra la esquina, lejos de donde uno la busca. Centrada, la solapa cae
-        // en el medio del borde —tirada a la derecha, que es donde termina la barra—.
-        var centradaX = pantalla.Left + (pantalla.Width - Width) / 2;
-        var centradaY = pantalla.Top + (pantalla.Height - Height) / 2;
-
-        return borde switch
-        {
-            "Izquierda" => new Point(pantalla.Left, centradaY),
-            "Derecha" => new Point(pantalla.Right - Width, centradaY),
-            _ => new Point(centradaX, pantalla.Top)
-        };
-    }
-
-    private Rectangle PantallaDeLaBarra() => Screen.FromPoint(_posicionDesplegada).WorkingArea;
-
-    private string BordeMasCercano()
-    {
-        var pantalla = Screen.FromControl(this).WorkingArea;
-
-        var aIzquierda = Location.X - pantalla.Left;
-        var aDerecha = pantalla.Right - Right;
-        var arriba = Location.Y - pantalla.Top;
-
-        if (arriba <= aIzquierda && arriba <= aDerecha) return "Arriba";
-        return aIzquierda <= aDerecha ? "Izquierda" : "Derecha";
     }
 
     // --- Dónde y de qué tamaño -----------------------------------------------
@@ -450,7 +507,7 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
         // Siempre nace a la vista: la barra se abre cuando se levanta el entorno, que es justo
         // cuando hay algo para mirar. Esconderla es una decisión del momento y dura lo que dura
         // la sesión; recordarla haría que arrancara escondida y pareciera que no abrió.
-        _posicionDesplegada = Location;
+        _pestania = Location;
     }
 
     /// <summary>
@@ -470,8 +527,8 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
     private void Recordar()
     {
         var configuracion = ConfiguracionDevTools.Compartida;
-        var posicion = _replegadaEn is null ? Location : _posicionDesplegada;
-        var ancho = _replegadaEn is null ? ClientSize.Width : _tamanoDesplegado.Width;
+        var posicion = _colapsada ? _pestania : Location;
+        var ancho = _colapsada ? _tamanoDesplegado.Width : ClientSize.Width;
 
         configuracion.PosicionDeLaBarra = $"{posicion.X},{posicion.Y}";
         configuracion.AnchoDeLaBarra = ancho;
@@ -487,9 +544,43 @@ public sealed class BarraDeEntorno : Form, IVentanaDeLaBarra
             : AnchoPorDefecto;
     }
 
+    /// <summary>
+    /// Redondea las esquinas que no tocan la pantalla y deja rectas las del borde de apoyo. No se
+    /// usa <see cref="MenuDelTema.Contorno"/> porque redondea las cuatro, y un vértice redondeado
+    /// contra el borde deja ver el escritorio por el hueco: se nota el recorte.
+    /// </summary>
     private void Redondear()
     {
-        using var contorno = MenuDelTema.Contorno(new Rectangle(Point.Empty, Size), Radio);
+        var area = new Rectangle(Point.Empty, Size);
+        var diametro = Radio * 2;
+        var derecha = area.Right - 1;
+        var abajo = area.Bottom - 1;
+
+        // Qué esquinas van redondeadas, en orden horario desde la de arriba a la izquierda. Sin
+        // apoyo se comporta como apoyada arriba: las de abajo redondeadas y las de arriba rectas,
+        // que es el aspecto de la barra flotando.
+        var (supIzq, supDer, infDer, infIzq) = _lado switch
+        {
+            Lado.Derecha => (true, false, false, true),
+            Lado.Izquierda => (false, true, true, false),
+            _ => (false, false, true, true)
+        };
+
+        using var contorno = new GraphicsPath();
+
+        if (supIzq) contorno.AddArc(area.X, area.Y, diametro, diametro, 180, 90);
+        else contorno.AddLine(area.X, area.Y, area.X + 1, area.Y);
+
+        if (supDer) contorno.AddArc(derecha - diametro, area.Y, diametro, diametro, 270, 90);
+        else contorno.AddLine(derecha, area.Y, derecha, area.Y + 1);
+
+        if (infDer) contorno.AddArc(derecha - diametro, abajo - diametro, diametro, diametro, 0, 90);
+        else contorno.AddLine(derecha, abajo, derecha - 1, abajo);
+
+        if (infIzq) contorno.AddArc(area.X, abajo - diametro, diametro, diametro, 90, 90);
+        else contorno.AddLine(area.X, abajo, area.X, abajo - 1);
+
+        contorno.CloseFigure();
         Region = new Region(contorno);
     }
 

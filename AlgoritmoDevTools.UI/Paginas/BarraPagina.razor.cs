@@ -44,6 +44,33 @@ public partial class BarraPagina : IDisposable
     /// 40 segundos; pasado este tope se asume que no va a volver y se le devuelve el botón.
     /// </summary>
     private static readonly TimeSpan EsperaPorServicio = TimeSpan.FromMinutes(3);
+    /// <summary>
+    /// Los iconos de Bootstrap Icons (MIT) de la barra: el rack del entorno —el mismo que el
+    /// Selector tiene en el menú— en la zona de arrastre, y la chincheta inclinada en el botón que
+    /// colapsa la barra.
+    ///
+    /// <para>
+    /// El par de chinchetas sigue la convención de los paneles de Windows: <b>el icono muestra el
+    /// estado</b> —derecha si está clavada, inclinada si se va a contraer sola— y el tooltip dice
+    /// qué pasa al tocarlo.
+    /// </para>
+    ///
+    /// <para>
+    /// Van como SVG embebido, que es lo que ya hace el resto de la aplicación, y no como fuente de
+    /// iconos: unos pocos no justifican sumar un woff2 con su hoja de estilos, y así la aplicación
+    /// sigue sin pedirle nada a la red.
+    /// </para>
+    /// </summary>
+    private const string Agarre =
+        """<svg class="ico-bi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m2 7a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2.5.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/><path d="M2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h1v2H2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1V7h1a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm13 2v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1m0 7v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1m-3-4v2H4V7z"/></svg>""";
+
+    private const string Chincheta =
+        """<svg class="ico-bi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282"/></svg>""";
+
+    private const string ChinchetaInclinada =
+        """<svg class="ico-bi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707s.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146m.122 2.112v-.002zm0-.002v.002a.5.5 0 0 1-.122.51L6.293 6.878a.5.5 0 0 1-.511.12H5.78l-.014-.004a5 5 0 0 0-.288-.076 5 5 0 0 0-.765-.116c-.422-.028-.836.008-1.175.15l5.51 5.509c.141-.34.177-.753.149-1.175a5 5 0 0 0-.192-1.054l-.004-.013v-.001a.5.5 0 0 1 .12-.512l3.536-3.535a.5.5 0 0 1 .532-.115l.096.022c.087.017.208.034.344.034q.172.002.343-.04L9.927 2.028q-.042.172-.04.343a1.8 1.8 0 0 0 .062.46z"/></svg>""";
+
+
     private static readonly TimeSpan AvisoDeListo = TimeSpan.FromSeconds(8);
 
     [Inject]
@@ -79,6 +106,19 @@ public partial class BarraPagina : IDisposable
     /// </summary>
     private readonly Dictionary<string, DateTime> _esperando = new(StringComparer.OrdinalIgnoreCase);
     private bool _desfasada;
+
+    /// <summary>
+    /// Los PID que tenía cada servicio cuando se cambió la base. Mientras quede alguno con el
+    /// mismo PID, hay un servicio corriendo con la conexión anterior.
+    ///
+    /// <para>
+    /// El sello no se puede atar al camino que el usuario haya tomado. Se reescribía sólo al
+    /// terminar un reinicio general y dentro del tope de tres minutos, así que bajar y volver a
+    /// subir los servicios de a uno —o un reinicio que tardara más que eso— dejaba la barra en
+    /// ámbar para siempre, avisando de una diferencia que ya no existía.
+    /// </para>
+    /// </summary>
+    private Dictionary<string, int>? _pidsConLaBaseAnterior;
     private bool _recienListo;
     private DateTime? _listoDesde;
     private string? _baseQueMuestra;
@@ -111,6 +151,7 @@ public partial class BarraPagina : IDisposable
     {
         _temas.TemaCambiado += AlCambiarElTema;
         Ventana.AspectoCambiado += AlCambiarElAspecto;
+        Ventana.FrenadoPedido += AlPedirQueFrene;
         await Refrescar();
         _ = Sondear();
     }
@@ -119,6 +160,7 @@ public partial class BarraPagina : IDisposable
     {
         _temas.TemaCambiado -= AlCambiarElTema;
         Ventana.AspectoCambiado -= AlCambiarElAspecto;
+        Ventana.FrenadoPedido -= AlPedirQueFrene;
         _corte.Cancel();
         _corte.Dispose();
     }
@@ -126,6 +168,16 @@ public partial class BarraPagina : IDisposable
     private void AlCambiarElTema(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
     private void AlCambiarElAspecto(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// El Selector pidió frenar, al cancelar un levantado. Va por el mismo camino que el botón de
+    /// la barra para que haya un solo frenado; si ya se está frenando, el pedido se ignora.
+    /// </summary>
+    private void AlPedirQueFrene(object? sender, EventArgs e)
+    {
+        if (_frenando) return;
+        _ = InvokeAsync(Frenar);
+    }
 
     private async Task Sondear()
     {
@@ -190,12 +242,6 @@ public partial class BarraPagina : IDisposable
 
                 if (terminado)
                 {
-                    // Los servicios volvieron a arrancar, así que leyeron la conexión que está
-                    // configurada ahora: el sello pasa a ser ésa. Sin esto la barra seguiría en
-                    // ámbar avisando de una diferencia que el reinicio acaba de resolver.
-                    var conexion = await Task.Run(ChequeoDePrerrequisitos.ConexionConfigurada, _corte.Token);
-                    SelloDeConexion.Escribir(conexion.Servidor, conexion.Base);
-
                     _listoDesde = DateTime.Now;
                     System.Media.SystemSounds.Asterisk.Play();
                 }
@@ -204,6 +250,25 @@ public partial class BarraPagina : IDisposable
 
         _recienListo = _listoDesde is not null && DateTime.Now - _listoDesde < AvisoDeListo;
         if (_listoDesde is not null && !_recienListo) _listoDesde = null;
+
+        // Cuando ya no queda ninguno con el PID que tenía al cambiar la base, todos volvieron a
+        // arrancar y leyeron la conexión nueva: el sello pasa a ser ésa. Vale para el reinicio de
+        // todos, para el de a uno y para bajar y volver a subir, porque mira el resultado y no el
+        // camino. Va antes de comparar, así la misma vuelta ya muestra la barra sin el ámbar.
+        if (_pidsConLaBaseAnterior is { Count: > 0 } viejos)
+        {
+            var quedaAlguno = _ultimo.Servicios.Any(servicio =>
+                servicio.Pid is int pid
+                && viejos.TryGetValue(servicio.Nombre, out var anterior)
+                && pid == anterior);
+
+            if (!quedaAlguno)
+            {
+                var conexion = await Task.Run(ChequeoDePrerrequisitos.ConexionConfigurada, _corte.Token);
+                SelloDeConexion.Escribir(conexion.Servidor, conexion.Base);
+                _pidsConLaBaseAnterior = null;
+            }
+        }
 
         // Fuera del hilo de la interfaz: la primera lectura de los secretos levanta un proceso de
         // dotnet y tarda un par de segundos.
@@ -513,6 +578,12 @@ public partial class BarraPagina : IDisposable
             _enCurso = null;
         }
 
+        // Lo que está corriendo ahora quedó con la conexión vieja: cada uno la leyó al arrancar y
+        // no la vuelve a mirar. Se anotan sus PID para saber cuándo no queda ninguno.
+        _pidsConLaBaseAnterior = _ultimo.Servicios
+            .Where(servicio => servicio.Pid is not null)
+            .ToDictionary(servicio => servicio.Nombre, servicio => servicio.Pid!.Value, StringComparer.OrdinalIgnoreCase);
+
         Desplegar(Desplegable.Nada);
         await Refrescar();
     }
@@ -598,10 +669,17 @@ public partial class BarraPagina : IDisposable
     /// La flecha de la solapa apunta hacia donde va a salir la barra: abajo si está escondida
     /// arriba, hacia adentro si está en un costado.
     /// </summary>
-    private MarkupString FlechaDeLaSolapa() => (MarkupString)(Ventana.SolapaContra switch
-    {
-        "Izquierda" => "&#xE76C;",
-        "Derecha" => "&#xE76B;",
-        _ => "&#xE70D;"
-    });
+    /// <summary>
+    /// Lo único que se ve de la barra mientras está escondida: el rack de Bootstrap Icons (MIT),
+    /// que es el icono del entorno y el mismo que el Selector tiene en el menú.
+    ///
+    /// <para>
+    /// Antes eran tres flechas, una por borde, apuntando hacia donde iba a salir la barra. El rack
+    /// dice mejor qué hay detrás de la solapa —si no, es una flecha suelta en un borde de la
+    /// pantalla, sin pista de a qué pertenece—, y hacia dónde sale se ve en cuanto el mouse se
+    /// acerca y la barra asoma.
+    /// </para>
+    /// </summary>
+    private MarkupString IconoDeLaSolapa() =>
+        (MarkupString)"""<svg class="ico-bi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h1v2H2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1V7h1a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm.5 3a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m-2 7a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1M12 7v2H4V7z"/></svg>""";
 }

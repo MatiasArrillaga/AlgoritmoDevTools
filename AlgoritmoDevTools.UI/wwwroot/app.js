@@ -18,11 +18,15 @@ window.devtools.sincronizarParciales = function () {
 
 // La barra del entorno no tiene marco, asi que arrastrarla no lo hace Windows solo. Tampoco sirve
 // el hit-test del formulario: el visor ocupa toda la ventana y se queda con el mouse. Entonces la
-// pagina avisa que se empezo a arrastrar desde la zona de puntos y el host se encarga del resto,
+// pagina avisa que se empezo a arrastrar desde la zona de agarre y el host se encarga del resto,
 // que es el mismo camino que usa la franja de archivos arrastrados.
+//
+// Colapsada, la pestana entera es zona de agarre: se la puede llevar a donde no moleste. Que un
+// clic sin movimiento la despliegue lo resuelve el host comparando la posicion antes y despues,
+// porque el arrastre lo maneja Windows con su bucle modal y el clic no vuelve aca.
 document.addEventListener('mousedown', function (evento) {
     if (evento.button !== 0) return;
-    if (!evento.target.closest('.barra-agarre')) return;
+    if (!evento.target.closest('.barra-agarre, .barra-solapa')) return;
 
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage('barra:mover');

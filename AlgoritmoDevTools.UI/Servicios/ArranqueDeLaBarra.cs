@@ -62,6 +62,9 @@ public sealed class ArranqueDeLaBarra
     [DllImport("user32.dll")]
     private static extern bool PostMessage(IntPtr ventana, uint mensaje, IntPtr parametro, IntPtr otro);
 
+    /// <summary>El cierre de una ventana, <c>WM_CLOSE</c>.</summary>
+    private const uint AlCerrar = 0x0010;
+
     private static readonly IntPtr SiempreEncima = new(-1);
     private const uint SinMover = 0x0002;
     private const uint SinRedimensionar = 0x0001;
@@ -73,12 +76,58 @@ public sealed class ArranqueDeLaBarra
     /// </summary>
     private const string NombreDelMensajeMostrate = "AlgoritmoDevTools.Barra.Mostrate";
 
+    /// <summary>Con esto se le pide a la barra que frene el entorno, por el mismo camino.</summary>
+    private const string NombreDelMensajeFrenate = "AlgoritmoDevTools.Barra.Frenate";
+
     /// <summary>
     /// El número del mensaje para pedirle a la barra que se muestre, que ella reconoce en su
     /// <c>WndProc</c>. Devuelve 0 si Windows no lo pudo registrar, y entonces no hay que comparar
     /// contra él: 0 es <c>WM_NULL</c>.
     /// </summary>
     public static uint MensajeParaMostrarse() => RegisterWindowMessage(NombreDelMensajeMostrate);
+
+    /// <summary>El número del mensaje «frenate», que la barra reconoce en su <c>WndProc</c>.</summary>
+    public static uint MensajeParaFrenar() => RegisterWindowMessage(NombreDelMensajeFrenate);
+
+    /// <summary>
+    /// Cierra la barra y nada más: el entorno sigue corriendo. Devuelve false si no se la encontró.
+    ///
+    /// <para>
+    /// Es lo contrario de <see cref="PedirQueFrene"/>, y la diferencia importa: cerrar la barra es
+    /// dejar de mirar, frenar es bajar los servicios. El Selector ofrece las dos, con nombres que
+    /// no se confundan.
+    /// </para>
+    /// </summary>
+    public static bool Cerrar()
+    {
+        var ventana = FindWindow(null, TituloDeLaVentana);
+        if (ventana == IntPtr.Zero) return false;
+
+        PostMessage(ventana, AlCerrar, IntPtr.Zero, IntPtr.Zero);
+        return true;
+    }
+
+    /// <summary>
+    /// Le pide a la barra que frene el entorno. Devuelve false si no se la encontró.
+    ///
+    /// <para>
+    /// <b>El frenado no se reimplementa acá a propósito.</b> La barra ya espera a que bajen los
+    /// servicios, cierra la consola de tye, barre los huérfanos y recién entonces se cierra. Dos
+    /// frenados distintos se separan con el tiempo, y el que quedaría peor atendido es justamente
+    /// éste, que se usa mucho menos.
+    /// </para>
+    /// </summary>
+    public static bool PedirQueFrene()
+    {
+        var ventana = FindWindow(null, TituloDeLaVentana);
+        if (ventana == IntPtr.Zero) return false;
+
+        var frenate = MensajeParaFrenar();
+        if (frenate == 0) return false;
+
+        PostMessage(ventana, frenate, IntPtr.Zero, IntPtr.Zero);
+        return true;
+    }
 
     /// <summary>
     /// Devuelve null si salió bien, o el mensaje de error.

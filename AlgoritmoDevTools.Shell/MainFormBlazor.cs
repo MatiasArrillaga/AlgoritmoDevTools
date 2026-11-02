@@ -112,6 +112,28 @@ public sealed class MainFormBlazor : Form
 
     private void AlCambiarElTema(object? sender, EventArgs e) => BarraDeTitulo.Pintar(Handle, _temas.Actual);
 
+    /// <summary>
+    /// Al cerrar DevTools se cierra también la barra del entorno.
+    ///
+    /// <para>
+    /// <b>Va contra el diseño original de la barra</b>, que es un proceso aparte justamente para
+    /// sobrevivir a esta ventana: el entorno sigue arriba mucho después de que DevTools se cierre.
+    /// Se cambió por pedido, porque una barra flotando sin la aplicación detrás sorprende más de
+    /// lo que ayuda; el widget de bandeja sigue siendo el camino para mirar el entorno sin tener
+    /// la ventana abierta.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Cierra la barra, no el entorno</b>: los servicios siguen corriendo, y la barra se vuelve
+    /// a abrir desde el Selector con «Controlar».
+    /// </para>
+    /// </summary>
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+        ArranqueDeLaBarra.Cerrar();
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing) _temas.TemaCambiado -= AlCambiarElTema;

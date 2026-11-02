@@ -90,8 +90,18 @@ public static class IconosSvg
     public const string Secretos =
         """<svg viewBox="0 0 16 16"><circle cx="5.5" cy="6.5" r="2.5"/><path d="M7.8 7.6 13 12.8M11 11l1.4-1.4"/></svg>""";
 
+    /// <summary>
+    /// El rack de Bootstrap Icons (MIT), para el Selector de Servicios. Es el primero del menú que
+    /// se pasa a Bootstrap; el resto de esta clase son trazados a mano.
+    ///
+    /// <para>
+    /// Lleva <c>ico-bi</c> porque se pinta distinto: los de acá son trazos —<c>stroke</c>, sin
+    /// relleno— y los de Bootstrap son siluetas rellenas. El CSS usa esa clase para invertir las
+    /// dos propiedades sin tocar al resto.
+    /// </para>
+    /// </summary>
     public const string Servicios =
-        """<svg viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="4"/><rect x="2.5" y="9" width="11" height="4"/></svg>""";
+        """<svg class="ico-bi" viewBox="0 0 16 16"><path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m2 7a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2.5.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/><path d="M2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h1v2H2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h-1V7h1a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm13 2v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1m0 7v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1m-3-4v2H4V7z"/></svg>""";
 
     public const string Comandos =
         """<svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"/><path d="m5 7 2 1.8L5 10.5M8.5 10.5H11"/></svg>""";
