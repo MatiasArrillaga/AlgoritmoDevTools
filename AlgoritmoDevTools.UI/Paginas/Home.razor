@@ -81,6 +81,13 @@
         }
     </div>
 
+    @*
+        La tarjeta de Migraciones no se muestra: el Model Drift Checker está oculto del panel, y una
+        tarjeta que habla del baseline sin la herramienta a mano para marcarlo sólo confunde. Para
+        volver a mostrarla, descomentar el bloque que sigue y reponer la entrada en
+        CatalogoDeHerramientas.
+    *@
+    @*
     <div class="tarjeta">
         <p class="tarjeta-titulo">Migraciones</p>
         @if (_baseline is null)
@@ -94,6 +101,7 @@
             <p class="tarjeta-detalle">Último commit que marcaste como migrado.</p>
         }
     </div>
+    *@
 
     <div class="tarjeta">
         <p class="tarjeta-titulo">Repositorio</p>
